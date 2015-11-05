@@ -1,0 +1,4 @@
+#!/bin/sh
+
+oslo-config-generator --config-file=tools/config-generator.conf
+

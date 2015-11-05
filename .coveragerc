@@ -1,0 +1,8 @@
+[run]
+branch = True
+source = kingbird
+omit = kingbird/openstack/*
+
+[report]
+ignore-errors = True
+

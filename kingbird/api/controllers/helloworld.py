@@ -17,6 +17,7 @@ from kingbird.jobdaemon import jdrpcapi
 
 import pecan
 from pecan import expose
+from pecan import request
 from pecan import rest
 import restcomm
 
@@ -41,14 +42,29 @@ class HelloWorldController(rest.RestController):
     @index.when(method='PUT', template='json')
     def put(self, **kw):
         context = restcomm.extract_context_from_environ()
-        return self.jd_api.say_hello_world_call(context, '## put call ##')
+
+        payload = '## put call ##, request.body = '
+        payload = payload + request.body
+        return self.jd_api.say_hello_world_call(context, payload)
 
     @index.when(method='POST', template='json')
     def post(self, **kw):
         context = restcomm.extract_context_from_environ()
-        return self.jd_api.say_hello_world_call(context, '## post call ##')
+
+        payload = '## post call ##, request.body = '
+        payload = payload + request.body
+        return self.jd_api.say_hello_world_call(context, payload)
 
     @index.when(method='delete', template='json')
     def delete(self):
+
+        # no return value to browser indeed for cast. check the log info in
+        # jdmanager, jwmanager instead
         context = restcomm.extract_context_from_environ()
-        return self.jd_api.say_hello_world_cast(context, '## delete cast ##')
+
+        payload = '## delete call ##, request.body is null'
+        payload = payload + request.body
+        self.jd_api.say_hello_world_cast(context, payload)
+
+        return {'cast example': 'check the log produced by jobdaemon '
+                                + 'and jobworker, no value returned here'}

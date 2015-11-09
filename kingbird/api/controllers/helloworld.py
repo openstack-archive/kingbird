@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# from kingbird.jobdaemon import jdrpcapi
+from kingbird.jobdaemon import jdrpcapi
 
 import pecan
 from pecan import expose
@@ -25,7 +25,7 @@ class HelloWorldController(rest.RestController):
 
     def __init__(self, *args, **kwargs):
         super(HelloWorldController, self).__init__(*args, **kwargs)
-        # self.jd_api = jdrpcapi.JobDaemonAPI()
+        self.jd_api = jdrpcapi.JobDaemonAPI()
 
     @expose(generic=True, template='json')
     def index(self):
@@ -41,23 +41,14 @@ class HelloWorldController(rest.RestController):
     @index.when(method='PUT', template='json')
     def put(self, **kw):
         context = restcomm.extract_context_from_environ()
-        if context.is_admin:
-            return {'hello world message for admin': 'PUT'}
-        else:
-            return {'hello world message for non-admin': 'PUT'}
+        return self.jd_api.say_hello_world_call(context, '## put call ##')
 
     @index.when(method='POST', template='json')
     def post(self, **kw):
         context = restcomm.extract_context_from_environ()
-        if context.is_admin:
-            return {'hello world message for admin': 'POST'}
-        else:
-            return {'hello world message for non-admin': 'POST'}
+        return self.jd_api.say_hello_world_call(context, '## post call ##')
 
     @index.when(method='delete', template='json')
     def delete(self):
         context = restcomm.extract_context_from_environ()
-        if context.is_admin:
-            return {'hello world message for admin': 'delete'}
-        else:
-            return {'hello world message for non-admin': 'delete'}
+        return self.jd_api.say_hello_world_cast(context, '## delete cast ##')

@@ -32,13 +32,13 @@ LOG = logging.getLogger(__name__)
 
 from kingbird.common.i18n import _LI
 from kingbird.common.i18n import _LW
-from kingbird.jobdaemon import jdcfg
-import kingbird.jobdaemon.jdservice as service
+from kingbird.jobworker import jwcfg
+import kingbird.jobworker.jwservice as service
 
 
 def main():
-    jdcfg.init(sys.argv[1:])
-    jdcfg.setup_logging()
+    jwcfg.init(sys.argv[1:])
+    jwcfg.setup_logging()
 
     host = CONF.host
     workers = CONF.workers
@@ -50,8 +50,8 @@ def main():
     LOG.info(_LI("Server on http://%(host)s with %(workers)s"),
              {'host': host, 'workers': workers})
 
-    jdservice = service.create_service()
-    service.serve(jdservice, workers)
+    jwservice = service.create_service()
+    service.serve(jwservice, workers)
     service.wait()
 
     LOG.info(_LI("Configuration:"))

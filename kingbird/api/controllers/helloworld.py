@@ -50,5 +50,8 @@ class HelloWorldController(rest.RestController):
 
     @index.when(method='delete', template='json')
     def delete(self):
+
+        # no return value to browser indeed for cast. check the log info in
+        # jdmanager, jwmanager instead
         context = restcomm.extract_context_from_environ()
         return self.jd_api.say_hello_world_cast(context, '## delete cast ##')

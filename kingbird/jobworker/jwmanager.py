@@ -20,60 +20,61 @@ import oslo_messaging as messaging
 from kingbird.common.i18n import _
 from kingbird.common.i18n import _LI
 from kingbird.common import manager
-from kingbird.jobworker import jwrpcapi
+
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class JDManager(manager.Manager):
-    """Manages the running job from creation to destruction."""
+class JWManager(manager.Manager):
+    """Manages the running job worker from creation to destruction."""
 
     target = messaging.Target(version='1.0')
 
     def __init__(self, *args, **kwargs):
-        LOG.debug(_('JDManager initialization...'))
 
-        super(JDManager, self).__init__(service_name="job_daemon",
+        super(JWManager, self).__init__(service_name="job_worker",
                                         *args, **kwargs)
 
-        self.jw_api = jwrpcapi.JobWorkerAPI()
+        LOG.debug(_('JWManager initialization...'))
 
     def init_host(self):
-        LOG.debug(_('JDManager init_host...'))
+
+        LOG.debug(_('JWManager init_host...'))
 
         pass
 
     def cleanup_host(self):
-        LOG.debug(_('JDManager cleanup_host...'))
+
+        LOG.debug(_('JWManager cleanup_host...'))
 
         pass
 
     def pre_start_hook(self):
-        LOG.debug(_('JDManager pre_start_hook...'))
+
+        LOG.debug(_('JWManager pre_start_hook...'))
 
         pass
 
     def post_start_hook(self):
-        LOG.debug(_('JDManager post_start_hook...'))
+
+        LOG.debug(_('JWManager post_start_hook...'))
 
         pass
 
     # rpc message endpoint handling
     def say_hello_world_call(self, ctx, payload):
 
-        LOG.info(_LI("jobdaemon say hello world, call payload: %s"), payload)
-
-        self.jw_api.say_hello_world_call(ctx, 'hello from jobdaemon')
+        LOG.info(_LI("jobworker say hello world, call payload: %s"), payload)
 
         info_text = "payload: %s" % payload
-        return {'jobdaemon': info_text}
+
+        return {'jobdworker': info_text}
 
     def say_hello_world_cast(self, ctx, payload):
 
-        LOG.info(_LI("jobdaemon say hello world, cast payload: %s"), payload)
-
-        self.jw_api.say_hello_world_cast(ctx, 'hello from jobdaemon')
+        LOG.info(_LI("jobworker say hello world, cast payload: %s"), payload)
 
         info_text = "payload: %s" % payload
-        return {'jobdaemon': info_text}
+
+        return {'jobdworker': info_text}

@@ -13,7 +13,7 @@ SERVICE_ID=$(openstack service show kingbird -f value -cid 2>/dev/null)
 if [[ -z $SERVICE_ID ]]; then
   SERVICE_ID=$(openstack service create \
     --name kingbird \
-    --description 'Kingbird Service V1' \
+    --description 'Kingbird Synchronisation Service V1' \
     -f value -cid \
     synchronisation)
 fi
@@ -23,9 +23,9 @@ if [[ -z $SERVICE_ID ]]; then
 fi
 
 openstack endpoint create \
-  --adminurl "http://$HOST:$PORT/v1.0/\$(tenant_id)s" \
-  --publicurl "http://$HOST:$PORT/v1.0/\$(tenant_id)s" \
-  --internalurl "http://$HOST:$PORT/v1.0/\$(tenant_id)s" \
+  --adminurl "http://$HOST:$PORT/v1/\$(tenant_id)s" \
+  --publicurl "http://$HOST:$PORT/v1/\$(tenant_id)s" \
+  --internalurl "http://$HOST:$PORT/v1/\$(tenant_id)s" \
   --region RegionOne \
   kingbird
 
@@ -44,4 +44,3 @@ openstack role add \
   service \
   --user kingbird \
   --project demo
-

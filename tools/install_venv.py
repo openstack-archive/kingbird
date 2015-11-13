@@ -22,8 +22,8 @@ def print_help(venv, root):
     help = """
     Kingbird development environment setup is complete.
 
-    Kingbird development uses virtualenv to track and manage Python
-    dependencies while in development and testing.
+    Kingbird development uses virtualenv to track and manage Python dependencies
+    while in development and testing.
 
     To activate the Nova virtualenv for the extent of your current shell
     session you can run:
@@ -54,7 +54,7 @@ def main(argv):
     py_version = "python%s.%s" % (sys.version_info[0], sys.version_info[1])
     project = 'Kingbird'
     install = install_venv.InstallVenv(root, venv, pip_requires, test_requires,
-                                       py_version, project)
+                             py_version, project)
     options = install.parse_args(argv)
     install.check_python_version()
     install.check_dependencies()

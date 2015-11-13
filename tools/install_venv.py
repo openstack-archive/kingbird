@@ -11,10 +11,8 @@
 #    under the License.
 
 from __future__ import print_function
-
 import os
 import sys
-
 import install_venv_common as install_venv
 
 
@@ -61,6 +59,7 @@ def main(argv):
     install.create_virtualenv(no_site_packages=options.no_site_packages)
     install.install_dependencies()
     print_help(venv, root)
+
 
 if __name__ == '__main__':
     main(sys.argv)

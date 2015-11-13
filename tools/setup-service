@@ -5,7 +5,7 @@ if [ $# -ne 2 ]; then
   exit -1
 fi
 
-PORT=8778
+PORT=8118
 HOST=$1 # Put your host IP here
 SVC_PASSWD=$2
 
@@ -13,7 +13,7 @@ SERVICE_ID=$(openstack service show kingbird -f value -cid 2>/dev/null)
 if [[ -z $SERVICE_ID ]]; then
   SERVICE_ID=$(openstack service create \
     --name kingbird \
-    --description 'Kingbird Service V1' \
+    --description 'Kingbird Synchronization Service V1.0' \
     -f value -cid \
     synchronisation)
 fi
@@ -44,4 +44,3 @@ openstack role add \
   service \
   --user kingbird \
   --project demo
-

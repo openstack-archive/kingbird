@@ -23,6 +23,5 @@ from kingbird.tests import base
 
 
 class TestKingbird(base.TestCase):
-
     def test_something(self):
         pass

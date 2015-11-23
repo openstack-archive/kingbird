@@ -1,4 +1,5 @@
 # Copyright 2015 Huawei Technologies Co., Ltd.
+# Copyright 2015 Ericsson AB.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,9 +17,9 @@
 """
 Kingbird base exception handling.
 """
+import six
 
 from oslo_utils import excutils
-import six
 
 from kingbird.common.i18n import _
 
@@ -82,3 +83,7 @@ class InUse(KingbirdException):
 class InvalidConfigurationOption(KingbirdException):
     message = _("An invalid value was provided for %(opt_name)s: "
                 "%(opt_value)s")
+
+
+class ProjectQuotaNotFound(NotFound):
+    message = _("Quota for project %(project_id) doesn't exist.")

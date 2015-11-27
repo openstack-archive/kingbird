@@ -13,12 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import pecan
+
 from keystonemiddleware import auth_token
 from oslo_config import cfg
 from oslo_middleware import request_id
-import pecan
+from oslo_service import service
 
 from kingbird.common import exceptions as k_exc
+from kingbird.common.i18n import _
 
 
 def setup_app(*args, **kwargs):
@@ -64,3 +67,18 @@ def _wrap_app(app):
             opt_name='auth_strategy', opt_value=cfg.CONF.auth_strategy)
 
     return app
+
+
+_launcher = None
+
+
+def serve(api_service, conf, workers=1):
+    global _launcher
+    if _launcher:
+        raise RuntimeError(_('serve() can only be called once'))
+
+    _launcher = service.launch(conf, api_service, workers=workers)
+
+
+def wait():
+    _launcher.wait()

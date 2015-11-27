@@ -21,10 +21,9 @@ import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import wsgi
 
 import logging as std_logging
-
-from werkzeug import serving
 
 from kingbird.api import apicfg
 from kingbird.api import app
@@ -52,12 +51,14 @@ def main():
     LOG.info(_LI("Server on http://%(host)s:%(port)s with %(workers)s"),
              {'host': host, 'port': port, 'workers': workers})
 
-    serving.run_simple(host, port,
-                       application,
-                       processes=workers)
+    service = wsgi.Server(CONF, "Kingbird", application, host, port)
+
+    app.serve(service, CONF, workers)
 
     LOG.info(_LI("Configuration:"))
     CONF.log_opt_values(LOG, std_logging.INFO)
+
+    app.wait()
 
 
 if __name__ == '__main__':

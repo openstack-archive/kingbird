@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import helloworld
+
 import pecan
+
+from kingbird.api.controllers import helloworld
 
 
 class RootController(object):
@@ -24,7 +26,7 @@ class RootController(object):
         if version == 'v1.0':
             return V1Controller(), remainder
 
-    @pecan.expose('json')
+    @pecan.expose(generic=True, template='json')
     def index(self):
         return {
             "versions": [
@@ -42,6 +44,14 @@ class RootController(object):
                 ]
             }
 
+    @index.when(method='POST')
+    @index.when(method='PUT')
+    @index.when(method='DELETE')
+    @index.when(method='HEAD')
+    @index.when(method='PATCH')
+    def not_supported(self):
+        pecan.abort(405)
+
 
 class V1Controller(object):
 
@@ -54,7 +64,7 @@ class V1Controller(object):
         for name, ctrl in self.sub_controllers.items():
             setattr(self, name, ctrl)
 
-    @pecan.expose('json')
+    @pecan.expose(generic=True, template='json')
     def index(self):
         return {
             "version": "1.0",
@@ -67,3 +77,11 @@ class V1Controller(object):
                 for name in sorted(self.sub_controllers)
             ]
         }
+
+    @index.when(method='POST')
+    @index.when(method='PUT')
+    @index.when(method='DELETE')
+    @index.when(method='HEAD')
+    @index.when(method='PATCH')
+    def not_supported(self):
+        pecan.abort(405)

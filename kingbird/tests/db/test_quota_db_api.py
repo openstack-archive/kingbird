@@ -31,7 +31,7 @@ UUID2 = utils.UUID2
 UUID3 = utils.UUID3
 
 
-class DBAPIQuotaTest(base.TestCase):
+class DBAPIQuotaTest(base.KingbirdTestCase):
     def setup_dummy_db(self):
         options.cfg.set_defaults(options.database_opts,
                                  sqlite_synchronous=False)

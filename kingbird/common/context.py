@@ -19,7 +19,8 @@ from oslo_context import context as oslo_ctx
 class ContextBase(oslo_ctx.RequestContext):
     def __init__(self, auth_token=None, user_id=None, tenant_id=None,
                  is_admin=False, request_id=None, overwrite=True,
-                 user_name=None, tenant_name=None, **kwargs):
+                 user_name=None, tenant_name=None, auth_url=None,
+                 region=None, password=None, domain='default', **kwargs):
         super(ContextBase, self).__init__(
             auth_token=auth_token,
             user=user_id or kwargs.get('user', None),
@@ -35,12 +36,35 @@ class ContextBase(oslo_ctx.RequestContext):
             overwrite=overwrite)
         self.user_name = user_name
         self.tenant_name = tenant_name
+        self.auth_url = auth_url
+        self.password = password
+        self.default_name = domain
+        self.region_name = region
 
     def to_dict(self):
         ctx_dict = super(ContextBase, self).to_dict()
         ctx_dict.update({
             'user_name': self.user_name,
-            'tenant_name': self.tenant_name
+            'tenant_name': self.tenant_name,
+            'auth_url': self.auth_url,
+            'auth_token': self.auth_token,
+            'auth_token_info': self.auth_token_info,
+            'user': self.user,
+            'user_domain': self.user_domain,
+            'user_domain_name': self.user_domain_name,
+            'project': self.project,
+            'project_name': self.project_name,
+            'project_domain': self.project_domain,
+            'project_domain_name': self.project_domain_name,
+            'domain': self.domain,
+            'domain_name': self.domain_name,
+            'trusts': self.trusts,
+            'region_name': self.region_name,
+            'roles': self.roles,
+            'show_deleted': self.show_deleted,
+            'is_admin': self.is_admin,
+            'request_id': self.request_id,
+            'password': self.password,
         })
         return ctx_dict
 

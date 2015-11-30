@@ -22,6 +22,6 @@ Tests for `kingbird` module.
 from kingbird.tests import base
 
 
-class TestKingbird(base.TestCase):
+class TestKingbird(base.KingbirdTestCase):
     def test_something(self):
         pass

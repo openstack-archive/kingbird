@@ -23,7 +23,7 @@ FAKE_SERVICE = 'fake_service'
 FAKE_URL = 'fake_url'
 
 
-class EndpointCacheTest(base.TestCase):
+class EndpointCacheTest(base.KingbirdTestCase):
     def setUp(self):
         super(EndpointCacheTest, self).setUp()
 

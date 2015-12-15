@@ -127,3 +127,10 @@ class EndpointCache(object):
         :return: None
         """
         self._update_endpoints()
+
+    def get_all_regions(self):
+        """Get region list
+
+        return: List of regions
+        """
+        return self.endpoint_map.keys()

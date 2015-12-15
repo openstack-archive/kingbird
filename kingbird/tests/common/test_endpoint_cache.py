@@ -22,6 +22,15 @@ FAKE_REGION = 'fake_region'
 FAKE_SERVICE = 'fake_service'
 FAKE_URL = 'fake_url'
 
+FAKE_REGION_2 = 'fake_region_2'
+FAKE_NOVA_SERVICE = 'fake_nova_service'
+FAKE_NEUTRON_SERVICE = 'fake_neutron_service'
+FAKE_CINDER_SERVICE = 'fake_cinder_service'
+FAKE_NOVA_URL_1 = 'fake_url_nova_1'
+FAKE_NOVA_URL_2 = 'fake_url_nova_2'
+FAKE_CINDER_URL_2 = 'fake_url_cinder_2'
+FAKE_NEUTRON_URL_1 = 'fake_url_neutron_1'
+
 
 class EndpointCacheTest(base.KingbirdTestCase):
     def setUp(self):
@@ -63,3 +72,15 @@ class EndpointCacheTest(base.KingbirdTestCase):
         cache.update_endpoints()
         self.assertEqual(cache.get_endpoint(FAKE_REGION, FAKE_SERVICE),
                          'another_fake_url')
+
+    @patch.object(endpoint_cache.EndpointCache, '_get_endpoint_from_keystone')
+    def test_get_all_regions(self, mock_method):
+        mock_method.return_value = {
+            FAKE_REGION: {FAKE_NOVA_SERVICE: FAKE_NOVA_URL_1,
+                          FAKE_NEUTRON_SERVICE: FAKE_NEUTRON_URL_1},
+            FAKE_REGION_2: {FAKE_NOVA_SERVICE: FAKE_NOVA_URL_2,
+                            FAKE_CINDER_SERVICE: FAKE_CINDER_URL_2}
+            }
+        cache = endpoint_cache.EndpointCache()
+        region_list = cache.get_all_regions()
+        self.assertEqual(region_list, [FAKE_REGION, FAKE_REGION_2])

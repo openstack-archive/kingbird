@@ -63,3 +63,13 @@ class EndpointCacheTest(base.KingbirdTestCase):
         cache.update_endpoints()
         self.assertEqual(cache.get_endpoint(FAKE_REGION, FAKE_SERVICE),
                          'another_fake_url')
+
+    @patch.object(endpoint_cache.EndpointCache, '_get_endpoint_from_keystone')
+    def test_get_all_regions(self, mock_method):
+        mock_method.return_value = {
+            FAKE_REGION: {FAKE_SERVICE: FAKE_URL}}
+        cache = endpoint_cache.EndpointCache()
+        mock_method.return_value = {
+            FAKE_REGION: {FAKE_SERVICE: 'another_fake_url'}}
+        region_list = cache.get_all_regions()
+        self.assertEqual(region_list, [FAKE_REGION])

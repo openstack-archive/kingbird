@@ -13,13 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from kingbird.jobdaemon import jdrpcapi
-
 import pecan
 from pecan import expose
 from pecan import request
 from pecan import rest
+
 import restcomm
+
+from kingbird.jobdaemon import jdrpcapi
 
 
 class HelloWorldController(rest.RestController):
@@ -62,9 +63,15 @@ class HelloWorldController(rest.RestController):
         # jdmanager, jwmanager instead
         context = restcomm.extract_context_from_environ()
 
-        payload = '## delete call ##, request.body is null'
+        payload = '## delete cast ##, request.body is null'
         payload = payload + request.body
         self.jd_api.say_hello_world_cast(context, payload)
+
+        return self._delete_response(context)
+
+    def _delete_response(self, context):
+
+        context = context
 
         return {'cast example': 'check the log produced by jobdaemon '
                                 + 'and jobworker, no value returned here'}

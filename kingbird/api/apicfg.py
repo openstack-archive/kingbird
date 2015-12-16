@@ -17,6 +17,7 @@
 Routines for configuring kingbird, largely copy from Neutron
 """
 
+import os
 import sys
 
 
@@ -40,8 +41,9 @@ common_opts = [
                help=_("The port to bind to")),
     cfg.IntOpt('api_workers', default=2,
                help=_("number of api workers")),
-    cfg.StrOpt('api_paste_config', default="api-paste.ini",
-               help=_("The API paste config file to use")),
+    cfg.StrOpt('state_path',
+               default=os.path.join(os.path.dirname(__file__), '../'),
+               help='Top-level directory for maintaining kingbird state'),
     cfg.StrOpt('api_extensions_path', default="",
                help=_("The path for API extensions")),
     cfg.StrOpt('auth_strategy', default='keystone',

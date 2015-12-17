@@ -14,13 +14,19 @@ from oslo_log import log
 
 from kingbird.drivers import base
 
+from novaclient import client as nv_client
+
 LOG = log.getLogger(__name__)
+API_VERSION = 2
 
 
 class NovaClient(base.DriverBase):
     '''Nova V2.1 driver.'''
-    def __init__(self, client):
-        pass
+    def __init__(self, context, region=None, token=None):
+        region = region if region else context.region
+        self.nova_client = nv_client.Client(
+            API_VERSION, context.user_name, context.password,
+            context.tenant_name, context.auth_url, region_name=region)
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''

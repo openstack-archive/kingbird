@@ -10,20 +10,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+import novaclient
 
-from kingbird.drivers.openstack import sdk
+from kingbird.drivers.openstack import nova_v2
 from kingbird.tests import base
+from kingbird.tests import utils
 
 
 class TestNovaClient(base.KingbirdTestCase):
-    @mock.patch.object(sdk.OpenStackDriver, '_create_connection')
-    def setUp(self, mock_os_client):
+    def setUp(self):
         super(TestNovaClient, self).setUp()
-        self.compute_client = mock_os_client.return_value.compute
+        self.ctx = utils.dummy_context()
 
     def test_init(self):
-        pass
+        nv_client = nova_v2.NovaClient(self.ctx, 'fake_region')
+        self.assertIsNotNone(nv_client)
+        self.assertIsInstance(nv_client.nova_client,
+                              novaclient.v2.client.Client)
 
     def test_get_resource_usages(self):
         pass

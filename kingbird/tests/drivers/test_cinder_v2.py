@@ -10,20 +10,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+import cinderclient
 
-from kingbird.drivers.openstack import sdk
+from kingbird.drivers.openstack import cinder_v2
 from kingbird.tests import base
+from kingbird.tests import utils
 
 
 class TestCinderClient(base.KingbirdTestCase):
-    @mock.patch.object(sdk.OpenStackDriver, '_create_connection')
-    def setUp(self, mock_os_client):
+    def setUp(self):
         super(TestCinderClient, self).setUp()
-        self.cinder_client = mock_os_client.return_value.volume
+        self.ctx = utils.dummy_context()
 
     def test_init(self):
-        pass
+        ci_client = cinder_v2.CinderClient(self.ctx, 'fake_region')
+        self.assertIsNotNone(ci_client)
+        self.assertIsInstance(ci_client.cinder_client,
+                              cinderclient.v2.client.Client)
 
     def test_get_resource_usages(self):
         pass

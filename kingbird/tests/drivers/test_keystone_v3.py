@@ -12,34 +12,30 @@
 
 import mock
 
+import keystoneclient
+
 from kingbird.drivers.openstack import keystone_v3
-from kingbird.drivers.openstack import sdk
 from kingbird.tests import base
+from kingbird.tests import utils
 
 
 class TestKeystoneClient(base.KingbirdTestCase):
-
-    @mock.patch.object(sdk.OpenStackDriver, '_create_connection')
-    def setUp(self, mock_os_client):
+    def setUp(self):
         super(TestKeystoneClient, self).setUp()
-        self.keystone_client = mock_os_client.return_value.identity
+        self.ctx = utils.dummy_context()
 
     def test_init(self):
-        keystone_client = keystone_v3.KeystoneClient(self.keystone_client)
-        self.assertIsNotNone(keystone_client)
+        key_client = keystone_v3.KeystoneClient(self.ctx)
+        self.assertIsNotNone(key_client.keystone_client)
+        self.assertIsInstance(key_client.keystone_client,
+                              keystoneclient.v3.client.Client)
 
-    def test_get_enabled_projects(self):
+    @mock.patch.object(keystone_v3, 'KeystoneClient')
+    def test_get_enabled_projects(self, mock_key_client):
+        key_client = keystone_v3.KeystoneClient(self.ctx)
         raised = False
         try:
-            self.keystone_client.get_enabled_projects()
+            key_client.get_enabled_projects()
         except Exception:
             raised = True
         self.assertFalse(raised, 'get_enabled_projects Failed')
-
-    def test_get_regions(self):
-        raised = False
-        try:
-            self.keystone_client.get_regions()
-        except Exception:
-            raised = True
-        self.assertFalse(raised, 'get_regions Failed')

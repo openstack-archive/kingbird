@@ -83,4 +83,5 @@ class EndpointCacheTest(base.KingbirdTestCase):
             }
         cache = endpoint_cache.EndpointCache()
         region_list = cache.get_all_regions()
-        self.assertEqual(region_list, [FAKE_REGION, FAKE_REGION_2])
+        self.assertIn(FAKE_REGION, region_list)
+        self.assertIn(FAKE_REGION_2, region_list)

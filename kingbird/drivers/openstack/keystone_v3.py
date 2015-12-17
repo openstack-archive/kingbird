@@ -15,6 +15,10 @@
 
 from oslo_utils import importutils
 
+from keystoneclient.auth.identity import v3
+from keystoneclient import session
+from keystoneclient.v3 import client
+
 from kingbird.common import exceptions
 from kingbird.drivers import base
 
@@ -25,8 +29,13 @@ importutils.import_module('keystonemiddleware.auth_token')
 class KeystoneClient(base.DriverBase):
     '''Keystone V3 driver.'''
 
-    def __init__(self, client):
-        self.keystone = client
+    def __init__(self, context):
+        auth = v3.Password(auth_url=context.auth_url,
+                           username=context.user_name,
+                           password=context.password,
+                           project_name=context.project_name)
+        sess = session.Session(auth=auth)
+        self.keystone_client = client.Client(session=sess)
 
     def get_enabled_projects(self):
         try:
@@ -34,7 +43,3 @@ class KeystoneClient(base.DriverBase):
                     self.keystone.projects.list() if current_project.enabled]
         except exceptions.HttpException as ex:
             raise ex
-
-    def get_regions(self):
-        '''returns lists of cached regions'''
-        pass

@@ -22,55 +22,32 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         super(TestOpenStackDriver, self).setUp()
 
         self.context = utils.dummy_context()
-        self.region_name = 'RegionOne'
-        self.os_client = None
+        self.nova_client = None
+        self.cinder_client = None
+        self.neutron_client = None
+        self.keystone_client = None
 
-    @mock.patch.object(sdk.OpenStackDriver, '_create_connection')
     @mock.patch.object(sdk, 'NovaClient')
     @mock.patch.object(sdk, 'NeutronClient')
     @mock.patch.object(sdk, 'CinderClient')
     @mock.patch.object(sdk, 'KeystoneClient')
     def test_init(self, mock_keystone_client, mock_cinder_client,
-                  mock_neutron_client, mock_nova_client, mock_os_client):
-        sdk.OpenStackDriver(self.context, self.region_name)
-        self.os_client = mock_os_client.return_value
-
-        mock_os_client.assert_called_once_with(self.context,
-                                               self.region_name, None)
-        mock_nova_client.assert_called_once_with(self.os_client.compute)
-        mock_neutron_client.assert_called_once_with(self.os_client.network)
-        mock_cinder_client.assert_called_once_with(self.os_client.volume)
-        mock_keystone_client.assert_called_once_with(self.os_client.identity)
-
-    @mock.patch.object(sdk, 'argparse')
-    @mock.patch.object(sdk, 'cloud_config')
-    @mock.patch.object(sdk, 'clientmanager')
-    def test_connection(self, mock_cm, mock_cloud_config, mock_argparse):
-        os_driver = sdk.OpenStackDriver(self.context, self.region_name)
-        os_driver._create_connection(self.context,
-                                     self.region_name)
-
-        mock_argparse.ArgumentParser.assert_called_with()
-        parser = mock_argparse.return_value
-        cloud = mock_cloud_config.OpenStackConfig().get_one_cloud.return_value
-
-        mock_cloud_config.OpenStackConfig.assert_called_with()
-        mock_cm.build_plugin_option_parser(parser
-                                           ).parse_args.assert_called_with()
-        mock_cm.ClientManager.assert_called_with(cli_options=cloud,
-                                                 api_version={}, verify=True)
+                  mock_neutron_client, mock_nova_client):
+        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_1', None)
+        self.assertIsNotNone(os_driver.neutron_client)
+        self.assertIsNotNone(os_driver.nova_client)
+        self.assertIsNotNone(os_driver.keystone_client)
+        self.assertIsNotNone(os_driver.cinder_client)
 
     @mock.patch.object(sdk, 'NovaClient')
     @mock.patch.object(sdk, 'NeutronClient')
     @mock.patch.object(sdk, 'CinderClient')
-    @mock.patch.object(sdk, 'argparse')
-    @mock.patch.object(sdk, 'cloud_config')
-    @mock.patch.object(sdk, 'clientmanager')
-    def test_get_resource_usages(self, mock_clientmanager, mock_cloud_config,
-                                 mock_argparse, mock_cinder_client,
-                                 mock_neutron_client, mock_nova_client):
+    @mock.patch.object(sdk, 'KeystoneClient')
+    def test_get_resource_usages(self, mock_keystone_client,
+                                 mock_cinder_client, mock_neutron_client,
+                                 mock_nova_client):
         project_id = 'fake_project'
-        os_driver = sdk.OpenStackDriver(self.context, self.region_name)
+        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_2')
         total_quotas = os_driver.get_resource_usages(project_id)
         mock_nova_client().get_resource_usages.assert_called_once_with(
             project_id)
@@ -83,18 +60,16 @@ class TestOpenStackDriver(base.KingbirdTestCase):
     @mock.patch.object(sdk, 'NovaClient')
     @mock.patch.object(sdk, 'NeutronClient')
     @mock.patch.object(sdk, 'CinderClient')
-    @mock.patch.object(sdk, 'argparse')
-    @mock.patch.object(sdk, 'cloud_config')
-    @mock.patch.object(sdk, 'clientmanager')
-    def test_write_quota_limits(self, mock_clientmanager, mock_cloud_config,
-                                mock_argparse, mock_cinder_client,
-                                mock_network_client, mock_nova_client):
+    @mock.patch.object(sdk, 'KeystoneClient')
+    def test_write_quota_limits(self, mock_keystone_client,
+                                mock_cinder_client, mock_network_client,
+                                mock_nova_client):
         project_id = 'fake_project'
         write_limits = {}
         write_limits['nova'] = {'ram': 1222, 'vcpus': 10, 'instances': 7}
         write_limits['cinder'] = {'disk': 1222}
         write_limits['neutron'] = {'network': 10, 'subnet': 10}
-        os_driver = sdk.OpenStackDriver(self.context, self.region_name)
+        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_3')
         os_driver.write_quota_limits(project_id, write_limits)
         mock_nova_client(
         ).update_quota_limits.assert_called_once_with(project_id,
@@ -106,19 +81,16 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         ).update_quota_limits.assert_called_once_with(project_id,
                                                       write_limits['cinder'])
 
+    @mock.patch.object(sdk, 'KeystoneClient')
     @mock.patch.object(sdk, 'NovaClient')
     @mock.patch.object(sdk, 'NeutronClient')
     @mock.patch.object(sdk, 'CinderClient')
-    @mock.patch.object(sdk, 'argparse')
-    @mock.patch.object(sdk, 'cloud_config')
-    @mock.patch.object(sdk, 'clientmanager')
-    def test_delete_quota_limit(self, mock_clientmanager, mock_cloud_config,
-                                mock_argparse, mock_cinder_client,
-                                mock_network_client, mock_nova_client):
+    def test_delete_quota_limits(self, mock_cinder_client,
+                                 mock_network_client, mock_nova_client,
+                                 mock_keystone_client):
         project_id = 'fake_project'
-
-        os_driver = sdk.OpenStackDriver(self.context, self.region_name)
-        os_driver.delete_quota_limit(project_id)
+        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_4', None)
+        os_driver.delete_quota_limits(project_id)
         mock_nova_client().delete_quota_limits.assert_called_once_with(
             project_id)
         mock_network_client().delete_quota_limits.assert_called_once_with(
@@ -127,21 +99,36 @@ class TestOpenStackDriver(base.KingbirdTestCase):
             project_id)
 
     @mock.patch.object(sdk, 'KeystoneClient')
-    @mock.patch.object(sdk, 'argparse')
-    @mock.patch.object(sdk, 'cloud_config')
-    @mock.patch.object(sdk, 'clientmanager')
-    def test_get_all_regions(self, mock_clientmanager, mock_cloud_config,
-                             mock_argparse, mock_keystone_client):
-        os_driver = sdk.OpenStackDriver(self.context, self.region_name)
-        os_driver.get_all_regions()
-        mock_keystone_client().get_regions.assert_called_once_with()
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_get_enabled_projects(self, mock_cinder_client,
+                                  mock_network_client, mock_nova_client,
+                                  mock_keystone_client):
+        input_project_list = ['project_1', 'project_2', 'project_3']
+        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_5', None)
+        os_driver.keystone_client.get_enabled_projects.return_value = \
+            input_project_list
+        output_project_list = os_driver.get_enabled_projects()
+        self.assertEqual(output_project_list, input_project_list)
 
     @mock.patch.object(sdk, 'KeystoneClient')
-    @mock.patch.object(sdk, 'argparse')
-    @mock.patch.object(sdk, 'cloud_config')
-    @mock.patch.object(sdk, 'clientmanager')
-    def test_get_enabled_projects(self, mock_clientmanager, mock_cloud_config,
-                                  mock_argparse, mock_keystone_client):
-        os_driver = sdk.OpenStackDriver(self.context, self.region_name)
-        os_driver.get_enabled_projects()
-        mock_keystone_client().get_enabled_projects.assert_called_once_with()
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_cache_os_clients(self, mock_cinder_client,
+                              mock_network_client, mock_nova_client,
+                              mock_keystone_client):
+        os_driver_1 = sdk.OpenStackDriver(self.context, 'RegionOne', None)
+        os_driver_2 = sdk.OpenStackDriver(self.context, 'RegionTwo', None)
+        os_driver_3 = sdk.OpenStackDriver(self.context, 'RegionOne', None)
+        os_driver_4 = sdk.OpenStackDriver(self.context, 'RegionTwo', None)
+        # assert equal for same region clients objects to test caching
+        self.assertEqual(os_driver_1.nova_client, os_driver_3.nova_client)
+        self.assertEqual(os_driver_1.cinder_client, os_driver_3.cinder_client)
+        self.assertEqual(os_driver_1.neutron_client,
+                         os_driver_3.neutron_client)
+        self.assertEqual(os_driver_2.nova_client, os_driver_4.nova_client)
+        self.assertEqual(os_driver_2.cinder_client, os_driver_4.cinder_client)
+        self.assertEqual(os_driver_2.neutron_client,
+                         os_driver_4.neutron_client)

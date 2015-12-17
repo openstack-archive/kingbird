@@ -10,20 +10,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+import neutronclient
 
-from kingbird.drivers.openstack import sdk
+from kingbird.drivers.openstack import neutron_v2
 from kingbird.tests import base
+from kingbird.tests import utils
 
 
 class TestNeutronClient(base.KingbirdTestCase):
-    @mock.patch.object(sdk.OpenStackDriver, '_create_connection')
-    def setUp(self, mock_os_client):
+    def setUp(self):
         super(TestNeutronClient, self).setUp()
-        self.neutron_client = mock_os_client.return_value.network
+        self.ctx = utils.dummy_context()
 
     def test_init(self):
-        pass
+        neutron_client = neutron_v2.NeutronClient(self.ctx, 'fake_region')
+        self.assertIsNotNone(neutron_client)
+        self.assertIsInstance(neutron_client.neutron_client,
+                              neutronclient.v2_0.client.Client)
 
     def test_get_resource_usages(self):
         pass

@@ -20,7 +20,8 @@ class ContextBase(oslo_ctx.RequestContext):
     def __init__(self, auth_token=None, user_id=None, tenant_id=None,
                  is_admin=False, request_id=None, overwrite=True,
                  user_name=None, tenant_name=None, auth_url=None,
-                 region=None, password=None, domain='default', **kwargs):
+                 region=None, password=None, domain='default',
+                 project_name=None, **kwargs):
         super(ContextBase, self).__init__(
             auth_token=auth_token,
             user=user_id or kwargs.get('user', None),
@@ -36,16 +37,20 @@ class ContextBase(oslo_ctx.RequestContext):
             overwrite=overwrite)
         self.user_name = user_name
         self.tenant_name = tenant_name
+        self.tenant_id = tenant_id
         self.auth_url = auth_url
         self.password = password
         self.default_name = domain
         self.region_name = region
+        self.project_name = project_name
 
     def to_dict(self):
         ctx_dict = super(ContextBase, self).to_dict()
         ctx_dict.update({
             'user_name': self.user_name,
             'tenant_name': self.tenant_name,
+            'project_name': self.project_name,
+            'tenant_id': self.tenant_id,
             'auth_url': self.auth_url,
             'password': self.password,
             'default_name': self.default_name,

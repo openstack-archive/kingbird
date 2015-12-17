@@ -14,13 +14,20 @@ from oslo_log import log
 
 from kingbird.drivers import base
 
+from neutronclient.neutron import client
+
 LOG = log.getLogger(__name__)
+API_VERSION = '2.0'
 
 
 class NeutronClient(base.DriverBase):
     '''Neutron V2 driver.'''
-    def __init__(self, client):
-        pass
+    def __init__(self, context, region=None, token=None):
+        region = region if region else context.region
+        self.neutron_client = client.Client(
+            API_VERSION, username=context.user_name, password=context.password,
+            tenant_name=context.tenant_name, auth_url=context.auth_url,
+            region_name=region)
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''

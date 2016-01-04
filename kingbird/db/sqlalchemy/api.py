@@ -65,8 +65,8 @@ def _session(context):
 def is_admin_context(context):
     """Indicates if the request context is an administrator."""
     if not context:
-        LOG.warn(_('Use of empty request context is deprecated'),
-                 DeprecationWarning)
+        LOG.warning(_('Use of empty request context is deprecated'),
+                    DeprecationWarning)
         raise Exception('die')
     return context.is_admin
 

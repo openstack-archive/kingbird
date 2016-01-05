@@ -31,6 +31,7 @@ class OpenStackDriver(object):
 
     def __init__(self, ctx, region_name=None, token=None):
         # Check if objects are cached and try to use those
+        self.region_name = region_name
         if region_name in OpenStackDriver.os_clients_dict:
             self.nova_client = OpenStackDriver.os_clients_dict[
                 region_name]['nova']
@@ -43,6 +44,8 @@ class OpenStackDriver(object):
             self.nova_client = NovaClient(ctx, region_name, token)
             self.cinder_client = CinderClient(ctx, region_name, token)
             self.neutron_client = NeutronClient(ctx, region_name, token)
+            OpenStackDriver.os_clients_dict[
+                region_name] = collections.defaultdict(dict)
             OpenStackDriver.os_clients_dict[region_name][
                 'nova'] = self.nova_client
             OpenStackDriver.os_clients_dict[region_name][
@@ -56,23 +59,48 @@ class OpenStackDriver(object):
             OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
 
     def get_enabled_projects(self):
-        return self.keystone_client.get_enabled_projects()
+        try:
+            return self.keystone_client.get_enabled_projects()
+        # As of now assuming the cached keystone client is out dated
+        # and exception is thrown because of it.
+        except Exception:
+            # Delete the cached object
+            del OpenStackDriver.os_clients_dict['keystone']
 
     def get_resource_usages(self, project_id):
-        nova_usages = self.nova_client.get_resource_usages(project_id)
-        neutron_usages = self.neutron_client.get_resource_usages(project_id)
-        cinder_usages = self.cinder_client.get_resource_usages(project_id)
-        return nova_usages, neutron_usages, cinder_usages
+        try:
+            nova_usages = self.nova_client.get_resource_usages(project_id)
+            neutron_usages = self.neutron_client.get_resource_usages(
+                project_id)
+            cinder_usages = self.cinder_client.get_resource_usages(project_id)
+            return nova_usages, neutron_usages, cinder_usages
+        # As of now assuming the cached openstack clients are out dated
+        # and exception is thrown because of it.
+        except Exception:
+            # Delete the cached objects for that region
+            del OpenStackDriver.os_clients_dict[self.region_name]
 
     def write_quota_limits(self, project_id, limits_to_write):
-        self.nova_client.update_quota_limits(project_id,
-                                             limits_to_write['nova'])
-        self.cinder_client.update_quota_limits(project_id,
-                                               limits_to_write['cinder'])
-        self.neutron_client.update_quota_limits(project_id,
-                                                limits_to_write['neutron'])
+        try:
+            self.nova_client.update_quota_limits(project_id,
+                                                 limits_to_write['nova'])
+            self.cinder_client.update_quota_limits(project_id,
+                                                   limits_to_write['cinder'])
+            self.neutron_client.update_quota_limits(project_id,
+                                                    limits_to_write['neutron'])
+        # As of now assuming the cached openstack clients are out dated
+        # and exception is thrown because of it.
+        except Exception:
+            # Delete the cached objects for that region
+            del OpenStackDriver.os_clients_dict[self.region_name]
 
     def delete_quota_limits(self, project_id):
-        self.nova_client.delete_quota_limits(project_id)
-        self.neutron_client.delete_quota_limits(project_id)
-        self.cinder_client.delete_quota_limits(project_id)
+        try:
+            self.nova_client.delete_quota_limits(project_id)
+            self.neutron_client.delete_quota_limits(project_id)
+            self.cinder_client.delete_quota_limits(project_id)
+        # As of now assuming the cached openstack clients are out dated
+        # and exception is thrown because of it.
+        except Exception:
+            # Delete the cached objects for that region
+            del OpenStackDriver.os_clients_dict[self.region_name]

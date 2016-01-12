@@ -1,0 +1,10 @@
+Code-Review+1: zhurong <aaronzhu1121@gmail.com>
+Code-Review+1: Allen <chen.qiaomin@99cloud.net>
+Code-Review+2: Chaoyi Huang <joehuang@huawei.com>
+Workflow+1: Chaoyi Huang <joehuang@huawei.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 12 Jan 2016 06:26:39 +0000
+Reviewed-on: https://review.openstack.org/263251
+Project: openstack/kingbird
+Branch: refs/heads/master

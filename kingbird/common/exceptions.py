@@ -87,3 +87,11 @@ class InvalidConfigurationOption(KingbirdException):
 
 class ProjectQuotaNotFound(NotFound):
     message = _("Quota for project %(project_id) doesn't exist.")
+
+
+class ConnectionRefused(KingbirdException):
+    message = _("Connection to the service endpoint is refused")
+
+
+class TimeOut(KingbirdException):
+    message = _("Timeout when connecting to OpenStack Service")

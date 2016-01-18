@@ -22,11 +22,11 @@ API_VERSION = '2.1'
 
 class NovaClient(base.DriverBase):
     '''Nova V2.1 driver.'''
-    def __init__(self, context, region=None, token=None):
-        region = region if region else context.region
+    def __init__(self, region, **kwargs):
         self.nova_client = nv_client.Client(
-            API_VERSION, context.user_name, context.password,
-            context.tenant_name, context.auth_url, region_name=region)
+            API_VERSION, kwargs['user_name'],
+            kwargs['password'], kwargs['tenant_name'],
+            kwargs['auth_url'], region_name=region)
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''

@@ -33,7 +33,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
     @mock.patch.object(sdk, 'KeystoneClient')
     def test_init(self, mock_keystone_client, mock_cinder_client,
                   mock_neutron_client, mock_nova_client):
-        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_1', None)
+        os_driver = sdk.OpenStackDriver('fake_region_1')
         self.assertIsNotNone(os_driver.neutron_client)
         self.assertIsNotNone(os_driver.nova_client)
         self.assertIsNotNone(os_driver.keystone_client)
@@ -47,7 +47,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
                                  mock_cinder_client, mock_neutron_client,
                                  mock_nova_client):
         project_id = 'fake_project'
-        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_2')
+        os_driver = sdk.OpenStackDriver('fake_region_2')
         total_quotas = os_driver.get_resource_usages(project_id)
         mock_nova_client().get_resource_usages.assert_called_once_with(
             project_id)
@@ -69,7 +69,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         write_limits['nova'] = {'ram': 1222, 'vcpus': 10, 'instances': 7}
         write_limits['cinder'] = {'disk': 1222}
         write_limits['neutron'] = {'network': 10, 'subnet': 10}
-        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_3')
+        os_driver = sdk.OpenStackDriver('fake_region_3')
         os_driver.write_quota_limits(project_id, write_limits)
         mock_nova_client(
         ).update_quota_limits.assert_called_once_with(project_id,
@@ -89,7 +89,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
                                  mock_network_client, mock_nova_client,
                                  mock_keystone_client):
         project_id = 'fake_project'
-        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_4', None)
+        os_driver = sdk.OpenStackDriver('fake_region_4')
         os_driver.delete_quota_limits(project_id)
         mock_nova_client().delete_quota_limits.assert_called_once_with(
             project_id)
@@ -106,7 +106,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
                                   mock_network_client, mock_nova_client,
                                   mock_keystone_client):
         input_project_list = ['project_1', 'project_2', 'project_3']
-        os_driver = sdk.OpenStackDriver(self.context, 'fake_region_5', None)
+        os_driver = sdk.OpenStackDriver('fake_region_5')
         os_driver.keystone_client.get_enabled_projects.return_value = \
             input_project_list
         output_project_list = os_driver.get_enabled_projects()
@@ -119,10 +119,10 @@ class TestOpenStackDriver(base.KingbirdTestCase):
     def test_cache_os_clients(self, mock_cinder_client,
                               mock_network_client, mock_nova_client,
                               mock_keystone_client):
-        os_driver_1 = sdk.OpenStackDriver(self.context, 'RegionOne', None)
-        os_driver_2 = sdk.OpenStackDriver(self.context, 'RegionTwo', None)
-        os_driver_3 = sdk.OpenStackDriver(self.context, 'RegionOne', None)
-        os_driver_4 = sdk.OpenStackDriver(self.context, 'RegionTwo', None)
+        os_driver_1 = sdk.OpenStackDriver('RegionOne')
+        os_driver_2 = sdk.OpenStackDriver('RegionTwo')
+        os_driver_3 = sdk.OpenStackDriver('RegionOne')
+        os_driver_4 = sdk.OpenStackDriver('RegionTwo')
         # assert equal for same region clients objects to test caching
         self.assertEqual(os_driver_1.nova_client, os_driver_3.nova_client)
         self.assertEqual(os_driver_1.cinder_client, os_driver_3.cinder_client)

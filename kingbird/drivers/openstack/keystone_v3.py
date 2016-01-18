@@ -29,11 +29,12 @@ importutils.import_module('keystonemiddleware.auth_token')
 class KeystoneClient(base.DriverBase):
     '''Keystone V3 driver.'''
 
-    def __init__(self, context):
-        auth = v3.Password(auth_url=context.auth_url,
-                           username=context.user_name,
-                           password=context.password,
-                           project_name=context.project_name)
+    def __init__(self, **kwargs):
+        auth = v3.Password(
+            auth_url=kwargs['auth_url'],
+            username=kwargs['user_name'],
+            password=kwargs['password'],
+            project_name=kwargs['tenant_name'])
         sess = session.Session(auth=auth)
         self.keystone_client = client.Client(session=sess)
 

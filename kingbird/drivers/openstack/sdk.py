@@ -27,14 +27,48 @@ from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient
 
+from oslo_config import cfg
+
 LOG = log.getLogger(__name__)
+
+admin_creds_opts = [
+    cfg.StrOpt('auth_url',
+               default='http://127.0.0.1:5000/v3',
+               help='keystone authorization url'),
+    cfg.StrOpt('identity_url',
+               default='http://127.0.0.1:35357/v3',
+               help='keystone service url'),
+    cfg.StrOpt('admin_username',
+               help='username of admin account, needed when'
+                    ' auto_refresh_endpoint set to True'),
+    cfg.StrOpt('admin_password',
+               help='password of admin account, needed when'
+                    ' auto_refresh_endpoint set to True'),
+    cfg.StrOpt('admin_tenant',
+               help='tenant name of admin account, needed when'
+                    ' auto_refresh_endpoint set to True'),
+    cfg.StrOpt('admin_tenant_id',
+               help='tenant name of admin account, needed when'
+                    ' auto_refresh_endpoint set to True'),
+    cfg.StrOpt('admin_user_domain_name',
+               default='Default',
+               help='user domain name of admin account, needed when'
+                    ' auto_refresh_endpoint set to True'),
+    cfg.StrOpt('admin_tenant_domain_name',
+               default='Default',
+               help='tenant domain name of admin account, needed when'
+                    ' auto_refresh_endpoint set to True')
+]
+admin_creds_opt_group = cfg.OptGroup('admin_creds')
+cfg.CONF.register_group(admin_creds_opt_group)
+cfg.CONF.register_opts(admin_creds_opts, group=admin_creds_opt_group)
 
 
 class OpenStackDriver(object):
 
     os_clients_dict = collections.defaultdict(dict)
 
-    def __init__(self, ctx, region_name=None, token=None):
+    def __init__(self, region_name):
         # Check if objects are cached and try to use those
         self.region_name = region_name
         if region_name in OpenStackDriver.os_clients_dict:
@@ -48,9 +82,16 @@ class OpenStackDriver(object):
         else:
             # Create new objects and cache them
             LOG.debug(_("Creating fresh OS Clients objects"))
-            self.nova_client = NovaClient(ctx, region_name, token)
-            self.cinder_client = CinderClient(ctx, region_name, token)
-            self.neutron_client = NeutronClient(ctx, region_name, token)
+            admin_kwargs = {
+                'user_name': cfg.CONF.admin_creds.admin_username,
+                'password': cfg.CONF.admin_creds.admin_password,
+                'tenant_name': cfg.CONF.admin_creds.admin_tenant,
+                'auth_url': cfg.CONF.admin_creds.auth_url,
+                'tenant_id': cfg.CONF.admin_creds.admin_tenant_id
+                }
+            self.nova_client = NovaClient(region_name, **admin_kwargs)
+            self.cinder_client = CinderClient(region_name, **admin_kwargs)
+            self.neutron_client = NeutronClient(region_name, **admin_kwargs)
             OpenStackDriver.os_clients_dict[
                 region_name] = collections.defaultdict(dict)
             OpenStackDriver.os_clients_dict[region_name][
@@ -62,7 +103,7 @@ class OpenStackDriver(object):
         if 'keystone' in OpenStackDriver.os_clients_dict:
             self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
         else:
-            self.keystone_client = KeystoneClient(ctx)
+            self.keystone_client = KeystoneClient(**admin_kwargs)
             OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
 
     def get_enabled_projects(self):

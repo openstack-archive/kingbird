@@ -21,11 +21,12 @@ LOG = log.getLogger(__name__)
 
 class CinderClient(base.DriverBase):
     '''Cinder V2 driver.'''
-    def __init__(self, context, region=None, token=None):
-        region = region if region else context.region
+    def __init__(self, region, **kwargs):
         self.cinder_client = ci_client.Client(
-            auth_url=context.auth_url, username=context.user_name,
-            api_key=context.password, tenant_id=context.tenant_id,
+            auth_url=kwargs['auth_url'],
+            username=kwargs['user_name'],
+            api_key=kwargs['password'],
+            tenant_id=kwargs['tenant_id'],
             region_name=region)
 
     def get_resource_usages(self, project_id):

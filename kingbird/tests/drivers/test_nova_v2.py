@@ -16,6 +16,13 @@ from kingbird.drivers.openstack import nova_v2
 from kingbird.tests import base
 from kingbird.tests import utils
 
+FAKE_ADMIN_CREDS = {
+    'user_name': 'fake_user',
+    'password': 'pass1234',
+    'tenant_name': 'test_tenant',
+    'auth_url': 'http://127.0.0.1:5000/v3'
+    }
+
 
 class TestNovaClient(base.KingbirdTestCase):
     def setUp(self):
@@ -23,7 +30,7 @@ class TestNovaClient(base.KingbirdTestCase):
         self.ctx = utils.dummy_context()
 
     def test_init(self):
-        nv_client = nova_v2.NovaClient(self.ctx, 'fake_region')
+        nv_client = nova_v2.NovaClient('fake_region', **FAKE_ADMIN_CREDS)
         self.assertIsNotNone(nv_client)
         self.assertIsInstance(nv_client.nova_client,
                               novaclient.v2.client.Client)

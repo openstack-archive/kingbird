@@ -22,11 +22,13 @@ API_VERSION = '2.0'
 
 class NeutronClient(base.DriverBase):
     '''Neutron V2 driver.'''
-    def __init__(self, context, region=None, token=None):
-        region = region if region else context.region
+    def __init__(self, region, **kwargs):
         self.neutron_client = client.Client(
-            API_VERSION, username=context.user_name, password=context.password,
-            tenant_name=context.tenant_name, auth_url=context.auth_url,
+            API_VERSION,
+            username=kwargs['user_name'],
+            password=kwargs['password'],
+            tenant_name=kwargs['tenant_name'],
+            auth_url=kwargs['auth_url'],
             region_name=region)
 
     def get_resource_usages(self, project_id):

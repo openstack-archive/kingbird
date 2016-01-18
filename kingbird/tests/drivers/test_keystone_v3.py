@@ -18,6 +18,13 @@ from kingbird.drivers.openstack import keystone_v3
 from kingbird.tests import base
 from kingbird.tests import utils
 
+FAKE_ADMIN_CREDS = {
+    'user_name': 'fake_user',
+    'password': 'pass1234',
+    'tenant_name': 'test_tenant',
+    'auth_url': 'http://127.0.0.1:5000/v3'
+    }
+
 
 class TestKeystoneClient(base.KingbirdTestCase):
     def setUp(self):
@@ -25,7 +32,7 @@ class TestKeystoneClient(base.KingbirdTestCase):
         self.ctx = utils.dummy_context()
 
     def test_init(self):
-        key_client = keystone_v3.KeystoneClient(self.ctx)
+        key_client = keystone_v3.KeystoneClient(**FAKE_ADMIN_CREDS)
         self.assertIsNotNone(key_client.keystone_client)
         self.assertIsInstance(key_client.keystone_client,
                               keystoneclient.v3.client.Client)

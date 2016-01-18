@@ -16,6 +16,13 @@ from kingbird.drivers.openstack import neutron_v2
 from kingbird.tests import base
 from kingbird.tests import utils
 
+FAKE_ADMIN_CREDS = {
+    'user_name': 'fake_user',
+    'password': 'pass1234',
+    'tenant_name': 'test_tenant',
+    'auth_url': 'http://127.0.0.1:5000/v3'
+    }
+
 
 class TestNeutronClient(base.KingbirdTestCase):
     def setUp(self):
@@ -23,7 +30,8 @@ class TestNeutronClient(base.KingbirdTestCase):
         self.ctx = utils.dummy_context()
 
     def test_init(self):
-        neutron_client = neutron_v2.NeutronClient(self.ctx, 'fake_region')
+        neutron_client = neutron_v2.NeutronClient('fake_region',
+                                                  **FAKE_ADMIN_CREDS)
         self.assertIsNotNone(neutron_client)
         self.assertIsInstance(neutron_client.neutron_client,
                               neutronclient.v2_0.client.Client)

@@ -48,6 +48,16 @@ from kingbird.db import base
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+host_opts = [
+    cfg.StrOpt('host',
+               default='localhost',
+               help='hostname of the machine')
+]
+
+host_opt_group = cfg.OptGroup('host_details')
+cfg.CONF.register_group(host_opt_group)
+cfg.CONF.register_opts(host_opts, group=host_opt_group)
+
 
 class PeriodicTasks(periodic_task.PeriodicTasks):
     def __init__(self):
@@ -58,7 +68,7 @@ class Manager(base.Base, PeriodicTasks):
 
     def __init__(self, host=None, db_driver=None, service_name='undefined'):
         if not host:
-            host = CONF.host
+            host = cfg.CONF.host_details.host
         self.host = host
         self.service_name = service_name
         # self.notifier = rpc.get_notifier(self.service_name, self.host)

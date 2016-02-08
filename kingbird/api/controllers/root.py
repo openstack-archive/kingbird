@@ -16,7 +16,7 @@
 
 import pecan
 
-from kingbird.api.controllers import helloworld
+from kingbird.api.controllers import quota_manager
 
 
 class RootController(object):
@@ -58,7 +58,7 @@ class V1Controller(object):
     def __init__(self):
 
         self.sub_controllers = {
-            "helloworld": helloworld.HelloWorldController()
+            "quota": quota_manager.QuotaManagerController()
         }
 
         for name, ctrl in self.sub_controllers.items():

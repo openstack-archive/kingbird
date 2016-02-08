@@ -1,4 +1,4 @@
-# Copyright 2015 Huawei Technologies Co., Ltd.
+# Copyright 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,61 +20,56 @@ import oslo_messaging as messaging
 from kingbird.common.i18n import _
 from kingbird.common.i18n import _LI
 from kingbird.common import manager
-
+from kingbird.engine.quota_manager import QuotaManager
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class JWManager(manager.Manager):
-    """Manages the running job worker from creation to destruction."""
+class EngineManager(manager.Manager):
+    """Manages all the kb engine activities."""
 
     target = messaging.Target(version='1.0')
 
     def __init__(self, *args, **kwargs):
+        self.qm = QuotaManager()
+        LOG.debug(_('Engine initialization...'))
 
-        super(JWManager, self).__init__(service_name="job_worker",
-                                        *args, **kwargs)
-
-        LOG.debug(_('JWManager initialization...'))
+        super(EngineManager, self).__init__(service_name="engine_manager",
+                                            *args, **kwargs)
 
     def init_host(self):
-
-        LOG.debug(_('JWManager init_host...'))
+        LOG.debug(_('Engine init_host...'))
 
         pass
 
     def cleanup_host(self):
-
-        LOG.debug(_('JWManager cleanup_host...'))
+        LOG.debug(_('Engine cleanup_host...'))
 
         pass
 
     def pre_start_hook(self):
-
-        LOG.debug(_('JWManager pre_start_hook...'))
+        LOG.debug(_('Engine pre_start_hook...'))
 
         pass
 
     def post_start_hook(self):
-
-        LOG.debug(_('JWManager post_start_hook...'))
+        LOG.debug(_('Engine post_start_hook...'))
 
         pass
 
     # rpc message endpoint handling
     def say_hello_world_call(self, ctx, payload):
 
-        LOG.info(_LI("jobworker say hello world, call payload: %s"), payload)
+        LOG.info(_LI("engine say hello world, call payload: %s"), payload)
 
         info_text = "payload: %s" % payload
 
-        return {'jobworker': info_text}
+        return info_text
 
     def say_hello_world_cast(self, ctx, payload):
-
-        LOG.info(_LI("jobworker say hello world, cast payload: %s"), payload)
+        LOG.info(_LI("engine say hello world, cast payload: %s"), payload)
 
         # no return value to browser indeed for cast. check the log info
         info_text = "payload: %s" % payload
-        return {'jobworker': info_text}
+        return {'engine': info_text}

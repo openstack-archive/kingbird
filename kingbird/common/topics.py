@@ -17,5 +17,4 @@ CREATE = 'create'
 DELETE = 'delete'
 UPDATE = 'update'
 
-TOPIC_JOBDAEMON = 'job_daemon'
-TOPIC_JOBWORKER = 'job_worker'
+TOPIC_KB_ENGINE = 'engine'

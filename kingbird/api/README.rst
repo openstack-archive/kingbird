@@ -5,12 +5,11 @@ api
 Kingbird API is Web Server Gateway Interface (WSGI) applications to receive
 and process API calls, including keystonemiddleware to do the authentication,
 parameter check and validation, convert API calls to job rpc message, and
-then send the job to Kingbird Job Daemon through the queue. If the job will
-be processed by Kingbird Job Daemon in synchronous way, the Kingbird API will
-wait for the response from the Kingbird Job Daemon. Otherwise, the Kingbird
+then send the job to Kingbird Engine through the queue. If the job will
+be processed by Kingbird Engine in synchronous way, the Kingbird API will
+wait for the response from the Kingbird Engine. Otherwise, the Kingbird
 API will send response to the API caller first, and then send the job to
-Kingbird Job Daemon in asynchronous way. One of the Kingbird Job Daemons
-will be the owner of the job.
+Kingbird Engine in asynchronous way.
 
 Multiple Kingbird API could run in parallel, and also can work in multi-worker
 mode.

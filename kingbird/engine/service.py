@@ -1,4 +1,4 @@
-# Copyright 2015 Huawei Technologies Co., Ltd.
+# Copyright 2016 Ericsson AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,57 +22,67 @@ from kingbird.common.i18n import _
 from kingbird.common.serializer import KingbirdSerializer as Serializer
 from kingbird.common.service import Service
 from kingbird.common import topics
-from kingbird.jobdaemon.jdmanager import JDManager
+from kingbird.engine.listener import EngineManager
 
 _TIMER_INTERVAL = 30
 _TIMER_INTERVAL_MAX = 60
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
+
+host_opts = [
+    cfg.StrOpt('host',
+               default='localhost',
+               help='hostname of the machine')
+]
+
+host_opt_group = cfg.OptGroup('host_details')
+cfg.CONF.register_group(host_opt_group)
+cfg.CONF.register_opts(host_opts, group=host_opt_group)
 
 
-class JDService(Service):
+class EngineService(Service):
     def __init__(self, host, binary, topic, manager, report_interval=None,
                  periodic_enable=None, periodic_fuzzy_delay=None,
                  periodic_interval_max=None, serializer=None,
                  *args, **kwargs):
-        super(JDService, self).__init__(host, binary, topic, manager,
-                                        report_interval, periodic_enable,
-                                        periodic_fuzzy_delay,
-                                        periodic_interval_max, serializer,
-                                        *args, **kwargs)
+        super(EngineService, self).__init__(host, binary, topic, manager,
+                                            report_interval, periodic_enable,
+                                            periodic_fuzzy_delay,
+                                            periodic_interval_max, serializer,
+                                            *args, **kwargs)
 
 
 def create_service():
 
-    LOG.debug(_('create job daemon server'))
+    LOG.debug(_('create KB engine service'))
 
-    jdmanager = JDManager()
-    jdservice = JDService(
-        host=CONF.host,
-        binary="job_daemon",
-        topic=topics.TOPIC_JOBDAEMON,
-        manager=jdmanager,
+    engine_manager = EngineManager()
+    engine_service = EngineService(
+        host=cfg.CONF.host_details.host,
+        binary="kb_engine",
+        topic=topics.TOPIC_KB_ENGINE,
+        manager=engine_manager,
         periodic_enable=True,
         report_interval=_TIMER_INTERVAL,
         periodic_interval_max=_TIMER_INTERVAL_MAX,
         serializer=Serializer()
     )
 
-    jdservice.start()
+    engine_service.start()
 
-    return jdservice
+    return engine_service
 
 
 _launcher = None
 
 
-def serve(jdservice, workers=1):
+def serve(engine_service, workers=1):
     global _launcher
     if _launcher:
         raise RuntimeError(_('serve() can only be called once'))
 
-    _launcher = srv.launch(CONF, jdservice, workers=workers)
+    _launcher = srv.launch(CONF, engine_service, workers=workers)
 
 
 def wait():

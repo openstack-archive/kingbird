@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 import mock
 from mock import patch
 
@@ -26,24 +28,13 @@ from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from kingbird.api import apicfg
-from kingbird.api.controllers import helloworld
+from kingbird.api.controllers import quota_manager
 from kingbird.common import rpc
-from kingbird.jobdaemon import jdrpcapi
 from kingbird.tests import base
 
 
 OPT_GROUP_NAME = 'keystone_authtoken'
 cfg.CONF.import_group(OPT_GROUP_NAME, "keystonemiddleware.auth_token")
-
-
-def fake_say_hello_world_call(self, ctxt, payload):
-    info_text = "say_hello_world_call, payload: %s" % payload
-    return {'jobdaemon': info_text}
-
-
-def fake_say_hello_world_cast(self, ctxt, payload):
-    info_text = "say_hello_world_cast, payload: %s" % payload
-    return {'jobdaemon': info_text}
 
 
 def fake_delete_response(self, context):
@@ -121,10 +112,6 @@ class TestRootController(KBFunctionalTest):
 class TestV1Controller(KBFunctionalTest):
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_get(self):
         response = self.app.get('/v1.0')
         self.assertEqual(response.status_int, 200)
@@ -134,9 +121,9 @@ class TestV1Controller(KBFunctionalTest):
 
         links = json_body.get('links')
         v1_link = links[0]
-        helloworld_link = links[1]
+        quota_manager_link = links[1]
         self.assertEqual('self', v1_link['rel'])
-        self.assertEqual('helloworld', helloworld_link['rel'])
+        self.assertEqual('quota', quota_manager_link['rel'])
 
     def _test_method_returns_405(self, method):
         api_method = getattr(self.app, method)
@@ -144,106 +131,64 @@ class TestV1Controller(KBFunctionalTest):
         self.assertEqual(response.status_int, 405)
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_post(self):
         self._test_method_returns_405('post')
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_put(self):
         self._test_method_returns_405('put')
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_patch(self):
         self._test_method_returns_405('patch')
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_delete(self):
         self._test_method_returns_405('delete')
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_head(self):
         self._test_method_returns_405('head')
 
 
-class TestHelloworld(KBFunctionalTest):
+class TestQuotaManager(KBFunctionalTest):
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_get(self):
-        response = self.app.get('/v1.0/helloworld')
+        response = self.app.get('/v1.0/quota/?arg=tenant_1')
         self.assertEqual(response.status_int, 200)
-        self.assertIn('hello world message for', response)
+        self.assertIn('tenant_1', json.loads(response.text).values())
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
-    def test_post(self):
-        response = self.app.post_json('/v1.0/helloworld',
+    @mock.patch.object(rpc, 'get_client')
+    def test_post(self, mock_client):
+        mock_client().call.return_value = "Post method called"
+        response = self.app.post_json('/v1.0/quota',
                                       headers={'X-Tenant-Id': 'tenid'})
         self.assertEqual(response.status_int, 200)
-        self.assertIn('## post call ##', response)
-        self.assertIn('jobdaemon', response)
+        self.assertIn("Post method called", str(response.text))
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
-    def test_put(self):
-        response = self.app.put_json('/v1.0/helloworld',
+    @mock.patch.object(rpc, 'get_client')
+    def test_put(self, mock_client):
+        mock_client().call.return_value = "Put method called"
+        response = self.app.put_json('/v1.0/quota',
                                      headers={'X-Tenant-Id': 'tenid'})
         self.assertEqual(response.status_int, 200)
-        self.assertIn('## put call ##', response)
-        self.assertIn('jobdaemon', response)
+        self.assertIn("Put method called", str(response.text))
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
-    def test_delete(self):
-        response = self.app.delete('/v1.0/helloworld',
+    @mock.patch.object(rpc, 'get_client')
+    def test_delete(self, mock_client):
+        response = self.app.delete('/v1.0/quota',
                                    headers={'X-Tenant-Id': 'tenid'})
         self.assertEqual(response.status_int, 200)
-        self.assertIn('cast example', response)
-        self.assertIn('check the log produced by jobdaemon', response)
+        self.assertIn("cast example", json.loads(response.text))
 
 
-class TestHelloworldContext(KBFunctionalTest):
-
+class TestQuotaManagerContext(KBFunctionalTest):
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
-    @patch.object(helloworld.HelloWorldController, '_delete_response',
+    @patch.object(quota_manager.QuotaManagerController, '_delete_response',
                   new=fake_delete_response)
     def test_context_set_in_request(self):
-        response = self.app.delete('/v1.0/helloworld',
+        response = self.app.delete('/v1.0/quota',
                                    headers={'X_Auth_Token': 'a-token',
                                             'X_TENANT_ID': 't-id',
                                             'X_USER_ID': 'u-id',
@@ -271,12 +216,8 @@ class TestErrors(KBFunctionalTest):
         self.assertEqual(response.status_int, 404)
 
     @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_call',
-                  new=fake_say_hello_world_call)
-    @patch.object(jdrpcapi.JobDaemonAPI, 'say_hello_world_cast',
-                  new=fake_say_hello_world_cast)
     def test_bad_method(self):
-        response = self.app.patch('/v1.0/helloworld/123.json',
+        response = self.app.patch('/v1.0/quota/123.json',
                                   expect_errors=True)
         self.assertEqual(response.status_int, 405)
 

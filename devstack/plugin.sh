@@ -67,32 +67,19 @@ function configure_kingbird_api {
 }
 
 
-function configure_kingbird_JD {
-    echo "Configuring kingbird jobdaemon service"
+function configure_kingbird_engine {
+    echo "Configuring kingbird engine service"
 
-    if is_service_enabled kb-jd ; then
-        cp -p $KINGBIRD_DIR/etc/jobworker.conf $KINGBIRD_JD_CONF
-        iniset $KINGBIRD_JD_CONF DEFAULT debug $ENABLE_DEBUG_LOG_LEVEL
-        iniset $KINGBIRD_JD_CONF DEFAULT verbose True
-        iniset $KINGBIRD_JD_CONF DEFAULT use_syslog $SYSLOG
+    if is_service_enabled kb-engine ; then
+        cp -p $KINGBIRD_DIR/etc/engine.conf $KINGBIRD_ENGINE_CONF
+        iniset $KINGBIRD_ENGINE_CONF DEFAULT debug $ENABLE_DEBUG_LOG_LEVEL
+        iniset $KINGBIRD_ENGINE_CONF DEFAULT verbose True
+        iniset $KINGBIRD_ENGINE_CONF DEFAULT use_syslog $SYSLOG
 
-        setup_colorized_logging $KINGBIRD_JD_CONF DEFAULT
+        setup_colorized_logging $KINGBIRD_ENIGNE_CONF DEFAULT
     fi
 }
 
-
-function configure_kingbird_JW {
-    echo "Configuring kingbird jobdworker service"
-
-    if is_service_enabled kb-jw ; then
-        cp -p $KINGBIRD_DIR/etc/jobdaemon.conf $KINGBIRD_JW_CONF
-        iniset $KINGBIRD_JW_CONF DEFAULT debug $ENABLE_DEBUG_LOG_LEVEL
-        iniset $KINGBIRD_JW_CONF DEFAULT verbose True
-        iniset $KINGBIRD_JW_CONF DEFAULT use_syslog $SYSLOG
-
-        setup_colorized_logging $KINGBIRD_JW_CONF DEFAULT
-    fi
-}
 
 if [[ "$Q_ENABLE_KINGBIRD" == "True" ]]; then
     if [[ "$1" == "stack" && "$2" == "pre-install" ]]; then
@@ -109,8 +96,7 @@ if [[ "$Q_ENABLE_KINGBIRD" == "True" ]]; then
         sudo install -d -o $STACK_USER -m 755 $KINGBIRD_CONF_DIR
 
         configure_kingbird_api
-        configure_kingbird_JD
-        configure_kingbird_JW
+        configure_kingbird_engine
 
         echo export PYTHONPATH=\$PYTHONPATH:$KINGBIRD_DIR >> $RC_DIR/.localrc.auto
 
@@ -120,12 +106,8 @@ if [[ "$Q_ENABLE_KINGBIRD" == "True" ]]; then
     elif [[ "$1" == "stack" && "$2" == "extra" ]]; then
         echo_summary "Initializing Kingbird Service"
 
-        if is_service_enabled kb-jw; then
-            run_process kb-jw "python $KINGBIRD_JW_SERVICE --config-file=$KINGBIRD_JW_CONF"
-        fi
-
-        if is_service_enabled kb-jd; then
-            run_process kb-jd "python $KINGBIRD_JD_SERVICE --config-file=$KINGBIRD_JD_CONF"
+        if is_service_enabled kb-engine; then
+            run_process kb-engine "python $KINGBIRD_ENGINE --config-file=$KINGBIRD_ENGINE_CONF"
         fi
 
         if is_service_enabled kb-api; then
@@ -138,12 +120,8 @@ if [[ "$Q_ENABLE_KINGBIRD" == "True" ]]; then
 
     if [[ "$1" == "unstack" ]]; then
 
-        if is_service_enabled kb-jw; then
-           stop_process kb-jw
-        fi
-
-        if is_service_enabled kb-jd; then
-           stop_process kb-jd
+        if is_service_enabled kb-engine; then
+           stop_process kb-engine
         fi
 
         if is_service_enabled kb-api; then

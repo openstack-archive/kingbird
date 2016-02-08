@@ -12,6 +12,7 @@
 
 from oslo_log import log
 
+from kingbird.common import consts
 from kingbird.drivers import base
 
 from novaclient import client as nv_client
@@ -22,11 +23,13 @@ API_VERSION = '2.1'
 
 class NovaClient(base.DriverBase):
     '''Nova V2.1 driver.'''
-    def __init__(self, region, **kwargs):
+    def __init__(self, region, disabled_quotas, **kwargs):
         self.nova_client = nv_client.Client(
             API_VERSION, kwargs['user_name'],
             kwargs['password'], kwargs['tenant_name'],
             kwargs['auth_url'], region_name=region)
+        self.enabled_quotas = list(set(consts.NOVA_QUOTA_FIELDS) -
+                                   set(disabled_quotas))
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''

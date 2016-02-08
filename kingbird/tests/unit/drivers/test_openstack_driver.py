@@ -17,6 +17,17 @@ from kingbird.tests import base
 from kingbird.tests import utils
 
 
+class FakeService(object):
+
+    '''Fake service class used to test service enable testcase
+
+    '''
+
+    def __init__(self, type_service, name):
+        self.type = type_service
+        self.name = name
+
+
 class TestOpenStackDriver(base.KingbirdTestCase):
     def setUp(self):
         super(TestOpenStackDriver, self).setUp()
@@ -132,3 +143,47 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         self.assertEqual(os_driver_2.cinder_client, os_driver_4.cinder_client)
         self.assertEqual(os_driver_2.neutron_client,
                          os_driver_4.neutron_client)
+
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_get_disabled_quotas(self, mock_cinder_client,
+                                 mock_network_client, mock_nova_client,
+                                 mock_keystone_client):
+        input_disable_quotas = ["floatingip", "security_group",
+                                "security_group_rule"]
+        os_driver = sdk.OpenStackDriver('fake_region9')
+        output_disabled_quotas = os_driver._get_disabled_quotas('fake_region9')
+        self.assertIn(input_disable_quotas[0], output_disabled_quotas)
+        self.assertIn(input_disable_quotas[1], output_disabled_quotas)
+        self.assertIn(input_disable_quotas[2], output_disabled_quotas)
+
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_is_service_enabled(self, mock_cinder_client,
+                                mock_network_client, mock_nova_client,
+                                mock_keystone):
+        service = FakeService('network', 'neutron')
+        os_driver = sdk.OpenStackDriver('fake_region10')
+        os_driver.services_list = [service]
+        input_network_enabaled = True
+        network_enabled = os_driver._is_service_enabled('network')
+        self.assertEqual(input_network_enabaled, network_enabled)
+
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_is_extension_supported(self, mock_cinder_client,
+                                    mock_network_client, mock_nova_client,
+                                    mock_keystone):
+        input_extension = True
+        os_driver = sdk.OpenStackDriver('fake_region11')
+        sdk.OpenStackDriver.os_clients_dict['fake_region11'][
+            'extension'] = [{'alias': 'quotas'}]
+        extension_enabled = os_driver._is_extension_supported('quotas',
+                                                              'fake_region11')
+        self.assertEqual(input_extension, extension_enabled)

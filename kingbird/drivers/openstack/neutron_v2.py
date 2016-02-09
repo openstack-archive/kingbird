@@ -28,6 +28,7 @@ class NeutronClient(base.DriverBase):
             self.neutron_client = client.Client(
                 API_VERSION, session=session,
                 region_name=region)
+            self.extension_list = self.neutron_client.list_extensions()
         except exceptions.HttpException:
             raise
 

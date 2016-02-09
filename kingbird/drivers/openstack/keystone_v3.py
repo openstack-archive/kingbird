@@ -15,10 +15,7 @@
 
 from oslo_utils import importutils
 
-from keystoneclient.auth.identity import v3
-from keystoneclient import session
-from keystoneclient.v3 import client
-
+from kingbird.common.endpoint_cache import EndpointCache
 from kingbird.common import exceptions
 from kingbird.drivers import base
 
@@ -29,25 +26,18 @@ importutils.import_module('keystonemiddleware.auth_token')
 class KeystoneClient(base.DriverBase):
     '''Keystone V3 driver.'''
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         try:
-            auth = v3.Password(
-                auth_url=kwargs['auth_url'],
-                username=kwargs['user_name'],
-                password=kwargs['password'],
-                project_name=kwargs['tenant_name'],
-                project_domain_name=kwargs['project_domain'],
-                user_domain_name=kwargs['user_domain'])
-            self.session = session.Session(auth=auth)
-            self.keystone_client = client.Client(session=self.session)
+            self.endpoint_cache = EndpointCache()
+            self.session = self.endpoint_cache.admin_session
+            self.keystone_client = self.endpoint_cache.keystone_client
             self.services_list = self.keystone_client.services.list()
         except exceptions.HttpException:
             raise
 
     def get_enabled_projects(self):
         try:
-            return [current_project.id for current_project in
-                    self.keystone.projects.list() if current_project.enabled]
+            return self.endpoint_cache.get_all_enabled_projects()
         except exceptions.HttpException:
             raise
 

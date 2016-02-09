@@ -17,12 +17,6 @@ from kingbird.drivers.openstack import nova_v2
 from kingbird.tests import base
 from kingbird.tests import utils
 
-FAKE_ADMIN_CREDS = {
-    'user_name': 'fake_user',
-    'password': 'pass1234',
-    'tenant_name': 'test_tenant',
-    'auth_url': 'http://127.0.0.1:5000/v3'
-    }
 DISABLED_QUOTAS = ["floating_ips", "fixed_ips", "security_groups"]
 
 
@@ -30,10 +24,11 @@ class TestNovaClient(base.KingbirdTestCase):
     def setUp(self):
         super(TestNovaClient, self).setUp()
         self.ctx = utils.dummy_context()
+        self.session = 'fake_session'
 
     def test_init(self):
         nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       **FAKE_ADMIN_CREDS)
+                                       self.session)
         self.assertIsNotNone(nv_client)
         expected_quotas = list(set(consts.NOVA_QUOTA_FIELDS) -
                                set(DISABLED_QUOTAS))

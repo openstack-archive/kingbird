@@ -14,6 +14,7 @@ from oslo_log import log
 
 from cinderclient.v2 import client as ci_client
 
+from kingbird.common import exceptions
 from kingbird.drivers import base
 
 LOG = log.getLogger(__name__)
@@ -22,12 +23,15 @@ LOG = log.getLogger(__name__)
 class CinderClient(base.DriverBase):
     '''Cinder V2 driver.'''
     def __init__(self, region, **kwargs):
-        self.cinder_client = ci_client.Client(
-            auth_url=kwargs['auth_url'],
-            username=kwargs['user_name'],
-            api_key=kwargs['password'],
-            tenant_id=kwargs['tenant_id'],
-            region_name=region)
+        try:
+            self.cinder_client = ci_client.Client(
+                auth_url=kwargs['auth_url'],
+                username=kwargs['user_name'],
+                api_key=kwargs['password'],
+                tenant_id=kwargs['tenant_id'],
+                region_name=region)
+        except exceptions.HttpException:
+            raise
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''

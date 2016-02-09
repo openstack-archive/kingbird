@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import neutronclient
+import mock
 
 from kingbird.drivers.openstack import neutron_v2
 from kingbird.tests import base
@@ -23,18 +23,32 @@ FAKE_ADMIN_CREDS = {
     'auth_url': 'http://127.0.0.1:5000/v3'
     }
 
+FAKE_EXTENSIONS = {
+    'extensions': ['fake_extension1',
+                   'fake_extension2']
+    }
+
 
 class TestNeutronClient(base.KingbirdTestCase):
     def setUp(self):
         super(TestNeutronClient, self).setUp()
         self.ctx = utils.dummy_context()
 
-    def test_init(self):
+    @mock.patch.object(neutron_v2, 'NeutronClient')
+    def test_init(self, mock_neutron):
+        mock_neutron().extension_list = FAKE_EXTENSIONS
         neutron_client = neutron_v2.NeutronClient('fake_region',
                                                   **FAKE_ADMIN_CREDS)
-        self.assertIsNotNone(neutron_client)
-        self.assertIsInstance(neutron_client.neutron_client,
-                              neutronclient.v2_0.client.Client)
+        self.assertEqual(FAKE_EXTENSIONS,
+                         neutron_client.extension_list)
+
+    @mock.patch.object(neutron_v2, 'NeutronClient')
+    def test_is_extension_supported(self, mock_neutron):
+        neutron_client = neutron_v2.NeutronClient('fake_region',
+                                                  **FAKE_ADMIN_CREDS)
+        mock_neutron().is_extension_supported.return_value = True
+        extension_enabled = neutron_client.is_extension_supported('quotas')
+        self.assertEqual(extension_enabled, True)
 
     def test_get_resource_usages(self):
         pass

@@ -38,6 +38,8 @@ class TestKeystoneClient(base.KingbirdTestCase):
         self.assertIsNotNone(key_client.keystone_client)
         self.assertIsInstance(key_client.keystone_client,
                               keystoneclient.v3.client.Client)
+        self.assertIsInstance(key_client.session,
+                              keystoneclient.session.Session)
 
     @mock.patch.object(keystone_v3, 'KeystoneClient')
     def test_get_enabled_projects(self, mock_key_client):

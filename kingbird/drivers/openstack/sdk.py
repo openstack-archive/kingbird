@@ -105,14 +105,16 @@ class OpenStackDriver(object):
         else:
             # Create new objects and cache them
             LOG.debug(_("Creating fresh OS Clients objects"))
-            self.cinder_client = CinderClient(region_name, **admin_kwargs)
-            self.neutron_client = NeutronClient(region_name, **admin_kwargs)
+            self.cinder_client = CinderClient(region_name,
+                                              self.keystone_client.session)
+            self.neutron_client = NeutronClient(region_name,
+                                                self.keystone_client.session)
             OpenStackDriver.os_clients_dict[region_name][
                 'extension'] = self.neutron_client.neutron_client.\
                 list_extensions()
             self.disabled_quotas = self._get_disabled_quotas(region_name)
             self.nova_client = NovaClient(region_name, self.disabled_quotas,
-                                          **admin_kwargs)
+                                          self.keystone_client.session)
             OpenStackDriver.os_clients_dict[
                 region_name] = collections.defaultdict(dict)
             OpenStackDriver.os_clients_dict[region_name][
@@ -204,7 +206,7 @@ class OpenStackDriver(object):
 
     def _is_extension_supported(self, extension, region):
         for current_extension in OpenStackDriver.os_clients_dict[
-            region]['extension']:
+            region]['extension']['extensions']:
             if extension in current_extension['alias']:
                 return True
         return False

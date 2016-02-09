@@ -16,21 +16,15 @@ from kingbird.drivers.openstack import cinder_v2
 from kingbird.tests import base
 from kingbird.tests import utils
 
-FAKE_ADMIN_CREDS = {
-    'user_name': 'fake_user',
-    'password': 'pass1234',
-    'tenant_id': '392847',
-    'auth_url': 'http://127.0.0.1:5000/v3'
-    }
-
 
 class TestCinderClient(base.KingbirdTestCase):
     def setUp(self):
         super(TestCinderClient, self).setUp()
         self.ctx = utils.dummy_context()
+        self.session = 'fake_session'
 
     def test_init(self):
-        ci_client = cinder_v2.CinderClient('fake_region', **FAKE_ADMIN_CREDS)
+        ci_client = cinder_v2.CinderClient('fake_region', self.session)
         self.assertIsNotNone(ci_client)
         self.assertIsInstance(ci_client.cinder_client,
                               cinderclient.v2.client.Client)

@@ -183,7 +183,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         input_extension = True
         os_driver = sdk.OpenStackDriver('fake_region11')
         sdk.OpenStackDriver.os_clients_dict['fake_region11'][
-            'extension'] = [{'alias': 'quotas'}]
+            'extension'] = {'extensions': [{'alias': 'quotas'}]}
         extension_enabled = os_driver._is_extension_supported('quotas',
                                                               'fake_region11')
         self.assertEqual(input_extension, extension_enabled)

@@ -17,6 +17,7 @@ import collections
 
 from oslo_log import log
 
+from kingbird.common import consts
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.common.i18n import _LE
@@ -33,18 +34,19 @@ LOG = log.getLogger(__name__)
 
 admin_creds_opts = [
     cfg.StrOpt('auth_url',
-               default='http://127.0.0.1:5000/v3',
                help='keystone authorization url'),
     cfg.StrOpt('identity_url',
-               default='http://127.0.0.1:35357/v3',
                help='keystone service url'),
     cfg.StrOpt('admin_username',
+               default='admin',
                help='username of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
     cfg.StrOpt('admin_password',
+               default='admin',
                help='password of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
     cfg.StrOpt('admin_tenant',
+               default='admin',
                help='tenant name of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
     cfg.StrOpt('admin_tenant_id',
@@ -71,6 +73,21 @@ class OpenStackDriver(object):
     def __init__(self, region_name):
         # Check if objects are cached and try to use those
         self.region_name = region_name
+        self.services_list = []
+        admin_kwargs = {
+            'user_name': cfg.CONF.admin_creds.admin_username,
+            'password': cfg.CONF.admin_creds.admin_password,
+            'tenant_name': cfg.CONF.admin_creds.admin_tenant,
+            'auth_url': cfg.CONF.admin_creds.auth_url,
+            'tenant_id': cfg.CONF.admin_creds.admin_tenant_id,
+            'project_domain':
+                cfg.CONF.admin_creds.admin_tenant_domain_name,
+            'user_domain': cfg.CONF.admin_creds.admin_user_domain_name
+            }
+        if 'keystone' in OpenStackDriver.os_clients_dict:
+            self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
+        else:
+            self.keystone_client = KeystoneClient(**admin_kwargs)
         if region_name in OpenStackDriver.os_clients_dict:
             LOG.info(_LI('Using cached OS client objects'))
             self.nova_client = OpenStackDriver.os_clients_dict[
@@ -82,16 +99,11 @@ class OpenStackDriver(object):
         else:
             # Create new objects and cache them
             LOG.debug(_("Creating fresh OS Clients objects"))
-            admin_kwargs = {
-                'user_name': cfg.CONF.admin_creds.admin_username,
-                'password': cfg.CONF.admin_creds.admin_password,
-                'tenant_name': cfg.CONF.admin_creds.admin_tenant,
-                'auth_url': cfg.CONF.admin_creds.auth_url,
-                'tenant_id': cfg.CONF.admin_creds.admin_tenant_id
-                }
-            self.nova_client = NovaClient(region_name, **admin_kwargs)
             self.cinder_client = CinderClient(region_name, **admin_kwargs)
             self.neutron_client = NeutronClient(region_name, **admin_kwargs)
+            self.disabled_quotas = self._get_disabled_quotas(region_name)
+            self.nova_client = NovaClient(region_name, self.disabled_quotas,
+                                          **admin_kwargs)
             OpenStackDriver.os_clients_dict[
                 region_name] = collections.defaultdict(dict)
             OpenStackDriver.os_clients_dict[region_name][
@@ -100,11 +112,6 @@ class OpenStackDriver(object):
                 'cinder'] = self.cinder_client
             OpenStackDriver.os_clients_dict[region_name][
                 'neutron'] = self.neutron_client
-        if 'keystone' in OpenStackDriver.os_clients_dict:
-            self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
-        else:
-            self.keystone_client = KeystoneClient(**admin_kwargs)
-            OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
 
     def get_enabled_projects(self):
         try:
@@ -152,3 +159,30 @@ class OpenStackDriver(object):
             del OpenStackDriver.os_clients_dict[self.region_name]
         except Exception as exception:
             LOG.error(_LE('Error Occurred: %s'), exception.message)
+
+    def _get_disabled_quotas(self, region):
+        # Cinder
+        disabled_quotas = []
+        if not self.keystone_client.is_service_enabled('volume'):
+            disabled_quotas.extend(consts.CINDER_QUOTA_FIELDS)
+        # Neutron
+        if not self.keystone_client.is_service_enabled('network'):
+            disabled_quotas.extend(consts.NEUTRON_QUOTA_FIELDS)
+        else:
+            # Remove the nova network quotas
+            disabled_quotas.extend(['floating_ips', 'fixed_ips'])
+            if self.neutron_client.is_extension_supported('security-group'):
+                # If Neutron security group is supported, disable Nova quotas
+                disabled_quotas.extend(['security_groups',
+                                        'security_group_rules'])
+            else:
+                # If Nova security group is used, disable Neutron quotas
+                disabled_quotas.extend(['security_group',
+                                        'security_group_rule'])
+            try:
+                if not self.neutron_client.is_extension_supported('quotas'):
+                    disabled_quotas.extend(consts.NEUTRON_QUOTA_FIELDS)
+            except Exception:
+                LOG.exception("There was an error checking if the Neutron "
+                              "quotas extension is enabled.")
+        return disabled_quotas

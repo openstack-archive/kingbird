@@ -30,6 +30,7 @@ class NeutronClient(base.DriverBase):
             tenant_name=kwargs['tenant_name'],
             auth_url=kwargs['auth_url'],
             region_name=region)
+        self.extension_list = self.neutron_client.list_extensions()
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''
@@ -42,3 +43,9 @@ class NeutronClient(base.DriverBase):
     def delete_quota_limits(self, project_id):
         '''Delete/Reset the limits'''
         pass
+
+    def is_extension_supported(self, extension):
+        for current_extension in self.extension_list['extensions']:
+            if extension in current_extension['alias']:
+                return True
+        return False

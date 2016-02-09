@@ -12,8 +12,6 @@
 
 import mock
 
-import keystoneclient
-
 from kingbird.drivers.openstack import keystone_v3
 from kingbird.tests import base
 from kingbird.tests import utils
@@ -22,8 +20,15 @@ FAKE_ADMIN_CREDS = {
     'user_name': 'fake_user',
     'password': 'pass1234',
     'tenant_name': 'test_tenant',
-    'auth_url': 'http://127.0.0.1:5000/v3'
+    'auth_url': 'http://127.0.0.1:5000/v3',
+    'project_domain': 'domain1',
+    'user_domain': 'user_dom'
     }
+
+FAKE_SERVICE = [
+    'endpoint_volume',
+    'endpoint_network'
+    ]
 
 
 class TestKeystoneClient(base.KingbirdTestCase):
@@ -31,11 +36,12 @@ class TestKeystoneClient(base.KingbirdTestCase):
         super(TestKeystoneClient, self).setUp()
         self.ctx = utils.dummy_context()
 
-    def test_init(self):
+    @mock.patch.object(keystone_v3, 'KeystoneClient')
+    def test_init(self, mock_keystone):
+        mock_keystone().services_list = FAKE_SERVICE
         key_client = keystone_v3.KeystoneClient(**FAKE_ADMIN_CREDS)
-        self.assertIsNotNone(key_client.keystone_client)
-        self.assertIsInstance(key_client.keystone_client,
-                              keystoneclient.v3.client.Client)
+        self.assertEqual(key_client.services_list,
+                         FAKE_SERVICE)
 
     @mock.patch.object(keystone_v3, 'KeystoneClient')
     def test_get_enabled_projects(self, mock_key_client):
@@ -46,3 +52,10 @@ class TestKeystoneClient(base.KingbirdTestCase):
         except Exception:
             raised = True
         self.assertFalse(raised, 'get_enabled_projects Failed')
+
+    @mock.patch.object(keystone_v3, 'KeystoneClient')
+    def test_is_service_enabled(self, mock_keystone):
+        key_client = keystone_v3.KeystoneClient(**FAKE_ADMIN_CREDS)
+        mock_keystone().is_service_enabled.return_value = True
+        network_enabled = key_client.is_service_enabled('network')
+        self.assertEqual(network_enabled, True)

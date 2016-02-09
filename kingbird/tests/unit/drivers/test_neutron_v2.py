@@ -11,17 +11,12 @@
 # under the License.
 
 import mock
+import neutronclient
 
 from kingbird.drivers.openstack import neutron_v2
 from kingbird.tests import base
 from kingbird.tests import utils
 
-FAKE_ADMIN_CREDS = {
-    'user_name': 'fake_user',
-    'password': 'pass1234',
-    'tenant_name': 'test_tenant',
-    'auth_url': 'http://127.0.0.1:5000/v3'
-    }
 
 FAKE_EXTENSIONS = {
     'extensions': ['fake_extension1',
@@ -33,22 +28,30 @@ class TestNeutronClient(base.KingbirdTestCase):
     def setUp(self):
         super(TestNeutronClient, self).setUp()
         self.ctx = utils.dummy_context()
+        self.session = 'fake_session'
 
-    @mock.patch.object(neutron_v2, 'NeutronClient')
-    def test_init(self, mock_neutron):
-        mock_neutron().extension_list = FAKE_EXTENSIONS
+    def test_init(self):
         neutron_client = neutron_v2.NeutronClient('fake_region',
-                                                  **FAKE_ADMIN_CREDS)
-        self.assertEqual(FAKE_EXTENSIONS,
-                         neutron_client.extension_list)
+                                                  self.session)
+        self.assertIsNotNone(neutron_client)
+        self.assertIsInstance(neutron_client.neutron_client,
+                              neutronclient.v2_0.client.Client)
 
     @mock.patch.object(neutron_v2, 'NeutronClient')
     def test_is_extension_supported(self, mock_neutron):
         neutron_client = neutron_v2.NeutronClient('fake_region',
-                                                  **FAKE_ADMIN_CREDS)
+                                                  self.session)
         mock_neutron().is_extension_supported.return_value = True
         extension_enabled = neutron_client.is_extension_supported('quotas')
         self.assertEqual(extension_enabled, True)
+
+    @mock.patch.object(neutron_v2, 'NeutronClient')
+    def test_extension_list(self, mock_neutron):
+        mock_neutron().extension_list = FAKE_EXTENSIONS
+        neutron_client = neutron_v2.NeutronClient('fake_region',
+                                                  self.session)
+        self.assertEqual(FAKE_EXTENSIONS,
+                         neutron_client.extension_list)
 
     def test_get_resource_usages(self):
         pass

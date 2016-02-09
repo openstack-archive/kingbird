@@ -23,16 +23,11 @@ API_VERSION = '2.0'
 
 class NeutronClient(base.DriverBase):
     '''Neutron V2 driver.'''
-    def __init__(self, region, **kwargs):
+    def __init__(self, region, session):
         try:
             self.neutron_client = client.Client(
-                API_VERSION,
-                username=kwargs['user_name'],
-                password=kwargs['password'],
-                tenant_name=kwargs['tenant_name'],
-                auth_url=kwargs['auth_url'],
+                API_VERSION, session=session,
                 region_name=region)
-            self.extension_list = self.neutron_client.list_extensions()
         except exceptions.HttpException:
             raise
 

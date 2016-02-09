@@ -38,8 +38,8 @@ class KeystoneClient(base.DriverBase):
                 project_name=kwargs['tenant_name'],
                 project_domain_name=kwargs['project_domain'],
                 user_domain_name=kwargs['user_domain'])
-            sess = session.Session(auth=auth)
-            self.keystone_client = client.Client(session=sess)
+            self.session = session.Session(auth=auth)
+            self.keystone_client = client.Client(session=self.session)
             self.services_list = self.keystone_client.services.list()
         except exceptions.HttpException:
             raise

@@ -88,6 +88,9 @@ class OpenStackDriver(object):
             self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
         else:
             self.keystone_client = KeystoneClient(**admin_kwargs)
+            OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
+        self.services_list = self.keystone_client.keystone_client.\
+            services.list()
         if region_name in OpenStackDriver.os_clients_dict:
             LOG.info(_LI('Using cached OS client objects'))
             self.nova_client = OpenStackDriver.os_clients_dict[
@@ -99,11 +102,16 @@ class OpenStackDriver(object):
         else:
             # Create new objects and cache them
             LOG.debug(_("Creating fresh OS Clients objects"))
-            self.cinder_client = CinderClient(region_name, **admin_kwargs)
-            self.neutron_client = NeutronClient(region_name, **admin_kwargs)
+            self.cinder_client = CinderClient(region_name,
+                                              self.keystone_client.session)
+            self.neutron_client = NeutronClient(region_name,
+                                                self.keystone_client.session)
+            OpenStackDriver.os_clients_dict[region_name][
+                'extension'] = self.neutron_client.neutron_client.\
+                list_extensions()
             self.disabled_quotas = self._get_disabled_quotas(region_name)
             self.nova_client = NovaClient(region_name, self.disabled_quotas,
-                                          **admin_kwargs)
+                                          self.keystone_client.session)
             OpenStackDriver.os_clients_dict[
                 region_name] = collections.defaultdict(dict)
             OpenStackDriver.os_clients_dict[region_name][

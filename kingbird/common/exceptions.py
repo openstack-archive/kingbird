@@ -95,3 +95,7 @@ class ConnectionRefused(KingbirdException):
 
 class TimeOut(KingbirdException):
     message = _("Timeout when connecting to OpenStack Service")
+
+
+class InternalError(KingbirdException):
+    message = _("Error when performing operation")

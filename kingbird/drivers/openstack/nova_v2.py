@@ -31,7 +31,7 @@ class NovaClient(base.DriverBase):
                                              region_name=region)
             self.enabled_quotas = list(set(consts.NOVA_QUOTA_FIELDS) -
                                        set(disabled_quotas))
-        except exceptions.HttpException:
+        except exceptions.ServiceUnavailable:
             raise
 
     def get_resource_usages(self, project_id):

@@ -28,7 +28,8 @@ class NeutronClient(base.DriverBase):
             self.neutron_client = client.Client(
                 API_VERSION, session=session,
                 region_name=region)
-        except exceptions.HttpException:
+            self.extension_list = self.neutron_client.list_extensions()
+        except exceptions.ServiceUnavailable:
             raise
 
     def get_resource_usages(self, project_id):

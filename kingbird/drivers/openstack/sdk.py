@@ -28,42 +28,8 @@ from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient
 
-from oslo_config import cfg
 
 LOG = log.getLogger(__name__)
-
-admin_creds_opts = [
-    cfg.StrOpt('auth_url',
-               help='keystone authorization url'),
-    cfg.StrOpt('identity_url',
-               help='keystone service url'),
-    cfg.StrOpt('admin_username',
-               default='admin',
-               help='username of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_password',
-               default='admin',
-               help='password of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant',
-               default='admin',
-               help='tenant name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant_id',
-               help='tenant name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_user_domain_name',
-               default='Default',
-               help='user domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant_domain_name',
-               default='Default',
-               help='tenant domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True')
-]
-admin_creds_opt_group = cfg.OptGroup('admin_creds')
-cfg.CONF.register_group(admin_creds_opt_group)
-cfg.CONF.register_opts(admin_creds_opts, group=admin_creds_opt_group)
 
 
 class OpenStackDriver(object):
@@ -73,24 +39,11 @@ class OpenStackDriver(object):
     def __init__(self, region_name):
         # Check if objects are cached and try to use those
         self.region_name = region_name
-        self.services_list = []
-        admin_kwargs = {
-            'user_name': cfg.CONF.admin_creds.admin_username,
-            'password': cfg.CONF.admin_creds.admin_password,
-            'tenant_name': cfg.CONF.admin_creds.admin_tenant,
-            'auth_url': cfg.CONF.admin_creds.auth_url,
-            'tenant_id': cfg.CONF.admin_creds.admin_tenant_id,
-            'project_domain':
-                cfg.CONF.admin_creds.admin_tenant_domain_name,
-            'user_domain': cfg.CONF.admin_creds.admin_user_domain_name
-            }
         if 'keystone' in OpenStackDriver.os_clients_dict:
             self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
         else:
-            self.keystone_client = KeystoneClient(**admin_kwargs)
+            self.keystone_client = KeystoneClient()
             OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
-        self.services_list = self.keystone_client.keystone_client.\
-            services.list()
         if region_name in OpenStackDriver.os_clients_dict:
             LOG.info(_LI('Using cached OS client objects'))
             self.nova_client = OpenStackDriver.os_clients_dict[
@@ -106,9 +59,6 @@ class OpenStackDriver(object):
                                               self.keystone_client.session)
             self.neutron_client = NeutronClient(region_name,
                                                 self.keystone_client.session)
-            OpenStackDriver.os_clients_dict[region_name][
-                'extension'] = self.neutron_client.neutron_client.\
-                list_extensions()
             self.disabled_quotas = self._get_disabled_quotas(region_name)
             self.nova_client = NovaClient(region_name, self.disabled_quotas,
                                           self.keystone_client.session)

@@ -27,7 +27,7 @@ class CinderClient(base.DriverBase):
         try:
             self.cinder_client = client.Client(API_VERSION, session=session,
                                                region_name=region)
-        except exceptions.HttpException:
+        except exceptions.ServiceUnavailable:
             raise
 
     def get_resource_usages(self, project_id):

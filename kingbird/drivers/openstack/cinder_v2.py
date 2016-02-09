@@ -12,22 +12,19 @@
 
 from oslo_log import log
 
-from cinderclient.v2 import client as ci_client
+from cinderclient import client
 
 from kingbird.drivers import base
 
 LOG = log.getLogger(__name__)
+API_VERSION = 2
 
 
 class CinderClient(base.DriverBase):
     '''Cinder V2 driver.'''
-    def __init__(self, region, **kwargs):
-        self.cinder_client = ci_client.Client(
-            auth_url=kwargs['auth_url'],
-            username=kwargs['user_name'],
-            api_key=kwargs['password'],
-            tenant_id=kwargs['tenant_id'],
-            region_name=region)
+    def __init__(self, region, session):
+        self.cinder_client = client.Client(API_VERSION, session=session,
+                                           region_name=region)
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''

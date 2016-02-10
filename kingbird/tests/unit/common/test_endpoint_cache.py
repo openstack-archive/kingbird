@@ -32,6 +32,12 @@ FAKE_CINDER_URL_2 = 'fake_url_cinder_2'
 FAKE_NEUTRON_URL_1 = 'fake_url_neutron_1'
 
 
+class Project(object):
+    def __init__(self, proj_name, id):
+        self.proj_name = proj_name
+        self.id = id
+
+
 class EndpointCacheTest(base.KingbirdTestCase):
     def setUp(self):
         super(EndpointCacheTest, self).setUp()
@@ -85,3 +91,14 @@ class EndpointCacheTest(base.KingbirdTestCase):
         region_list = cache.get_all_regions()
         self.assertIn(FAKE_REGION, region_list)
         self.assertIn(FAKE_REGION_2, region_list)
+
+    @patch.object(endpoint_cache, 'EndpointCache')
+    def test_get_all_enabled_projects(self, mock_cache_client):
+        p1 = Project('proj1', '123')
+        p2 = Project('proj2', '456')
+        mock_cache_client().get_all_enabled_projects.return_value =\
+            [p1.id, p2.id]
+        cache = endpoint_cache.EndpointCache()
+        project_list = cache.get_all_enabled_projects()
+        self.assertIn(p1.id, project_list)
+        self.assertIn(p2.id, project_list)

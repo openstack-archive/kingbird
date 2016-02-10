@@ -23,10 +23,8 @@ from oslo_config import cfg
 
 cache_opts = [
     cfg.StrOpt('auth_url',
-               default='http://127.0.0.1:5000/v3',
                help='keystone authorization url'),
     cfg.StrOpt('identity_url',
-               default='http://127.0.0.1:35357/v3',
                help='keystone service url'),
     cfg.StrOpt('admin_username',
                help='username of admin account, needed when'
@@ -54,10 +52,12 @@ cfg.CONF.register_opts(cache_opts, group=cache_opt_group)
 class EndpointCache(object):
     def __init__(self):
         self.endpoint_map = collections.defaultdict(dict)
+        self.admin_session = None
+        self.keystone_client = None
         self._update_endpoints()
 
     @staticmethod
-    def _get_admin_token():
+    def _get_admin_token(self):
         auth = auth_identity.Password(
             auth_url=cfg.CONF.cache.identity_url,
             username=cfg.CONF.cache.admin_username,
@@ -66,14 +66,16 @@ class EndpointCache(object):
             user_domain_name=cfg.CONF.cache.admin_user_domain_name,
             project_domain_name=cfg.CONF.cache.admin_tenant_domain_name)
         sess = session.Session(auth=auth)
+        self.admin_session = sess
         return sess.get_token()
 
     @staticmethod
-    def _get_endpoint_from_keystone():
+    def _get_endpoint_from_keystone(self):
         auth = token_endpoint.Token(cfg.CONF.cache.identity_url,
-                                    EndpointCache._get_admin_token())
+                                    EndpointCache._get_admin_token(self))
         sess = session.Session(auth=auth)
         cli = keystone_client.Client(session=sess)
+        self.keystone_client = cli
 
         service_id_name_map = {}
         for service in cli.services.list():
@@ -105,7 +107,7 @@ class EndpointCache(object):
             return self.endpoint_map[region][service]
 
     def _update_endpoints(self):
-        endpoint_map = EndpointCache._get_endpoint_from_keystone()
+        endpoint_map = EndpointCache._get_endpoint_from_keystone(self)
 
         for region in endpoint_map:
             for service in endpoint_map[region]:
@@ -134,3 +136,12 @@ class EndpointCache(object):
         return: List of regions
         """
         return self.endpoint_map.keys()
+
+    def get_all_enabled_projects(self):
+        """Get project list
+
+        return: List of enabled projects
+        """
+        return [current_project.id for current_project in
+                self.keystone_client.projects.list() if
+                current_project.enabled]

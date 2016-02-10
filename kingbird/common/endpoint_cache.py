@@ -21,32 +21,9 @@ from keystoneclient import session
 from keystoneclient.v3 import client as keystone_client
 from oslo_config import cfg
 
-cache_opts = [
-    cfg.StrOpt('auth_url',
-               help='keystone authorization url'),
-    cfg.StrOpt('identity_url',
-               help='keystone service url'),
-    cfg.StrOpt('admin_username',
-               help='username of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_password',
-               help='password of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant',
-               help='tenant name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_user_domain_name',
-               default='Default',
-               help='user domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant_domain_name',
-               default='Default',
-               help='tenant domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True')
-]
-cache_opt_group = cfg.OptGroup('cache')
-cfg.CONF.register_group(cache_opt_group)
-cfg.CONF.register_opts(cache_opts, group=cache_opt_group)
+from kingbird.common import config
+
+config.register_options()
 
 
 class EndpointCache(object):

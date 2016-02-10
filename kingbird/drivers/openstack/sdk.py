@@ -28,45 +28,8 @@ from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient
 
-from oslo_config import cfg
 
 LOG = log.getLogger(__name__)
-
-admin_creds_opts = [
-    cfg.StrOpt('auth_url',
-               default='http://172.16.73.126:35357/v3',
-               help='keystone authorization url'),
-    cfg.StrOpt('identity_url',
-               default='http://172.16.73.126:35357',
-               help='keystone service url'),
-    cfg.StrOpt('admin_username',
-               default='admin',
-               help='username of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_password',
-               default='admin',
-               help='password of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant',
-               default='admin',
-               help='tenant name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant_id',
-               default='b7efb082377042c084ac145d1ad82200',
-               help='tenant name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_user_domain_name',
-               default='Default',
-               help='user domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant_domain_name',
-               default='Default',
-               help='tenant domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True')
-]
-admin_creds_opt_group = cfg.OptGroup('admin_creds')
-cfg.CONF.register_group(admin_creds_opt_group)
-cfg.CONF.register_opts(admin_creds_opts, group=admin_creds_opt_group)
 
 
 class OpenStackDriver(object):
@@ -77,20 +40,10 @@ class OpenStackDriver(object):
         # Check if objects are cached and try to use those
         self.region_name = region_name
         self.services_list = []
-        admin_kwargs = {
-            'user_name': cfg.CONF.admin_creds.admin_username,
-            'password': cfg.CONF.admin_creds.admin_password,
-            'tenant_name': cfg.CONF.admin_creds.admin_tenant,
-            'auth_url': cfg.CONF.admin_creds.auth_url,
-            'tenant_id': cfg.CONF.admin_creds.admin_tenant_id,
-            'project_domain':
-                cfg.CONF.admin_creds.admin_tenant_domain_name,
-            'user_domain': cfg.CONF.admin_creds.admin_user_domain_name
-            }
         if 'keystone' in OpenStackDriver.os_clients_dict:
             self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
         else:
-            self.keystone_client = KeystoneClient(**admin_kwargs)
+            self.keystone_client = KeystoneClient()
             OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
         self.services_list = self.keystone_client.keystone_client.\
             services.list()

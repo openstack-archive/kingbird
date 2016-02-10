@@ -26,8 +26,10 @@ from oslo_log import log as logging
 
 import logging as std_logging
 
+from kingbird.common import config
 
 CONF = cfg.CONF
+config.register_options()
 LOG = logging.getLogger(__name__)
 
 from kingbird.common.i18n import _LI

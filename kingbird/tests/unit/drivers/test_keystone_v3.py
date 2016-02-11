@@ -1,3 +1,5 @@
+# Copyright 2016 Ericsson AB
+
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
@@ -22,7 +24,9 @@ FAKE_ADMIN_CREDS = {
     'user_name': 'fake_user',
     'password': 'pass1234',
     'tenant_name': 'test_tenant',
-    'auth_url': 'http://127.0.0.1:5000/v3'
+    'auth_url': 'http://127.0.0.1:5000/v3',
+    'project_domain': 'domain1',
+    'user_domain': 'user_dom'
     }
 
 

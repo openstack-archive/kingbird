@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import mock
 from mock import patch
 
@@ -28,7 +26,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from kingbird.api import apicfg
-from kingbird.api.controllers import quota_manager
 from kingbird.common import rpc
 from kingbird.tests import base
 
@@ -149,64 +146,6 @@ class TestV1Controller(KBFunctionalTest):
     @patch.object(rpc, 'get_client', new=mock.Mock())
     def test_head(self):
         self._test_method_returns_405('head')
-
-
-class TestQuotaManager(KBFunctionalTest):
-
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    def test_get(self):
-        response = self.app.get('/v1.0/quota_manager/?arg=tenant_1')
-        self.assertEqual(response.status_int, 200)
-        self.assertIn('tenant_1', json.loads(response.text).values())
-
-    @mock.patch.object(rpc, 'get_client')
-    def test_post(self, mock_client):
-        mock_client().call.return_value = "Post method called"
-        response = self.app.post_json('/v1.0/quota_manager',
-                                      headers={'X-Tenant-Id': 'tenid'})
-        self.assertEqual(response.status_int, 200)
-        self.assertIn("Post method called", str(response.text))
-
-    @mock.patch.object(rpc, 'get_client')
-    def test_put(self, mock_client):
-        mock_client().call.return_value = "Put method called"
-        response = self.app.put_json('/v1.0/quota_manager',
-                                     headers={'X-Tenant-Id': 'tenid'})
-        self.assertEqual(response.status_int, 200)
-        self.assertIn("Put method called", str(response.text))
-
-    @mock.patch.object(rpc, 'get_client')
-    def test_delete(self, mock_client):
-        response = self.app.delete('/v1.0/quota_manager',
-                                   headers={'X-Tenant-Id': 'tenid'})
-        self.assertEqual(response.status_int, 200)
-        self.assertIn("cast example", json.loads(response.text))
-
-
-class TestQuotaManagerContext(KBFunctionalTest):
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(quota_manager.QuotaManagerController, '_delete_response',
-                  new=fake_delete_response)
-    def test_context_set_in_request(self):
-        response = self.app.delete('/v1.0/quota_manager',
-                                   headers={'X_Auth_Token': 'a-token',
-                                            'X_TENANT_ID': 't-id',
-                                            'X_USER_ID': 'u-id',
-                                            'X_USER_NAME': 'u-name',
-                                            'X_PROJECT_NAME': 't-name',
-                                            'X_DOMAIN_ID': 'domainx',
-                                            'X_USER_DOMAIN_ID': 'd-u',
-                                            'X_PROJECT_DOMAIN_ID': 'p_d',
-                                            })
-        json_body = jsonutils.loads(response.body)
-        self.assertIn('a-token', json_body)
-        self.assertIn('t-id', json_body)
-        self.assertIn('u-id', json_body)
-        self.assertIn('u-name', json_body)
-        self.assertIn('t-name', json_body)
-        self.assertIn('domainx', json_body)
-        self.assertIn('d-u', json_body)
-        self.assertIn('p_d', json_body)
 
 
 class TestErrors(KBFunctionalTest):

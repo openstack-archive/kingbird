@@ -140,9 +140,11 @@ def quota_get_all_by_project(context, project_id):
         filter_by(project_id=project_id). \
         all()
 
-    result = {'project_id': project_id}
-    for row in rows:
-        result[row.resource] = row.hard_limit
+    result = {}
+    if rows:
+        result['project_id'] = project_id
+        for row in rows:
+            result[row.resource] = row.hard_limit
 
     return result
 

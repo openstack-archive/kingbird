@@ -21,11 +21,12 @@ from pecan import expose
 from pecan import request
 from pecan import rest
 
-import restcomm
-
+from kingbird.common import context as cntx
+from kingbird.common import exceptions
 from kingbird.common import rpc
 from kingbird.common.serializer import KingbirdSerializer as Serializer
 from kingbird.common import topics
+from kingbird.db.sqlalchemy import api as db_api
 
 CONF = cfg.CONF
 
@@ -71,50 +72,86 @@ class QuotaManagerController(rest.RestController):
         return version_cap
 
     @expose(generic=True, template='json')
-    def index(self, arg=None):
+    def index(self, **arg):
         if pecan.request.method != 'GET':
             pecan.abort(405)
 
-        context = restcomm.extract_context_from_environ()
+        context = cntx.get_admin_context()
         if context.is_admin:
-            return {'Admin call for index with project': arg}
+            if 'project_id' in arg:
+                project_id = arg['project_id']
+            else:
+                pecan.abort(404)
+            try:
+                if 'resource' in arg:
+                    result = db_api.quota_get(context, **arg)
+                    result = {'project_id': result.project_id,
+                              result.resource: result.hard_limit}
+                else:
+                    result = db_api.quota_get_all_by_project(
+                        context, project_id)
+            except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)
+            return result
         else:
             return {'Non admin call for index with project': arg}
 
     @index.when(method='PUT', template='json')
     def put(self):
-        context = restcomm.extract_context_from_environ()
-
-        payload = '## put call ##, request.body = '
-        payload = payload + request.body
-        # To illustrate RPC, below line is written. Will be replaced by
-        # DB API call for updating quota limits for a tenant
-        return self.client.call(context, 'say_hello_world_call',
-                                payload=payload)
+        updated_quota = []
+        context = cntx.get_admin_context()
+        if not request.body:
+            pecan.abort(404)
+        payload = eval(request.body)
+        try:
+            for project, resources in payload.iteritems():
+                for resource, limit in resources.iteritems():
+                    result = db_api.quota_update(
+                        context,
+                        project_id=project,
+                        resource=resource,
+                        limit=limit)
+                    result = {'project_id': result.project_id,
+                              result.resource: result.hard_limit}
+                    updated_quota.append(result)
+        except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)
+        return {'Quota Updated': updated_quota}
 
     @index.when(method='POST', template='json')
     def post(self):
-        context = restcomm.extract_context_from_environ()
-
-        payload = '## post call ##, request.body = '
-        payload = payload + request.body
-        # To illustrate RPC, below line is written. Will be replaced by
-        # DB API call for creating quota limits for a tenant
-        return self.client.call(context, 'say_hello_world_call',
-                                payload=payload)
+        quota = []
+        context = cntx.get_admin_context()
+        if not request.body:
+            pecan.abort(404)
+        payload = eval(request.body)
+        try:
+            for project, resources in payload.iteritems():
+                for resource, limit in resources.iteritems():
+                    result = db_api.quota_create(
+                        context,
+                        project_id=project,
+                        resource=resource,
+                        limit=limit)
+                    result = {'project_id': result.project_id,
+                              result.resource: result.hard_limit}
+                    quota.append(result)
+        except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)
+        return {'Quota Created': quota}
 
     @index.when(method='delete', template='json')
     def delete(self):
-        context = restcomm.extract_context_from_environ()
-
-        payload = '## delete cast ##, request.body is null'
-        payload = payload + request.body
-        # To illustrate RPC, below line is written. Will be replaced by
-        # DB API call for deleting quota limits for a tenant
-        self.client.cast(context, 'say_hello_world_cast', payload=payload)
-        return self._delete_response(context)
-
-    def _delete_response(self, context):
-        context = context
-        return {'cast example': 'check the log produced by engine'
-                                + 'and no value returned here'}
+        context = cntx.get_admin_context()
+        if not request.body:
+            pecan.abort(404)
+        payload = eval(request.body)
+        try:
+            for project, resources in payload.iteritems():
+                if resources == 'all':
+                    db_api.quota_destroy_all(context, project)
+                else:
+                    for resource in resources:
+                        db_api.quota_destroy(context, project, resource)
+        except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)

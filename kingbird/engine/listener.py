@@ -82,22 +82,6 @@ class EngineManager(manager.Manager):
 
         pass
 
-    # rpc message endpoint handling
-    def say_hello_world_call(self, ctx, payload):
-
-        LOG.info(_LI("engine say hello world, call payload: %s"), payload)
-
-        info_text = "payload: %s" % payload
-
-        return info_text
-
-    def say_hello_world_cast(self, ctx, payload):
-        LOG.info(_LI("engine say hello world, cast payload: %s"), payload)
-
-        # no return value to browser indeed for cast. check the log info
-        info_text = "payload: %s" % payload
-        return {'engine': info_text}
-
     def periodic_balance_all(self):
         LOG.info(_LI("Periodic quota sync job started at: %s"),
                  time.strftime("%c"))

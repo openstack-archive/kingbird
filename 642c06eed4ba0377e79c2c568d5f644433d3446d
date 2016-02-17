@@ -1,0 +1,9 @@
+Code-Review+2: Dimitri Mazmanov <dimitri.mazmanov@ericsson.com>
+Code-Review+2: Chaoyi Huang <joehuang@huawei.com>
+Workflow+1: Chaoyi Huang <joehuang@huawei.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 17 Feb 2016 11:25:09 +0000
+Reviewed-on: https://review.openstack.org/277489
+Project: openstack/kingbird
+Branch: refs/heads/master

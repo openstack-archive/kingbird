@@ -12,6 +12,7 @@
 
 from oslo_log import log
 
+from kingbird.common import exceptions
 from kingbird.drivers import base
 
 from neutronclient.neutron import client
@@ -23,13 +24,17 @@ API_VERSION = '2.0'
 class NeutronClient(base.DriverBase):
     '''Neutron V2 driver.'''
     def __init__(self, region, **kwargs):
-        self.neutron_client = client.Client(
-            API_VERSION,
-            username=kwargs['user_name'],
-            password=kwargs['password'],
-            tenant_name=kwargs['tenant_name'],
-            auth_url=kwargs['auth_url'],
-            region_name=region)
+        try:
+            self.neutron_client = client.Client(
+                API_VERSION,
+                username=kwargs['user_name'],
+                password=kwargs['password'],
+                tenant_name=kwargs['tenant_name'],
+                auth_url=kwargs['auth_url'],
+                region_name=region)
+            self.extension_list = self.neutron_client.list_extensions()
+        except exceptions.HttpException:
+            raise
 
     def get_resource_usages(self, project_id):
         '''Calcualte resources usage and return the dict'''
@@ -42,3 +47,9 @@ class NeutronClient(base.DriverBase):
     def delete_quota_limits(self, project_id):
         '''Delete/Reset the limits'''
         pass
+
+    def is_extension_supported(self, extension):
+        for current_extension in self.extension_list['extensions']:
+            if extension in current_extension['alias']:
+                return True
+        return False

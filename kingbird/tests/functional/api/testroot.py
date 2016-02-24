@@ -13,10 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import mock
-from mock import patch
 
 import pecan
 from pecan.configuration import set_config
@@ -28,11 +25,11 @@ from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from kingbird.api import api_config
-from kingbird.api.controllers import quota_manager
+from kingbird.common import config
 from kingbird.common import rpc
 from kingbird.tests import base
 
-
+config.register_options()
 OPT_GROUP_NAME = 'keystone_authtoken'
 cfg.CONF.import_group(OPT_GROUP_NAME, "keystonemiddleware.auth_token")
 
@@ -111,7 +108,7 @@ class TestRootController(KBFunctionalTest):
 
 class TestV1Controller(KBFunctionalTest):
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_get(self):
         response = self.app.get('/v1.0')
         self.assertEqual(response.status_int, 200)
@@ -123,101 +120,48 @@ class TestV1Controller(KBFunctionalTest):
         v1_link = links[0]
         quota_manager_link = links[1]
         self.assertEqual('self', v1_link['rel'])
-        self.assertEqual('quota', quota_manager_link['rel'])
+        self.assertEqual('os-quota-sets', quota_manager_link['rel'])
 
     def _test_method_returns_405(self, method):
         api_method = getattr(self.app, method)
         response = api_method('/v1.0', expect_errors=True)
         self.assertEqual(response.status_int, 405)
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_post(self):
         self._test_method_returns_405('post')
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_put(self):
         self._test_method_returns_405('put')
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_patch(self):
         self._test_method_returns_405('patch')
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_delete(self):
         self._test_method_returns_405('delete')
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_head(self):
         self._test_method_returns_405('head')
 
 
-class TestQuotaManager(KBFunctionalTest):
-
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    def test_get(self):
-        response = self.app.get('/v1.0/quota/?arg=tenant_1')
-        self.assertEqual(response.status_int, 200)
-        self.assertIn('tenant_1', json.loads(response.text).values())
-
-    @mock.patch.object(rpc, 'get_client')
-    def test_post(self, mock_client):
-        mock_client().call.return_value = "Post method called"
-        response = self.app.post_json('/v1.0/quota',
-                                      headers={'X-Tenant-Id': 'tenid'})
-        self.assertEqual(response.status_int, 200)
-        self.assertIn("Post method called", str(response.text))
-
-    @mock.patch.object(rpc, 'get_client')
-    def test_put(self, mock_client):
-        mock_client().call.return_value = "Put method called"
-        response = self.app.put_json('/v1.0/quota',
-                                     headers={'X-Tenant-Id': 'tenid'})
-        self.assertEqual(response.status_int, 200)
-        self.assertIn("Put method called", str(response.text))
-
-    @mock.patch.object(rpc, 'get_client')
-    def test_delete(self, mock_client):
-        response = self.app.delete('/v1.0/quota',
-                                   headers={'X-Tenant-Id': 'tenid'})
-        self.assertEqual(response.status_int, 200)
-        self.assertIn("cast example", json.loads(response.text))
-
-
-class TestQuotaManagerContext(KBFunctionalTest):
-    @patch.object(rpc, 'get_client', new=mock.Mock())
-    @patch.object(quota_manager.QuotaManagerController, '_delete_response',
-                  new=fake_delete_response)
-    def test_context_set_in_request(self):
-        response = self.app.delete('/v1.0/quota',
-                                   headers={'X_Auth_Token': 'a-token',
-                                            'X_TENANT_ID': 't-id',
-                                            'X_USER_ID': 'u-id',
-                                            'X_USER_NAME': 'u-name',
-                                            'X_PROJECT_NAME': 't-name',
-                                            'X_DOMAIN_ID': 'domainx',
-                                            'X_USER_DOMAIN_ID': 'd-u',
-                                            'X_PROJECT_DOMAIN_ID': 'p_d',
-                                            })
-        json_body = jsonutils.loads(response.body)
-        self.assertIn('a-token', json_body)
-        self.assertIn('t-id', json_body)
-        self.assertIn('u-id', json_body)
-        self.assertIn('u-name', json_body)
-        self.assertIn('t-name', json_body)
-        self.assertIn('domainx', json_body)
-        self.assertIn('d-u', json_body)
-        self.assertIn('p_d', json_body)
-
-
 class TestErrors(KBFunctionalTest):
+
+    def setUp(self):
+        super(TestErrors, self).setUp()
+        cfg.CONF.set_override('admin_tenant_id', 'fake_tenant_id',
+                              group='cache')
 
     def test_404(self):
         response = self.app.get('/assert_called_once', expect_errors=True)
         self.assertEqual(response.status_int, 404)
 
-    @patch.object(rpc, 'get_client', new=mock.Mock())
+    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_bad_method(self):
-        response = self.app.patch('/v1.0/quota/123.json',
+        response = self.app.patch('/v1.0/fake_tenant_id/bad_method',
                                   expect_errors=True)
         self.assertEqual(response.status_int, 405)
 

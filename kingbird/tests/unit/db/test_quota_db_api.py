@@ -134,3 +134,9 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
         by_project = db_api.quota_get_all_by_project(self.ctx, project_id)
         self.assertIsNotNone(by_project)
         self.assertEqual(project_id, by_project['project_id'])
+
+    def test_quota_get_by_nonexisting_project(self):
+        project_id = UUID2
+        expected_quota_set = {'project_id': project_id}
+        project_limit = db_api.quota_get_all_by_project(self.ctx, project_id)
+        self.assertEqual(project_limit, expected_quota_set)

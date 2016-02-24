@@ -77,7 +77,7 @@ def is_user_context(context):
         return False
     if context.is_admin:
         return False
-    if not context.user_id or not context.project_id:
+    if not context.user or not context.tenant_id:
         return False
     return True
 
@@ -107,7 +107,7 @@ def require_context(f):
 
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
-            raise exception.Forbidden()
+            raise exception.NotAuthorized()
         return f(*args, **kwargs)
 
     return wrapper
@@ -139,11 +139,9 @@ def quota_get_all_by_project(context, project_id):
     rows = model_query(context, models.Quota). \
         filter_by(project_id=project_id). \
         all()
-
     result = {'project_id': project_id}
     for row in rows:
         result[row.resource] = row.hard_limit
-
     return result
 
 
@@ -184,6 +182,9 @@ def quota_destroy_all(context, project_id):
     quotas = model_query(context, models.Quota). \
         filter_by(project_id=project_id). \
         all()
+
+    if not quotas:
+        raise exception.ProjectQuotaNotFound(project_id=project_id)
 
     for quota_ref in quotas:
         quota_ref.delete(session=session)

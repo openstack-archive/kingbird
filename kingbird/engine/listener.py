@@ -82,24 +82,20 @@ class EngineManager(manager.Manager):
 
         pass
 
-    # rpc message endpoint handling
-    def say_hello_world_call(self, ctx, payload):
-
-        LOG.info(_LI("engine say hello world, call payload: %s"), payload)
-
-        info_text = "payload: %s" % payload
-
-        return info_text
-
-    def say_hello_world_cast(self, ctx, payload):
-        LOG.info(_LI("engine say hello world, cast payload: %s"), payload)
-
-        # no return value to browser indeed for cast. check the log info
-        info_text = "payload: %s" % payload
-        return {'engine': info_text}
-
     def periodic_balance_all(self):
         LOG.info(_LI("Periodic quota sync job started at: %s"),
                  time.strftime("%c"))
         ctxt = context.get_admin_context()
         self.qm.periodic_balance_all(ctxt)
+
+    def quota_sync_for_project(self, ctx, project_id):
+        LOG.info(_LI("Engine quota sync called for project: %s"), project_id)
+
+        pass
+
+    def get_total_usage_for_tenant(self, ctx, project_id):
+        # Returns a dictionary containing nova, neutron &
+        # cinder usages for the project
+        LOG.info(_LI("Get total tenant usage called for: %s"), project_id)
+
+        pass

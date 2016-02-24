@@ -64,6 +64,8 @@ cache_opts = [
     cfg.StrOpt('admin_tenant',
                help='Tenant name of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
+    cfg.StrOpt('admin_tenant_id',
+               help='Tenant id of admin account'),
     cfg.StrOpt('admin_user_domain_name',
                default='Default',
                help='User domain name of admin account, needed when'

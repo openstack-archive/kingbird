@@ -13,19 +13,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 import pecan
 from pecan import expose
 from pecan import request
-from pecan import rest
 
 import restcomm
 
+from kingbird.common import exceptions
 from kingbird.common import rpc
 from kingbird.common.serializer import KingbirdSerializer as Serializer
 from kingbird.common import topics
+from kingbird.db.sqlalchemy import api as db_api
 
 CONF = cfg.CONF
 
@@ -44,7 +46,7 @@ CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 LOG = logging.getLogger(__name__)
 
 
-class QuotaManagerController(rest.RestController):
+class QuotaManagerController(object):
 
     VERSION_ALIASES = {
         'mitaka': '1.0',
@@ -71,50 +73,101 @@ class QuotaManagerController(rest.RestController):
         return version_cap
 
     @expose(generic=True, template='json')
-    def index(self, arg=None):
-        if pecan.request.method != 'GET':
-            pecan.abort(405)
+    def index(self):
+        # Route the request to specific methods with parameters
+        pass
 
+    @index.when(method='GET', template='json')
+    def get(self, project_id, resource=None):
+        quota = collections.defaultdict(dict)
         context = restcomm.extract_context_from_environ()
         if context.is_admin:
-            return {'Admin call for index with project': arg}
+            try:
+                if project_id == 'defaults':
+                    # Get default quota limits from conf file
+                    result = collections.defaultdict(dict)
+                    for resource, limit in \
+                        CONF.kingbird_global_limit.iteritems():
+                            result[resource.replace('quota_', '')] = limit
+                else:
+                    # Get quota limits for all the resources for a project
+                    result = db_api.quota_get_all_by_project(
+                        context, project_id)
+                quota['quota_set'] = result
+                return quota
+            except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)
         else:
-            return {'Non admin call for index with project': arg}
+            pecan.abort(404)
 
     @index.when(method='PUT', template='json')
-    def put(self):
+    def put(self, project_id):
+        quota = collections.defaultdict(dict)
+        quota[project_id] = collections.defaultdict(dict)
         context = restcomm.extract_context_from_environ()
 
-        payload = '## put call ##, request.body = '
-        payload = payload + request.body
-        # To illustrate RPC, below line is written. Will be replaced by
-        # DB API call for updating quota limits for a tenant
-        return self.client.call(context, 'say_hello_world_call',
-                                payload=payload)
+        if not request.body:
+            pecan.abort(404)
+        payload = eval(request.body)
+        payload = payload.get('quota_set')
+
+        try:
+            for resource, limit in payload.iteritems():
+                result = db_api.quota_update(
+                    context,
+                    project_id=project_id,
+                    resource=resource,
+                    limit=limit)
+                quota[project_id][result.resource] = result.hard_limit
+            return quota
+        except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)
 
     @index.when(method='POST', template='json')
-    def post(self):
+    def post(self, project_id):
+        quota = collections.defaultdict(dict)
+        quota[project_id] = collections.defaultdict(dict)
         context = restcomm.extract_context_from_environ()
 
-        payload = '## post call ##, request.body = '
-        payload = payload + request.body
-        # To illustrate RPC, below line is written. Will be replaced by
-        # DB API call for creating quota limits for a tenant
-        return self.client.call(context, 'say_hello_world_call',
-                                payload=payload)
+        if not request.body:
+            pecan.abort(404)
+        payload = eval(request.body)
+        payload = payload.get('quota_set')
+        try:
+            for resource, limit in payload.iteritems():
+                result = db_api.quota_create(
+                    context,
+                    project_id=project_id,
+                    resource=resource,
+                    limit=limit)
+                quota[project_id][result.resource] = result.hard_limit
+            return quota
+        except exceptions.ProjectQuotaNotFound:
+            pecan.abort(404)
 
     @index.when(method='delete', template='json')
-    def delete(self):
+    def delete(self, project_id):
         context = restcomm.extract_context_from_environ()
 
-        payload = '## delete cast ##, request.body is null'
-        payload = payload + request.body
-        # To illustrate RPC, below line is written. Will be replaced by
-        # DB API call for deleting quota limits for a tenant
-        self.client.cast(context, 'say_hello_world_cast', payload=payload)
-        return self._delete_response(context)
+        try:
+            if request.body:
+                # Delete the mentioned quota limit for the project
+                payload = eval(request.body)
+                payload = payload.get('quota_set')
+                for resource in payload:
+                    db_api.quota_destroy(context, project_id, resource)
+            else:
+                # Delete all quota limits for the project
+                db_api.quota_destroy_all(context, project_id)
+        except exceptions.ProjectQuotaNotFound:
+                pecan.abort(404)
 
-    def _delete_response(self, context):
-        context = context
-        return {'cast example': 'check the log produced by engine'
-                                + 'and no value returned here'}
+    @expose(generic=True, template='json')
+    def sync(self, project_id):
+        context = restcomm.extract_context_from_environ()
+        if pecan.request.method != 'POST':
+            pecan.abort(405)
+
+        self.client.cast(context, 'quota_sync_for_project',
+                         project_id=project_id)
+        return 'trigered quota sync for ' + project_id

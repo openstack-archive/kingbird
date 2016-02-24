@@ -99,3 +99,7 @@ class TimeOut(KingbirdException):
 
 class InternalError(KingbirdException):
     message = _("Error when performing operation")
+
+
+class InvalidInputError(KingbirdException):
+    message = _("An invalid value was provided")

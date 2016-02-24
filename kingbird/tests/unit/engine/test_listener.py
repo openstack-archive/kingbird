@@ -28,22 +28,6 @@ class TestEngineManager(base.KingbirdTestCase):
         self.assertIsNotNone(engine_manager)
         self.assertIsInstance(engine_manager.qm, QuotaManager)
 
-    def test_say_hello_world_call(self):
-        payload = "test payload"
-        engine_manager = listener.EngineManager()
-        return_value = engine_manager.say_hello_world_call(self.context,
-                                                           payload)
-        expected_output = "payload: %s" % payload
-        self.assertEqual(return_value, expected_output)
-
-    def test_say_hello_world_cast(self):
-        payload = "test payload"
-        engine_manager = listener.EngineManager()
-        return_value = engine_manager.say_hello_world_call(self.context,
-                                                           payload)
-        expected_output = "payload: %s" % payload
-        self.assertEqual(return_value, expected_output)
-
     @mock.patch.object(listener, 'context')
     @mock.patch.object(listener, 'QuotaManager')
     def test_periodic_balance_all(self, mock_qm, mock_context):
@@ -53,3 +37,9 @@ class TestEngineManager(base.KingbirdTestCase):
         engine_manager.periodic_balance_all()
         mock_qm().periodic_balance_all.assert_called_once_with(
             mock_context.get_admin_context())
+
+    def test_quota_sync_for_project(self):
+        pass
+
+    def test_total_usage_for_tenant(self):
+        pass

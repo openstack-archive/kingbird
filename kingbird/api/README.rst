@@ -26,3 +26,86 @@ app.py:
 
 apicfg.py:
     API configuration loading and init
+
+==============================================
+Example API CURL requests for quota management
+==============================================
+
+Note:
+admin_tenant_id: Tenant ID of admin.
+tenant_1: Tenant ID of the project for which we want to perform operation.
+
+====
+POST
+====
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+ -X POST \
+ -d '{"quota_set":{"instances":10,"cores": 10,"ram": 51200,"floating_ips": 20,"metadata_items": 100,"security_groups": 20,"security_group_rules": 20,"key_pairs": 100 }}' \
+  http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1
+
+===
+PUT
+===
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+ -X PUT \
+ -d '{"quota_set":{"instances":20,"cores": 20,"ram": 12300,"floating_ips": 50,"metadata_items": 200,"security_groups": 50,"security_group_rules": 50,"key_pairs": 200 }}' \
+  http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1
+
+======
+DELETE
+======
+
+1. To delete all resources for tenant_1 from DB
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+ -X DELETE \
+ -d '{"quota_set": "all"}' \
+  http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1
+
+2. To delete resources mentioned in quota_set for tenant_1 from DB
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+ -X DELETE \
+ -d '{"quota_set": [ "instances", "floating_ips", "metadata_items", "security_groups", "security_group_rules", "key_pairs"]}' \
+  http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1
+
+===
+GET
+===
+
+1. To get quota limits for all resources in tenant_1
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+  http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1
+
+2. To get quota limit for mentioned resource in tenant_1
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+  http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1/ram
+
+Note - User can get information for one resource at a time
+       http://127.0.0.1:8118/v1.0/admin_tenant_id/quota/tenant_1/ram/cores is INVALID
+
+==========
+QUOTA SYNC - for a project
+==========
+
+curl \
+ -H "Content-Type: application/json" \
+ -H "X-Auth-Token: $TOKEN" \
+ -X POST \
+  http://127.0.0.1:8118/v1.0/quota/sync/tenant_1

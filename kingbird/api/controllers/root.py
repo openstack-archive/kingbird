@@ -16,6 +16,8 @@
 
 import pecan
 
+from oslo_config import cfg
+
 from kingbird.api.controllers import quota_manager
 
 
@@ -23,6 +25,20 @@ class RootController(object):
 
     @pecan.expose('json')
     def _lookup(self, version, *remainder):
+        if remainder:
+            if remainder[0] == 'quota':
+                if remainder[1] != 'sync':
+                    pecan.abort(405)
+            else:
+                # Validate the URL
+                if len(remainder) < 3:
+                    pecan.abort(405)
+                # Validate the admin tenant id with conf file
+                admin_tenant_id_conf = cfg.CONF['cache'].admin_tenant_id
+                admin_tenant_id = remainder[0]
+                if admin_tenant_id != admin_tenant_id_conf:
+                    pecan.abort(401)
+                remainder = remainder[1:]
         if version == 'v1.0':
             return V1Controller(), remainder
 

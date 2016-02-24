@@ -8,10 +8,10 @@ api.py:
     start API service
     python api.py --config-file=../etc/api.conf
 
-jobdaemon.py:
-    start JobDaemon service
-    python jobdaemon.py --config-file=../etc/jobdaemon.conf
+engine.py:
+    start Engine service
+    python engine.py --config-file=../etc/engine.conf
 
-jobworker.py:
-    start JobWorker service
-    python jobworker.py --config-file=../etc/jobworker.conf
+manage.py:
+    CLI interface for kingbird management
+    python manage.py ../etc/api.conf

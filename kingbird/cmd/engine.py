@@ -28,19 +28,19 @@ import logging as std_logging
 
 from kingbird.common import config
 
-CONF = cfg.CONF
-config.register_options()
-LOG = logging.getLogger(__name__)
-
 from kingbird.common.i18n import _LI
 from kingbird.common.i18n import _LW
-from kingbird.engine import engine_cfg
+from kingbird.engine import engine_config
 from kingbird.engine import service
+
+CONF = cfg.CONF
+config.register_options()
+LOG = logging.getLogger('kingbird.engine')
 
 
 def main():
-    engine_cfg.init(sys.argv[1:])
-    engine_cfg.setup_logging()
+    engine_config.init(sys.argv[1:])
+    engine_config.setup_logging()
 
     host = CONF.host
     workers = CONF.workers

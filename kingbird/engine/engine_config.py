@@ -30,7 +30,7 @@ from kingbird.common import version
 LOG = logging.getLogger(__name__)
 
 common_opts = [
-    cfg.StrOpt('host', default='kingbird.serivcehost',
+    cfg.StrOpt('host', default='kingbird.host',
                help=_("The host name for RPC server")),
     cfg.IntOpt('workers', default=2,
                help=_("number of workers")),
@@ -75,3 +75,7 @@ def reset_service():
 
     # TODO(joehuang) enforce policy later
     # policy.refresh()
+
+
+def list_opts():
+    yield None, common_opts

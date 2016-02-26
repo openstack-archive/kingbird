@@ -25,7 +25,7 @@ from oslo_service import wsgi
 
 import logging as std_logging
 
-from kingbird.api import apicfg
+from kingbird.api import api_config
 from kingbird.api import app
 
 from kingbird.common import config
@@ -34,12 +34,12 @@ from kingbird.common.i18n import _LW
 
 CONF = cfg.CONF
 config.register_options()
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('kingbird.api')
 
 
 def main():
-    apicfg.init(sys.argv[1:])
-    apicfg.setup_logging()
+    api_config.init(sys.argv[1:])
+    api_config.setup_logging()
     application = app.setup_app()
 
     host = CONF.bind_host

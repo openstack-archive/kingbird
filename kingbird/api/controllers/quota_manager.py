@@ -29,23 +29,22 @@ from kingbird.common import topics
 
 CONF = cfg.CONF
 
-rpcapi_cap_opt = cfg.StrOpt('kb-engine',
-                            help='Set a version cap for messages sent to'
-                                 'kb-engine services. If you plan to do a'
-                                 'live upgrade from an old version to a'
-                                 'newer version, you should set this option'
-                                 'to the old version before beginning the'
-                                 'live upgrade procedure. Only upgrading'
-                                 'to the next version is supported, so you'
-                                 'cannot skip a release for the live upgrade'
-                                 'procedure.')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+rpc_api_cap_opt = cfg.StrOpt('kb-engine',
+                             help='Set a version cap for messages sent to'
+                                  'kb-engine services. If you plan to do a'
+                                  'live upgrade from an old version to a'
+                                  'newer version, you should set this option'
+                                  'to the old version before beginning the'
+                                  'live upgrade procedure. Only upgrading'
+                                  'to the next version is supported, so you'
+                                  'cannot skip a release for the live upgrade'
+                                  'procedure.')
+CONF.register_opt(rpc_api_cap_opt, 'upgrade_levels')
 
 LOG = logging.getLogger(__name__)
 
 
 class QuotaManagerController(rest.RestController):
-
     VERSION_ALIASES = {
         'mitaka': '1.0',
     }
@@ -118,3 +117,7 @@ class QuotaManagerController(rest.RestController):
         context = context
         return {'cast example': 'check the log produced by engine'
                                 + 'and no value returned here'}
+
+
+def list_opts():
+    yield None, rpc_api_cap_opt

@@ -102,3 +102,7 @@ def test_init():
     cfg.CONF.register_opts(common_opts)
     logging.register_options(cfg.CONF)
     setup_logging()
+
+
+def list_opts():
+    yield None, common_opts

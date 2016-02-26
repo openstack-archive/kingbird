@@ -27,7 +27,7 @@ from oslo_config import fixture as fixture_config
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
-from kingbird.api import apicfg
+from kingbird.api import api_config
 from kingbird.api.controllers import quota_manager
 from kingbird.common import rpc
 from kingbird.tests import base
@@ -49,7 +49,7 @@ class KBFunctionalTest(base.KingbirdTestCase):
 
         self.addCleanup(set_config, {}, overwrite=True)
 
-        apicfg.test_init()
+        api_config.test_init()
 
         self.CONF = self.useFixture(fixture_config.Config()).conf
 
@@ -240,7 +240,7 @@ class TestKeystoneAuth(KBFunctionalTest):
 
         self.addCleanup(set_config, {}, overwrite=True)
 
-        apicfg.test_init()
+        api_config.test_init()
 
         self.CONF = self.useFixture(fixture_config.Config()).conf
 

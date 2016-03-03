@@ -1,3 +1,5 @@
+# Copyright 2016 Ericsson AB
+
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
@@ -36,7 +38,7 @@ class OpenStackDriver(object):
 
     os_clients_dict = collections.defaultdict(dict)
 
-    def __init__(self, region_name):
+    def __init__(self, region_name=None):
         # Check if objects are cached and try to use those
         self.region_name = region_name
         if 'keystone' in OpenStackDriver.os_clients_dict:
@@ -54,7 +56,7 @@ class OpenStackDriver(object):
                 region_name]['neutron']
         else:
             # Create new objects and cache them
-            LOG.debug(_("Creating fresh OS Clients objects"))
+            LOG.info(_("Creating fresh OS Clients objects"))
             self.cinder_client = CinderClient(region_name,
                                               self.keystone_client.session)
             self.neutron_client = NeutronClient(region_name,
@@ -94,11 +96,12 @@ class OpenStackDriver(object):
     def write_quota_limits(self, project_id, limits_to_write):
         try:
             self.nova_client.update_quota_limits(project_id,
-                                                 limits_to_write['nova'])
-            self.cinder_client.update_quota_limits(project_id,
-                                                   limits_to_write['cinder'])
-            self.neutron_client.update_quota_limits(project_id,
-                                                    limits_to_write['neutron'])
+                                                 **limits_to_write['nova'])
+            # TODO(Ashish): Include other clients after nova is fixed
+            # self.cinder_client.update_quota_limits(project_id,
+            #                                        **limits_to_write['cinder'])
+            # self.neutron_client.update_quota_limits(project_id,
+            #                                         **limits_to_write['neutron'])
         except (exceptions.ConnectionRefused, exceptions.NotAuthorized,
                 exceptions.TimeOut):
             # Delete the cached objects for that region
@@ -141,3 +144,9 @@ class OpenStackDriver(object):
                 LOG.exception("There was an error checking if the Neutron "
                               "quotas extension is enabled.")
         return disabled_quotas
+
+    def get_filtered_regions(self, project_id):
+        try:
+            return self.keystone_client.get_filtered_region(project_id)
+        except Exception as exception:
+            LOG.error(_LE('Error Occurred: %s'), exception.message)

@@ -28,3 +28,23 @@ listener.py
 
 engine_cfg.py:
     configuration and initialization for Engine service
+
+quota_manager.py
+    Manages all the quota related activies such as Periodic Quota Sync,
+    One Demand Quota Sync, Get Total Usage for a Project, Read Kingbird
+    global limit from DB/Conf file etc..
+
+    Quota sync happens based on below formula:
+    Global_remaining_limit = Kingbird_global_limit(from DB/Conf) -
+                             Su(sum of all usages from all regions)
+    Region_new_limit = Global_remaining_limit + resource_usage_in_that_region.
+
+    Reference link: https://etherpad.opnfv.org/p/centralized_quota_management
+
+    On Demand Quota Sync: Creates threads for each region and syncs
+    the limits for each quota concurrently.
+
+    Periodic Quota Sync: Creates threads for each Project and calls
+    quota sync for project(On Demand Quota sync) for syncing project.
+
+    Caches OpenStack region specific clients so reduced traffic.

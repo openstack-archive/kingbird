@@ -25,18 +25,16 @@ from oslo_serialization import jsonutils
 
 from kingbird.common import rpc
 
-
 CONF = cfg.CONF
-rpcapi_cap_opt = cfg.StrOpt('baseclientapi',
-                            help='Set a version cap for messages sent to the'
-                                 'base api in any service')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+rpc_api_cap_opt = cfg.StrOpt('base_client_api',
+                             help='Set a version cap for messages sent to the'
+                                  'base api in any service')
+CONF.register_opt(rpc_api_cap_opt, 'upgrade_levels')
 
-_NAMESPACE = 'baseclientapi'
+_NAMESPACE = 'base_client_api'
 
 
 class BaseClientAPI(object):
-
     """Client side of the base rpc API.
 
     API version history:
@@ -73,3 +71,7 @@ class BaseServerRPCAPI(object):
     def ping(self, context, arg):
         resp = {'service': self.service_name, 'arg': arg}
         return jsonutils.to_primitive(resp)
+
+
+def list_opts():
+    yield None, rpc_api_cap_opt

@@ -36,3 +36,7 @@ class Base(object):
         if not db_driver:
             db_driver = CONF.db_driver
         self.db = importutils.import_module(db_driver)
+
+
+def list_opts():
+    yield None, db_driver_opt

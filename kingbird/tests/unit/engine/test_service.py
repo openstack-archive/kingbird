@@ -12,7 +12,7 @@
 
 import mock
 
-from kingbird.engine.listener import EngineManager
+from kingbird.engine import listener
 from kingbird.engine import service
 from kingbird.tests import base
 from oslo_config import cfg
@@ -24,23 +24,26 @@ class TestEngineService(base.KingbirdTestCase):
     def setUp(self):
         super(TestEngineService, self).setUp()
 
-    def test_init(self):
-        manager = EngineManager()
+    @mock.patch.object(listener, 'QuotaManager')
+    def test_init(self, mock_qm):
+        manager = listener.EngineManager()
         engine_service = service.EngineService('127.0.0.1', 'engine',
                                                'topic-A', manager)
         self.assertIsNotNone(engine_service)
 
 
 @mock.patch.object(service, 'EngineService')
-def test_create_service(mock_engine):
+@mock.patch.object(listener, 'QuotaManager')
+def test_create_service(mock_qm, mock_engine):
     service.create_service()
     mock_engine().start.assert_called_once_with()
 
 
+@mock.patch.object(listener, 'QuotaManager')
 @mock.patch.object(service, 'EngineService')
 @mock.patch.object(service, 'srv')
-def test_serve(mock_srv, mock_engine):
-    manager = EngineManager()
+def test_serve(mock_srv, mock_engine, mock_qm):
+    manager = listener.EngineManager()
     engine_service = service.EngineService('127.0.0.1', 'engine',
                                            'topic-A', manager)
     service.serve(engine_service, 2)

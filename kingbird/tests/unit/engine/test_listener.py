@@ -13,9 +13,10 @@
 import mock
 
 from kingbird.engine import listener
-from kingbird.engine.quota_manager import QuotaManager
 from kingbird.tests import base
 from kingbird.tests import utils
+
+FAKE_PROJECT = 'fake_project'
 
 
 class TestEngineManager(base.KingbirdTestCase):
@@ -23,23 +24,27 @@ class TestEngineManager(base.KingbirdTestCase):
         super(TestEngineManager, self).setUp()
         self.context = utils.dummy_context()
 
-    def test_init(self):
+    @mock.patch.object(listener, 'QuotaManager')
+    def test_init(self, mock_qm):
         engine_manager = listener.EngineManager()
         self.assertIsNotNone(engine_manager)
-        self.assertIsInstance(engine_manager.qm, QuotaManager)
+        self.assertEqual(engine_manager.qm, mock_qm())
 
-    @mock.patch.object(listener, 'context')
     @mock.patch.object(listener, 'QuotaManager')
-    def test_periodic_balance_all(self, mock_qm, mock_context):
+    def test_periodic_balance_all(self, mock_qm):
         engine_manager = listener.EngineManager()
-        cntxt = utils.dummy_context()
-        mock_context.get_admin_context().return_value = cntxt
         engine_manager.periodic_balance_all()
-        mock_qm().periodic_balance_all.assert_called_once_with(
-            mock_context.get_admin_context())
+        mock_qm().periodic_balance_all.assert_called_once_with()
 
-    def test_quota_sync_for_project(self):
-        pass
+    @mock.patch.object(listener, 'QuotaManager')
+    def test_quota_sync_for_project(self, mock_qm):
+        engine_manager = listener.EngineManager()
+        engine_manager.quota_sync_for_project(self.context, FAKE_PROJECT)
+        mock_qm().quota_sync_for_project.assert_called_once_with(FAKE_PROJECT)
 
-    def test_total_usage_for_tenant(self):
-        pass
+    @mock.patch.object(listener, 'QuotaManager')
+    def test_get_total_usage_for_tenant(self, mock_qm):
+        engine_manager = listener.EngineManager()
+        engine_manager.get_total_usage_for_tenant(self.context, FAKE_PROJECT)
+        mock_qm().get_total_usage_for_tenant.assert_called_once_with(
+            FAKE_PROJECT)

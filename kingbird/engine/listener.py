@@ -18,7 +18,6 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 import time
 
-from kingbird.common import context
 from kingbird.common.i18n import _
 from kingbird.common.i18n import _LI
 from kingbird.common import manager
@@ -82,24 +81,14 @@ class EngineManager(manager.Manager):
 
         pass
 
-    # rpc message endpoint handling
-    def say_hello_world_call(self, ctx, payload):
-
-        LOG.info(_LI("engine say hello world, call payload: %s"), payload)
-
-        info_text = "payload: %s" % payload
-
-        return info_text
-
-    def say_hello_world_cast(self, ctx, payload):
-        LOG.info(_LI("engine say hello world, cast payload: %s"), payload)
-
-        # no return value to browser indeed for cast. check the log info
-        info_text = "payload: %s" % payload
-        return {'engine': info_text}
-
     def periodic_balance_all(self):
+        # Automated Quota Sync for all the keystone projects
         LOG.info(_LI("Periodic quota sync job started at: %s"),
                  time.strftime("%c"))
-        ctxt = context.get_admin_context()
-        self.qm.periodic_balance_all(ctxt)
+        self.qm.periodic_balance_all()
+
+    def quota_sync_for_project(self, ctx, project_id):
+        # On Demand Quota Sync for a project, will be triggered by KB-API
+        LOG.info(_LI("On Demand Quota Sync Called for: %s"),
+                 project_id)
+        self.qm.quota_sync_for_project(project_id)

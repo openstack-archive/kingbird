@@ -49,6 +49,7 @@ cinder_quotas = [
     cfg.IntOpt('quota_backup_gigabytes', default=1000)
 ]
 
+
 # OpenStack credentials used for Endpoint Cache
 cache_opts = [
     cfg.StrOpt('auth_url',

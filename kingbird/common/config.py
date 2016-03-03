@@ -49,6 +49,14 @@ cinder_quotas = [
     cfg.IntOpt('quota_backup_gigabytes', default=1000)
 ]
 
+# Projects are synced batch by batch. Below configuration defines
+# number of projects in each batch
+batch_opts = [
+    cfg.IntOpt('batch_size',
+               default=3,
+               help='Batch size number of projects will be synced at a time')
+]
+
 # OpenStack credentials used for Endpoint Cache
 cache_opts = [
     cfg.StrOpt('auth_url',
@@ -81,12 +89,16 @@ default_quota_group = cfg.OptGroup(name='kingbird_global_limit',
 cache_opt_group = cfg.OptGroup(name='cache',
                                title='OpenStack Credentials')
 
+batch_opt_group = cfg.OptGroup(name='batch',
+                               title='Number of projects to sync in one batch')
+
 
 def list_opts():
     yield default_quota_group.name, nova_quotas
     yield default_quota_group.name, neutron_quotas
     yield default_quota_group.name, cinder_quotas
     yield cache_opt_group.name, cache_opts
+    yield batch_opt_group.name, batch_opts
 
 
 def register_options():

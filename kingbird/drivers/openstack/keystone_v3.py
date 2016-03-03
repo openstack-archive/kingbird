@@ -13,6 +13,7 @@
 #   under the License.
 #
 
+from keystoneclient.v3.contrib import endpoint_filter
 from oslo_utils import importutils
 
 from kingbird.common.endpoint_cache import EndpointCache
@@ -49,5 +50,19 @@ class KeystoneClient(base.DriverBase):
                 if service in current_service.type:
                     return True
             return False
+        except exceptions.InternalError:
+            raise
+
+    # Returns list of regions if endpoint filter is applied for the project
+    def get_filtered_region(self, project_id):
+        try:
+            region_list = []
+            endpoint_manager = endpoint_filter.EndpointFilterManager(
+                self.keystone_client)
+            endpoint_lists = endpoint_manager.list_endpoints_for_project(
+                project_id)
+            for endpoint in endpoint_lists:
+                region_list.append(endpoint.region)
+            return region_list
         except exceptions.InternalError:
             raise

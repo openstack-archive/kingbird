@@ -18,7 +18,6 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 import time
 
-from kingbird.common import context
 from kingbird.common.i18n import _
 from kingbird.common.i18n import _LI
 from kingbird.common import manager
@@ -34,7 +33,7 @@ scheduler_opts = [
                 default=True,
                 help='boolean value for enable/disenable periodic tasks'),
     cfg.IntOpt('periodic_interval',
-               default=100,
+               default=900,
                help='periodic time interval for automatic quota sync job')
 ]
 
@@ -83,22 +82,23 @@ class EngineManager(manager.Manager):
         pass
 
     def periodic_balance_all(self):
+        # Automated Quota Sync for all the keystone projects
         LOG.info(_LI("Periodic quota sync job started at: %s"),
                  time.strftime("%c"))
-        ctxt = context.get_admin_context()
-        self.qm.periodic_balance_all(ctxt)
+        self.qm.periodic_balance_all()
 
     def quota_sync_for_project(self, ctx, project_id):
-        LOG.info(_LI("Engine quota sync called for project: %s"), project_id)
-
-        pass
+        # On Demand Quota Sync for a project, will be triggered by KB-API
+        LOG.info(_LI("On Demand Quota Sync Called for: %s"),
+                 project_id)
+        self.qm.quota_sync_for_project(project_id)
 
     def get_total_usage_for_tenant(self, ctx, project_id):
         # Returns a dictionary containing nova, neutron &
         # cinder usages for the project
-        LOG.info(_LI("Get total tenant usage called for: %s"), project_id)
-
-        pass
+        LOG.info(_LI("Get total tenant usage called for: %s"),
+                 project_id)
+        return self.qm.get_total_usage_for_tenant(project_id)
 
 
 def list_opts():

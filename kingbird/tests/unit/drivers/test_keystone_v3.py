@@ -23,9 +23,16 @@ FAKE_SERVICE = [
 
 
 class Project(object):
-    def __init__(self, proj_name, id):
+    def __init__(self, proj_name, id, enabled=True):
         self.proj_name = proj_name
         self.id = id
+        self.enabled = enabled
+
+
+class FakeEndpoint(object):
+    def __init__(self, endpoint_name, region):
+        self.endpoint_name = endpoint_name
+        self.region = region
 
 
 class TestKeystoneClient(base.KingbirdTestCase):
@@ -51,13 +58,26 @@ class TestKeystoneClient(base.KingbirdTestCase):
         network_enabled = key_client.is_service_enabled('network')
         self.assertEqual(network_enabled, True)
 
-    @mock.patch.object(keystone_v3, 'KeystoneClient')
-    def test_get_all_enabled_projects(self, mock_key_client):
+    @mock.patch.object(keystone_v3, 'EndpointCache')
+    def test_get_enabled_projects(self, mock_endpoint_cache):
         p1 = Project('proj1', '123')
         p2 = Project('proj2', '456')
-        mock_key_client().get_all_enabled_projects.return_value =\
-            [p1.id, p2.id]
         key_client = keystone_v3.KeystoneClient()
-        project_list = key_client.get_all_enabled_projects()
+        mock_endpoint_cache().keystone_client.projects.list.return_value =\
+            [p1, p2]
+        project_list = key_client.get_enabled_projects()
         self.assertIn(p1.id, project_list)
         self.assertIn(p2.id, project_list)
+
+    @mock.patch.object(keystone_v3.endpoint_filter, 'EndpointFilterManager')
+    @mock.patch.object(keystone_v3, 'EndpointCache')
+    def test_get_filtered_region(self, mock_endpoint_cache,
+                                 mock_endpoint_filter_manager):
+        endpoint_1 = FakeEndpoint('endpoint1', 'regionOne')
+        endpoint_2 = FakeEndpoint('endpoint2', 'regionTwo')
+        key_client = keystone_v3.KeystoneClient()
+        mock_endpoint_filter_manager(). \
+            list_endpoints_for_project.return_value = [endpoint_1, endpoint_2]
+        region_list = key_client.get_filtered_region('fake_project')
+        self.assertIn('regionOne', region_list)
+        self.assertIn('regionTwo', region_list)

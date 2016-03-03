@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from itertools import izip_longest
+
 
 def get_import_path(cls):
     return cls.__module__ + "." + cls.__name__
+
+
+# Returns a iterator of tuples containing batch_size number of objects in each
+def get_batch_projects(batch_size, project_list, fillvalue=None):
+    args = [iter(project_list)] * batch_size
+    return izip_longest(fillvalue=fillvalue, *args)

@@ -23,6 +23,10 @@ class RootController(object):
 
     @pecan.expose('json')
     def _lookup(self, version, *remainder):
+        if remainder:
+            if remainder[1] != 'os-quota-sets' or len(remainder) < 3:
+                    pecan.abort(405)
+            remainder = remainder[1:]
         if version == 'v1.0':
             return V1Controller(), remainder
 
@@ -39,7 +43,7 @@ class RootController(object):
                             }
                         ],
                     "id": "v1.0",
-                    "updated": "2015-09-09"
+                    "updated": "2016-03-07"
                     }
                 ]
             }
@@ -58,7 +62,7 @@ class V1Controller(object):
     def __init__(self):
 
         self.sub_controllers = {
-            "quota": quota_manager.QuotaManagerController()
+            "os-quota-sets": quota_manager.QuotaManagerController()
         }
 
         for name, ctrl in self.sub_controllers.items():

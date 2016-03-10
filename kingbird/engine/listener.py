@@ -103,3 +103,7 @@ class EngineManager(manager.Manager):
                  time.strftime("%c"))
         ctxt = context.get_admin_context()
         self.qm.periodic_balance_all(ctxt)
+
+
+def list_opts():
+    yield scheduler_opt_group.name, scheduler_opts

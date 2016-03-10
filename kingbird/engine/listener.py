@@ -88,6 +88,7 @@ class EngineManager(manager.Manager):
         ctxt = context.get_admin_context()
         self.qm.periodic_balance_all(ctxt)
 
+
     def quota_sync_for_project(self, ctx, project_id):
         LOG.info(_LI("Engine quota sync called for project: %s"), project_id)
 
@@ -99,3 +100,8 @@ class EngineManager(manager.Manager):
         LOG.info(_LI("Get total tenant usage called for: %s"), project_id)
 
         pass
+
+
+def list_opts():
+    yield scheduler_opt_group.name, scheduler_opts
+

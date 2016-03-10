@@ -99,3 +99,8 @@ class EngineManager(manager.Manager):
         LOG.info(_LI("Get total tenant usage called for: %s"), project_id)
 
         pass
+
+
+def list_opts():
+    yield scheduler_opt_group.name, scheduler_opts
+

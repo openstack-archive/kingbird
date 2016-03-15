@@ -17,6 +17,7 @@ import collections
 from Queue import Queue
 import re
 import threading
+import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -32,6 +33,7 @@ from kingbird.common import manager
 from kingbird.common import utils
 from kingbird.db import api as db_api
 from kingbird.drivers.openstack import sdk
+from kingbird.engine import kingbird_lock
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -60,8 +62,15 @@ class QuotaManager(manager.Manager):
         self.context = context.get_admin_context()
         self.endpoints = endpoint_cache.EndpointCache()
 
-    def periodic_balance_all(self):
+    def periodic_balance_all(self, engine_id):
         LOG.info(_LI("periodically balance quota for all keystone tenants"))
+        lock = kingbird_lock.sync_lock_acquire(self.context, engine_id)
+        if not lock:
+            LOG.error(_LE("Not able to acquire lock, may be Previous sync job"
+                          " has not finished yet, Aborting this run at: %s "),
+                      time.strftime("%c"))
+            return
+        LOG.info(_LI("Successfully acquired lock"))
         projects_thread_list = []
         # Iterate through project list and call sync project for each project
         # using threads
@@ -83,11 +92,15 @@ class QuotaManager(manager.Manager):
                 # the job(sync all projects quota)
                 for current_thread in projects_thread_list:
                     current_thread.join()
+        kingbird_lock.sync_lock_release(self.context, engine_id)
 
     def read_quota_usage(self, project_id, region, usage_queue):
         # Writes usage dict to the Queue in the following format
         # {'region_name': (<nova_usages>, <neutron_usages>, <cinder_usages>)}
-        LOG.info(_LI("Reading quota usage for project: %s"), project_id)
+        LOG.info(_LI("Reading quota usage for %(project_id)s in %(region)s"),
+                 {'project_id': project_id,
+                  'region': region}
+                 )
         os_client = sdk.OpenStackDriver(region)
         region_usage = os_client.get_resource_usages(project_id)
         total_region_usage = collections.defaultdict(dict)

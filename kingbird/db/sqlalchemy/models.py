@@ -75,3 +75,19 @@ class Quota(BASE, KingbirdBase):
     resource = Column(String(255), nullable=False)
 
     hard_limit = Column(Integer, nullable=False)
+
+
+class SyncLock(BASE, KingbirdBase):
+    """Store locks to avoid overlapping of projects
+
+    syncing during automatic periodic sync jobs with
+    multiple-engines.
+    """
+
+    __tablename__ = 'sync_lock'
+
+    id = Column(Integer, primary_key=True)
+
+    engine_id = Column(String(36))
+
+    timer_lock = Column(String(255), nullable=False, primary_key=True)

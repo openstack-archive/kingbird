@@ -79,3 +79,15 @@ def db_sync(engine, version=None):
 def db_version(engine):
     """Display the current database version."""
     return IMPL.db_version(engine)
+
+
+def sync_lock_acquire(context, engine_id, task_type):
+    return IMPL.sync_lock_acquire(context, engine_id, task_type)
+
+
+def sync_lock_release(context, task_type):
+    return IMPL.sync_lock_release(context, task_type)
+
+
+def sync_lock_steal(context, engine_id, task_type):
+    return IMPL.sync_lock_steal(context, engine_id, task_type)

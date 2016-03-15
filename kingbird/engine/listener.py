@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+import uuid
+
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
-import time
 
 from kingbird.common.i18n import _
 from kingbird.common.i18n import _LI
@@ -48,6 +50,7 @@ class EngineManager(manager.Manager):
     target = messaging.Target(version='1.0')
 
     def __init__(self, *args, **kwargs):
+        self.engine_id = str(uuid.uuid4())
         self.qm = QuotaManager()
         self.TG = scheduler.ThreadGroupManager()
         self.periodic_enable = cfg.CONF.scheduler.periodic_enable
@@ -59,7 +62,7 @@ class EngineManager(manager.Manager):
         if self.periodic_enable:
             LOG.debug("Adding periodic tasks for the engine to perform")
             self.TG.add_timer(self.periodic_interval,
-                              self.periodic_balance_all)
+                              self.periodic_balance_all, None, self.engine_id)
 
     def init_host(self):
         LOG.debug(_('Engine init_host...'))
@@ -81,11 +84,11 @@ class EngineManager(manager.Manager):
 
         pass
 
-    def periodic_balance_all(self):
+    def periodic_balance_all(self, engine_id):
         # Automated Quota Sync for all the keystone projects
         LOG.info(_LI("Periodic quota sync job started at: %s"),
                  time.strftime("%c"))
-        self.qm.periodic_balance_all()
+        self.qm.periodic_balance_all(engine_id)
 
     def quota_sync_for_project(self, ctx, project_id):
         # On Demand Quota Sync for a project, will be triggered by KB-API

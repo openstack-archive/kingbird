@@ -12,6 +12,7 @@
 from collections import Counter
 import mock
 from Queue import Queue
+import uuid
 
 from oslo_config import cfg
 
@@ -23,6 +24,7 @@ from kingbird.tests import utils
 CONF = cfg.CONF
 FAKE_PROJECT = 'fake_project'
 FAKE_REGION = 'fake_region'
+FAKE_ENGINE_ID = str(uuid.uuid4())
 NOVA_USAGE = {'ram': 100, 'cores': '50'}
 NEUTRON_USAGE = {'port': 10}
 CINDER_USAGE = {'volumes': 18}
@@ -32,6 +34,7 @@ TOTAL_USAGE = {}
 TOTAL_USAGE.update(NOVA_USAGE)
 TOTAL_USAGE.update(NEUTRON_USAGE)
 TOTAL_USAGE.update(CINDER_USAGE)
+TASK_TYPE = 'quota_sync'
 
 
 class TestQuotaManager(base.KingbirdTestCase):
@@ -49,16 +52,23 @@ class TestQuotaManager(base.KingbirdTestCase):
         self.assertEqual('localhost', qm.host)
         self.assertEqual(self.ctxt, qm.context)
 
+    @mock.patch.object(quota_manager, 'context')
     @mock.patch.object(quota_manager.QuotaManager, 'quota_sync_for_project')
     @mock.patch.object(quota_manager, 'sdk')
     @mock.patch.object(quota_manager, 'endpoint_cache')
-    def test_periodic_balance_all(self, mock_endpoint,
-                                  mock_sdk, mock_quota_sync):
+    @mock.patch.object(quota_manager, 'kingbird_lock')
+    def test_periodic_balance_all(self, mock_kb_lock, mock_endpoint,
+                                  mock_sdk, mock_quota_sync, mock_context):
+        mock_context.get_admin_context.return_value = self.ctxt
         mock_sdk.OpenStackDriver().get_enabled_projects.return_value = \
             ['proj1']
+        mock_kb_lock.sync_lock_acquire.return_value = True
         qm = quota_manager.QuotaManager()
-        qm.periodic_balance_all()
+        qm.periodic_balance_all(FAKE_ENGINE_ID)
         mock_quota_sync.assert_called_with('proj1')
+        mock_kb_lock.sync_lock_release.assert_called_once_with(self.ctxt,
+                                                               FAKE_ENGINE_ID,
+                                                               TASK_TYPE)
 
     @mock.patch.object(quota_manager, 'sdk')
     @mock.patch.object(quota_manager, 'endpoint_cache')
@@ -200,3 +210,16 @@ class TestQuotaManager(base.KingbirdTestCase):
         qm = quota_manager.QuotaManager()
         qm.quota_sync_for_project(FAKE_PROJECT)
         mock_update.assert_not_called()
+
+    @mock.patch.object(quota_manager.QuotaManager, 'quota_sync_for_project')
+    @mock.patch.object(quota_manager, 'sdk')
+    @mock.patch.object(quota_manager, 'endpoint_cache')
+    @mock.patch.object(quota_manager, 'kingbird_lock')
+    def test_periodic_balance_all_lock_fail(self, mock_kb_lock, mock_endpoint,
+                                            mock_sdk, mock_quota_sync):
+        mock_sdk.OpenStackDriver().get_enabled_projects.return_value = \
+            ['proj1']
+        mock_kb_lock.sync_lock_acquire.return_value = False
+        qm = quota_manager.QuotaManager()
+        qm.periodic_balance_all(FAKE_ENGINE_ID)
+        mock_quota_sync.assert_not_called()

@@ -20,6 +20,7 @@ Implementation of SQLAlchemy backend.
 import sys
 
 from oslo_config import cfg
+from oslo_db import api as oslo_db_api
 from oslo_db.sqlalchemy import session as db_session
 from oslo_log import log as logging
 
@@ -198,3 +199,35 @@ def db_sync(engine, version=None):
 def db_version(engine):
     """Display the current database version."""
     return migration.db_version(engine)
+
+
+@oslo_db_api.wrap_db_retry(max_retries=3, retry_on_deadlock=True,
+                           retry_interval=0.5, inc_retry_interval=True)
+def sync_lock_acquire(context, engine_id, task_type):
+    lock = model_query(context, models.SyncLock). \
+        filter_by(task_type=task_type).all()
+    if not lock:
+        lock_ref = models.SyncLock()
+        lock_ref.engine_id = engine_id
+        lock_ref.timer_lock = "Lock Acquired for EngineId: " + engine_id
+        lock_ref.task_type = task_type
+        session = _session(context)
+        with session.begin():
+            lock_ref.save(session)
+            return True
+    return False
+
+
+@oslo_db_api.wrap_db_retry(max_retries=3, retry_on_deadlock=True,
+                           retry_interval=0.5, inc_retry_interval=True)
+def sync_lock_release(context, task_type):
+    session = _session(context)
+    locks = model_query(context, models.SyncLock). \
+        filter_by(task_type=task_type).all()
+    for lock in locks:
+        lock.delete(session=session)
+
+
+def sync_lock_steal(context, engine_id, task_type):
+    sync_lock_release(context, task_type)
+    return sync_lock_acquire(context, engine_id, task_type)

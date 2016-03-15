@@ -11,12 +11,14 @@
 # under the License.
 
 import mock
+import uuid
 
 from kingbird.engine import listener
 from kingbird.tests import base
 from kingbird.tests import utils
 
 FAKE_PROJECT = 'fake_project'
+FAKE_ENGINE_ID = str(uuid.uuid4())
 
 
 class TestEngineManager(base.KingbirdTestCase):
@@ -33,8 +35,8 @@ class TestEngineManager(base.KingbirdTestCase):
     @mock.patch.object(listener, 'QuotaManager')
     def test_periodic_balance_all(self, mock_qm):
         engine_manager = listener.EngineManager()
-        engine_manager.periodic_balance_all()
-        mock_qm().periodic_balance_all.assert_called_once_with()
+        engine_manager.periodic_balance_all(FAKE_ENGINE_ID)
+        mock_qm().periodic_balance_all.assert_called_once_with(FAKE_ENGINE_ID)
 
     @mock.patch.object(listener, 'QuotaManager')
     def test_quota_sync_for_project(self, mock_qm):

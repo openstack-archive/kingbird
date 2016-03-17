@@ -42,8 +42,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import periodic_task
 
-from kingbird.db import base
-
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -64,16 +62,16 @@ class PeriodicTasks(periodic_task.PeriodicTasks):
         super(PeriodicTasks, self).__init__(CONF)
 
 
-class Manager(base.Base, PeriodicTasks):
+class Manager(PeriodicTasks):
 
-    def __init__(self, host=None, db_driver=None, service_name='undefined'):
+    def __init__(self, host=None, service_name='undefined'):
         if not host:
             host = cfg.CONF.host_details.host
         self.host = host
         self.service_name = service_name
         # self.notifier = rpc.get_notifier(self.service_name, self.host)
         self.additional_endpoints = []
-        super(Manager, self).__init__(db_driver)
+        super(Manager, self).__init__()
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""

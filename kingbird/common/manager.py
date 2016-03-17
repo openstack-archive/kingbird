@@ -125,3 +125,7 @@ class Manager(base.Base, PeriodicTasks):
         """
 
         pass
+
+
+def list_opts():
+    yield host_opt_group.name, host_opts

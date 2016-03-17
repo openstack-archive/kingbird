@@ -20,12 +20,16 @@
 from oslo_config import cfg
 from oslo_utils import importutils
 
-db_driver_opt = cfg.StrOpt('db_driver',
-                           default='kingbird.db',
-                           help='The driver to use for database access')
-
+db_driver_opt = [
+    cfg.StrOpt('db_driver',
+               default='kingbird.db',
+               help='The driver to use for database access')
+]
 CONF = cfg.CONF
-CONF.register_opt(db_driver_opt)
+
+db_option_group = cfg.OptGroup('db_options')
+cfg.CONF.register_group(db_option_group)
+cfg.CONF.register_opts(db_driver_opt, group=db_option_group)
 
 
 class Base(object):
@@ -34,9 +38,9 @@ class Base(object):
     def __init__(self, db_driver=None):
         super(Base, self).__init__()
         if not db_driver:
-            db_driver = CONF.db_driver
+            db_driver = CONF.db_options.db_driver
         self.db = importutils.import_module(db_driver)
 
 
 def list_opts():
-    yield None, db_driver_opt
+    yield db_option_group.name, db_driver_opt

@@ -15,9 +15,7 @@
 #
 #    copy and modify from OpenStack Nova
 
-"""
-Base RPC client and server common to all services.
-"""
+"""Base RPC client and server common to all services."""
 
 from oslo_config import cfg
 import oslo_messaging as messaging
@@ -26,10 +24,15 @@ from oslo_serialization import jsonutils
 from kingbird.common import rpc
 
 CONF = cfg.CONF
-rpc_api_cap_opt = cfg.StrOpt('base_client_api',
-                             help='Set a version cap for messages sent to the'
-                                  'base api in any service')
-CONF.register_opt(rpc_api_cap_opt, 'upgrade_levels')
+rpc_api_cap_opt = [
+    cfg.StrOpt('base_client_api',
+               help='Set a version cap for messages sent to the'
+               'base api in any service')
+]
+
+rpc_api_group = cfg.OptGroup('rpc_api_options')
+cfg.CONF.register_group(rpc_api_group)
+cfg.CONF.register_opts(rpc_api_cap_opt, group=rpc_api_group)
 
 _NAMESPACE = 'base_client_api'
 
@@ -46,12 +49,13 @@ class BaseClientAPI(object):
     }
 
     def __init__(self, topic):
+        """Init method for BaseClientApi Class."""
         super(BaseClientAPI, self).__init__()
         target = messaging.Target(topic=topic,
                                   namespace=_NAMESPACE,
                                   version='1.0')
-        version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.baseapi,
-                                               CONF.upgrade_levels.baseapi)
+        version_cap = self.VERSION_ALIASES.get(CONF.rpc_api_options.baseapi,
+                                               CONF.rpc_api_options.baseapi)
         self.client = rpc.get_client(target, version_cap=version_cap)
 
     def ping(self, context, arg, timeout=None):
@@ -74,4 +78,4 @@ class BaseServerRPCAPI(object):
 
 
 def list_opts():
-    yield None, rpc_api_cap_opt
+    yield rpc_api_group.name, rpc_api_cap_opt

@@ -48,7 +48,8 @@ class NovaClient(base.DriverBase):
         try:
             # The API call does not give usage for keypair, fixed ips &
             # metadata items. Have raised a bug for that.
-            limits = self.nova_client.limits.get().to_dict()
+            limits = self.nova_client.limits.get(
+                tenant_id=project_id).to_dict()
             resource_usage = collections.defaultdict(dict)
             resource_usage['ram'] = limits['absolute']['totalRAMUsed']
             resource_usage['cores'] = limits['absolute']['totalCoresUsed']

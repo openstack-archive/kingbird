@@ -39,12 +39,15 @@ III) Add kingbird_group and KingbirdGroup to list of opts(_opts)
 
    It generates etc/tempest.conf.sample. Copy it to /etc/tempest/ and rename as tempest.conf
 
-4. Copy tempest testcases for Kingbird::
+4. Make sure the default values represented by DEFAULT_QUOTAS in tempest/api/kingbird/base.py
+   has to be same as kingbird_global_limit section in kingbird.conf.
+
+5. Copy tempest testcases for Kingbird::
 
     $ cp -r tempest/tests/api/kingbird <tempest root directory>/tempest/api/
     $ cp tempest/tests/common/kingbird.py <tempest root directory>/tempest/common/
 
-5. Set kingbird = True under [service_available] section in tempest.conf::
+6. Set kingbird = True under [service_available] section in tempest.conf::
 
 To list all Kingbird tempest cases, go to tempest directory, then run::
 

@@ -53,16 +53,21 @@ cinder_quotas = [
 # OpenStack credentials used for Endpoint Cache
 cache_opts = [
     cfg.StrOpt('auth_url',
+               default='http://127.0.0.1:5000/v3',
                help='Keystone authorization url'),
     cfg.StrOpt('identity_url',
+               default='http://127.0.0.1:35357/v3',
                help='Keystone service url'),
     cfg.StrOpt('admin_username',
+               default='admin',
                help='Username of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
     cfg.StrOpt('admin_password',
+               default='password',
                help='Password of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
     cfg.StrOpt('admin_tenant',
+               default='admin',
                help='Tenant name of admin account, needed when'
                     ' auto_refresh_endpoint set to True'),
     cfg.StrOpt('admin_user_domain_name',

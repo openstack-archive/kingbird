@@ -23,7 +23,7 @@ class KingbirdTempestPlugin(plugins.TempestPlugin):
     def load_tests(self):
         base_path = os.path.split(os.path.dirname(
             os.path.abspath(__file__)))[0]
-        test_dir = "kingbird_tempest_tests/tests/"
+        test_dir = "tempest/tests/"
         full_test_dir = os.path.join(base_path, test_dir)
         return full_test_dir, base_path
 

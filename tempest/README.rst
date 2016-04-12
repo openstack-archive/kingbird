@@ -41,8 +41,8 @@ III) Add kingbird_group and KingbirdGroup to list of opts(_opts)
 
 4. Copy tempest testcases for Kingbird::
 
-    $ cp -r kingbird_tempest_tests/tests/api/kingbird <tempest root directory>/tempest/api/
-    $ cp kingbird_tempest_tests/tests/common/kingbird.py <tempest root directory>/tempest/common/
+    $ cp -r tempest/tests/api/kingbird <tempest root directory>/tempest/api/
+    $ cp tempest/tests/common/kingbird.py <tempest root directory>/tempest/common/
 
 5. Set kingbird = True under [service_available] section in tempest.conf::
 

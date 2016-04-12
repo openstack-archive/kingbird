@@ -32,9 +32,8 @@ Q_ENABLE_KINGBIRD=True
 enable_plugin kingbird https://git.openstack.org/openstack/kingbird master
 
 # Kingbird Services
-enable_service kb-jw
-enable_service kb-jd
 enable_service kb-api
+enable_service kb-engine
 
 # Use Neutron instead of nova-network
 disable_service n-net
@@ -49,3 +48,4 @@ disable_service c-vol
 disable_service c-bak
 disable_service c-sch
 disable_service cinder
+disable_service horizon

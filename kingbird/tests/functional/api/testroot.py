@@ -163,7 +163,7 @@ class TestErrors(KBFunctionalTest):
     def test_bad_method(self):
         response = self.app.patch('/v1.0/fake_tenant_id/bad_method',
                                   expect_errors=True)
-        self.assertEqual(response.status_int, 405)
+        self.assertEqual(response.status_int, 404)
 
 
 class TestRequestID(KBFunctionalTest):

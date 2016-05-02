@@ -24,7 +24,6 @@ from kingbird.db.sqlalchemy import api as db_api
 from kingbird.tests import base
 from kingbird.tests import utils
 
-
 get_engine = api.get_engine
 UUID1 = utils.UUID1
 UUID2 = utils.UUID2
@@ -41,7 +40,8 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
         db_api.db_sync(engine)
         engine.connect()
 
-    def reset_dummy_db(self):
+    @staticmethod
+    def reset_dummy_db():
         engine = get_engine()
         meta = sqlalchemy.MetaData()
         meta.reflect(bind=engine)
@@ -51,7 +51,8 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
                 continue
             engine.execute(table.delete())
 
-    def create_quota_limit(self, ctxt, **kwargs):
+    @staticmethod
+    def create_quota_limit(ctxt, **kwargs):
         values = {
             'project_id': utils.UUID1,
             'resource': "ram",
@@ -59,6 +60,16 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
         }
         values.update(kwargs)
         return db_api.quota_create(ctxt, **values)
+
+    @staticmethod
+    def create_quota_class(ctxt, **kwargs):
+        values = {
+            'class_name': "test_class",
+            'resource': "ram",
+            'limit': 10,
+        }
+        values.update(kwargs)
+        return db_api.quota_class_create(ctxt, **values)
 
     def setUp(self):
         super(DBAPIQuotaTest, self).setUp()
@@ -135,8 +146,64 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
         self.assertIsNotNone(by_project)
         self.assertEqual(project_id, by_project['project_id'])
 
-    def test_quota_get_by_nonexisting_project(self):
+    def test_quota_get_by_non_existing_project(self):
         project_id = UUID2
         expected_quota_set = {'project_id': project_id}
         project_limit = db_api.quota_get_all_by_project(self.ctx, project_id)
         self.assertEqual(project_limit, expected_quota_set)
+
+    def test_quota_class_create(self):
+        class_name = "test_class"
+        resource = "cores"
+        quota_class = self.create_quota_class(self.ctx, class_name=class_name,
+                                              resource=resource, limit=20)
+
+        self.assertIsNotNone(quota_class)
+
+        q_class = db_api.quota_class_get(self.ctx, class_name, resource)
+        self.assertIsNotNone(q_class)
+        self.assertEqual(20, q_class.hard_limit)
+
+    def test_quota_class_update(self):
+        class_name = "test_class"
+        resource = "cores"
+        quota_class = self.create_quota_class(self.ctx, class_name=class_name,
+                                              resource=resource, limit=20)
+        self.assertIsNotNone(quota_class)
+
+        db_api.quota_class_update(self.ctx, class_name=class_name,
+                                  resource=resource, limit=30)
+
+        updated_class = db_api.quota_class_get(self.ctx, class_name=class_name,
+                                               resource=resource)
+        self.assertEqual(30, updated_class.hard_limit)
+
+    def test_quota_class_destroy(self):
+        class_name = "test_class"
+        resource = "cores"
+        quota_class = self.create_quota_class(self.ctx, class_name=class_name,
+                                              resource=resource, limit=20)
+        self.assertIsNotNone(quota_class)
+
+        db_api.quota_class_destroy(self.ctx, class_name=class_name,
+                                   resource=resource)
+
+        self.assertRaises(exceptions.QuotaClassNotFound,
+                          db_api.quota_class_get,
+                          self.ctx, class_name, resource)
+
+    def test_quota_class_destroy_all(self):
+        class_name = "test_class"
+        self.create_quota_class(self.ctx, class_name=class_name,
+                                resource='cores', limit=1)
+        self.create_quota_class(self.ctx, class_name=class_name,
+                                resource='ram', limit=4)
+
+        db_api.quota_class_destroy_all(self.ctx, class_name=class_name)
+
+        self.assertRaises(exceptions.QuotaClassNotFound,
+                          db_api.quota_class_get,
+                          self.ctx, class_name, 'cores')
+        self.assertRaises(exceptions.QuotaClassNotFound,
+                          db_api.quota_class_get,
+                          self.ctx, class_name, 'ram')

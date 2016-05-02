@@ -50,7 +50,6 @@ LOG = logging.getLogger(__name__)
 
 
 class QuotaManagerController(object):
-
     VERSION_ALIASES = {
         'mitaka': '1.0',
     }
@@ -89,8 +88,8 @@ class QuotaManagerController(object):
             if project_id == 'defaults':
                 # Get default quota limits from conf file
                 for resource, limit in \
-                    CONF.kingbird_global_limit.iteritems():
-                        result[resource.replace('quota_', '')] = limit
+                        CONF.kingbird_global_limit.iteritems():
+                    result[resource.replace('quota_', '')] = limit
             else:
                 if action and action != 'detail':
                     pecan.abort(404, _('Invalid request URL'))
@@ -174,7 +173,7 @@ class QuotaManagerController(object):
                 db_api.quota_destroy_all(context, project_id)
                 return "Deleted all quota limits for the given project"
         except exceptions.ProjectQuotaNotFound:
-                pecan.abort(404, _('Project quota not found'))
+            pecan.abort(404, _('Project quota not found'))
         except exceptions.InvalidInputError:
             pecan.abort(400, _('Invalid input for quota'))
 
@@ -199,5 +198,5 @@ class QuotaManagerController(object):
                 raise exceptions.InvalidInputError
             # Check valid quota limit value in case for put/post
             if isinstance(payload, dict) and (not isinstance(
-                payload[resource], int) or payload[resource] <= 0):
-                    raise exceptions.InvalidInputError
+                    payload[resource], int) or payload[resource] <= 0):
+                raise exceptions.InvalidInputError

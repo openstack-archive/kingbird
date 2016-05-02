@@ -89,6 +89,10 @@ class ProjectQuotaNotFound(NotFound):
     message = _("Quota for project %(project_id) doesn't exist.")
 
 
+class QuotaClassNotFound(NotFound):
+    message = _("Quota class %(class_name) doesn't exist.")
+
+
 class ConnectionRefused(KingbirdException):
     message = _("Connection to the service endpoint is refused")
 

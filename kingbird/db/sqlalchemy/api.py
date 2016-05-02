@@ -47,6 +47,8 @@ def get_facade():
 get_engine = lambda: get_facade().get_engine()
 get_session = lambda: get_facade().get_session()
 
+_DEFAULT_QUOTA_NAME = 'default'
+
 
 def get_backend():
     """The backend is this module itself."""
@@ -189,6 +191,89 @@ def quota_destroy_all(context, project_id):
 
     for quota_ref in quotas:
         quota_ref.delete(session=session)
+
+
+##########################
+
+@require_context
+def _quota_class_get(context, class_name, resource):
+    result = model_query(context, models.QuotaClass). \
+        filter_by(deleted=False). \
+        filter_by(class_name=class_name). \
+        filter_by(resource=resource). \
+        first()
+
+    if not result:
+        raise exception.QuotaClassNotFound(class_name=class_name)
+
+    return result
+
+
+@require_context
+def quota_class_get(context, class_name, resource):
+    return _quota_class_get(context, class_name, resource)
+
+
+@require_context
+def quota_class_get_default(context):
+    return quota_class_get_all_by_name(context, _DEFAULT_QUOTA_NAME)
+
+
+@require_context
+def quota_class_get_all_by_name(context, class_name):
+    rows = model_query(context, models.QuotaClass). \
+        filter_by(deleted=False). \
+        filter_by(class_name=class_name). \
+        all()
+
+    result = {'class_name': class_name}
+    for row in rows:
+        result[row.resource] = row.hard_limit
+
+    return result
+
+
+@require_admin_context
+def quota_class_create(context, class_name, resource, limit):
+    quota_class_ref = models.QuotaClass()
+    quota_class_ref.class_name = class_name
+    quota_class_ref.resource = resource
+    quota_class_ref.hard_limit = limit
+    session = _session(context)
+    with session.begin():
+        quota_class_ref.save(session)
+        return quota_class_ref
+
+
+@require_admin_context
+def quota_class_update(context, class_name, resource, limit):
+    result = model_query(context, models.QuotaClass). \
+        filter_by(deleted=False). \
+        filter_by(class_name=class_name) .\
+        filter_by(resource=resource). \
+        update({'hard_limit': limit})
+
+    if not result:
+        raise exception.QuotaClassNotFound(class_name=class_name)
+
+
+@require_admin_context
+def quota_class_destroy(context, class_name, resource):
+    session = _session(context)
+    quota_class_ref = _quota_class_get(context, class_name, resource)
+    quota_class_ref.delete(session=session)
+
+
+@require_admin_context
+def quota_class_destroy_all(context, class_name):
+    session = _session(context)
+
+    quota_classes = model_query(context, models.QuotaClass) .\
+        filter_by(deleted=False). \
+        filter_by(class_name=class_name). \
+        all()
+    for quota_class_ref in quota_classes:
+        quota_class_ref.delete(session=session)
 
 
 def db_sync(engine, version=None):

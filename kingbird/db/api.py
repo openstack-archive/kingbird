@@ -71,6 +71,41 @@ def quota_destroy_all(context, project_id):
     return IMPL.quota_destroy(context, project_id)
 
 
+def quota_class_get(context, class_name, resource):
+    """Retrieve quota from the given quota class"""
+    return IMPL.quota_class_get(context, class_name, resource)
+
+
+def quota_class_get_default(context):
+    """Get default class quotas"""
+    return IMPL.quota_class_get_default(context)
+
+
+def quota_class_get_all_by_name(context, class_name):
+    """Get all quota limits for a specified class"""
+    return IMPL.quota_class_get_all_by_name(context, class_name)
+
+
+def quota_class_create(context, class_name, resource, limit):
+    """Create a new quota limit in a specified class"""
+    return IMPL.quota_class_create(context, class_name, resource, limit)
+
+
+def quota_class_destroy(context, class_name, resource):
+    """Destroy a class quota """
+    return IMPL.quota_class_destroy(context, class_name, resource)
+
+
+def quota_class_destroy_all(context, class_name):
+    """Destroy all quotas for class"""
+    return IMPL.quota_class_destroy_all(context, class_name)
+
+
+def quota_class_update(context, class_name, resource, limit):
+    """Update a quota or raise if it doesn't exist """
+    return IMPL.quota_class_update(context, class_name, resource, limit)
+
+
 def db_sync(engine, version=None):
     """Migrate the database to `version` or the most recent version."""
     return IMPL.db_sync(engine, version=version)

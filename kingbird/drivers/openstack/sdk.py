@@ -58,13 +58,13 @@ class OpenStackDriver(object):
         else:
             # Create new objects and cache them
             LOG.info(_("Creating fresh OS Clients objects"))
-            self.cinder_client = CinderClient(region_name,
-                                              self.keystone_client.session)
             self.neutron_client = NeutronClient(region_name,
                                                 self.keystone_client.session)
             self.disabled_quotas = self._get_disabled_quotas(region_name)
             self.nova_client = NovaClient(region_name, self.disabled_quotas,
                                           self.keystone_client.session)
+            self.cinder_client = CinderClient(region_name,
+                                              self.keystone_client.session)
             OpenStackDriver.os_clients_dict[
                 region_name] = collections.defaultdict(dict)
             OpenStackDriver.os_clients_dict[region_name][
@@ -124,6 +124,9 @@ class OpenStackDriver(object):
 
     def _get_disabled_quotas(self, region):
         disabled_quotas = []
+        if not self.keystone_client.is_service_enabled('volume') or \
+                self.keystone_client.is_service_enabled('volumev2'):
+            disabled_quotas.extend(consts.CINDER_QUOTA_FIELDS)
         # Neutron
         if not self.keystone_client.is_service_enabled('network'):
             disabled_quotas.extend(consts.NEUTRON_QUOTA_FIELDS)

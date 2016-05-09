@@ -92,5 +92,15 @@ class TestNovaClient(base.KingbirdTestCase):
         mock_novaclient.Client().quotas.update.assert_called_once_with(
             self.project, **new_quota)
 
-    def test_delete_quota_limits(self):
-        pass
+    @mock.patch.object(nova_v2, 'client')
+    def test_delete_quota_limits(self, mock_novaclient):
+        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
+                                       self.session)
+
+        new_quota = {'ram': 100, 'cores': 50}
+        nv_client.update_quota_limits(self.project, **new_quota)
+
+        nv_client.delete_quota_limits(self.project)
+
+        mock_novaclient.Client().quotas.delete.assert_called_once_with(
+            self.project)

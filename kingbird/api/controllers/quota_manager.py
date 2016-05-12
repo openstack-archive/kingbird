@@ -21,15 +21,15 @@ import pecan
 from pecan import expose
 from pecan import request
 
-import itertools
 import restcomm
 
-from kingbird.common import consts
+
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.common import rpc
 from kingbird.common.serializer import KingbirdSerializer as Serializer
 from kingbird.common import topics
+from kingbird.common import utils
 from kingbird.db.sqlalchemy import api as db_api
 
 CONF = cfg.CONF
@@ -129,7 +129,7 @@ class QuotaManagerController(object):
         if not payload:
             pecan.abort(400, _('quota_set in body is required'))
         try:
-            self._validate_quota_limits(payload)
+            utils.validate_quota_limits(payload)
             for resource, limit in payload.iteritems():
                 try:
                     # Update quota limit in DB
@@ -164,7 +164,7 @@ class QuotaManagerController(object):
                 payload = payload.get('quota_set')
                 if not payload:
                     pecan.abort(400, _('quota_set in body required'))
-                self._validate_quota_limits(payload)
+                utils.validate_quota_limits(payload)
                 for resource in payload:
                     db_api.quota_destroy(context, project_id, resource)
                 return {'Deleted quota limits': payload}
@@ -187,16 +187,3 @@ class QuotaManagerController(object):
         self.client.cast(context, 'quota_sync_for_project',
                          project_id=project_id)
         return 'triggered quota sync for ' + project_id
-
-    # to do validate the quota limits
-    def _validate_quota_limits(self, payload):
-        for resource in payload:
-            # Check valid resource name
-            if resource not in itertools.chain(consts.CINDER_QUOTA_FIELDS,
-                                               consts.NOVA_QUOTA_FIELDS,
-                                               consts.NEUTRON_QUOTA_FIELDS):
-                raise exceptions.InvalidInputError
-            # Check valid quota limit value in case for put/post
-            if isinstance(payload, dict) and (not isinstance(
-                    payload[resource], int) or payload[resource] <= 0):
-                raise exceptions.InvalidInputError

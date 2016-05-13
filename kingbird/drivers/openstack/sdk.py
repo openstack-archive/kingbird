@@ -64,6 +64,7 @@ class OpenStackDriver(object):
             self.nova_client = NovaClient(region_name, self.disabled_quotas,
                                           self.keystone_client.session)
             self.cinder_client = CinderClient(region_name,
+                                              self.disabled_quotas,
                                               self.keystone_client.session)
             OpenStackDriver.os_clients_dict[
                 region_name] = collections.defaultdict(dict)

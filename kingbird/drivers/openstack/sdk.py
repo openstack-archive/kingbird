@@ -125,8 +125,8 @@ class OpenStackDriver(object):
 
     def _get_disabled_quotas(self, region):
         disabled_quotas = []
-        if not self.keystone_client.is_service_enabled('volume') or \
-                self.keystone_client.is_service_enabled('volumev2'):
+        if not self.keystone_client.is_service_enabled('volume') and \
+                not self.keystone_client.is_service_enabled('volumev2'):
             disabled_quotas.extend(consts.CINDER_QUOTA_FIELDS)
         # Neutron
         if not self.keystone_client.is_service_enabled('network'):

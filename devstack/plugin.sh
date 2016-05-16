@@ -51,13 +51,13 @@ function init_common_kingbird_conf {
     iniset $conf_file DEFAULT verbose True
     iniset $conf_file DEFAULT use_syslog $SYSLOG
 
-    iniset $conf_file auth_url http://127.0.0.1:5000/v3
-    iniset $conf_file identity_url http://127.0.0.1:35357/v3
     iniset $conf_file cache admin_username admin
     iniset $conf_file cache admin_password $ADMIN_PASSWORD
     iniset $conf_file cache admin_tenant admin
+    iniset $conf_file cache auth_url http://127.0.0.1:5000/v3
+    iniset $conf_file cache identity_url http://127.0.0.1:35357/v3
 
-    iniset $conf_file database connection `database_connection_url kingbird`    
+    iniset $conf_file database connection `database_connection_url kingbird`
 }
 
 function configure_kingbird_api {

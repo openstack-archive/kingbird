@@ -1,0 +1,9 @@
+Code-Review+2: ashish singh <ashishsingh2k8@gmail.com>
+Workflow+1: Dimitri Mazmanov <dimitri.mazmanov@ericsson.com>
+Code-Review+2: Dimitri Mazmanov <dimitri.mazmanov@ericsson.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 16 May 2016 15:05:26 +0000
+Reviewed-on: https://review.openstack.org/315438
+Project: openstack/kingbird
+Branch: refs/heads/master

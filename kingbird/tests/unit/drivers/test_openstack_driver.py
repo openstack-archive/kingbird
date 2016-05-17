@@ -63,7 +63,7 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         mock_nova_client().get_resource_usages.assert_called_once_with(
             project_id)
         mock_neutron_client().get_resource_usages.assert_called_once_with(
-            project_id)
+            os_driver.disabled_quotas, project_id)
         mock_cinder_client().get_resource_usages.assert_called_once_with(
             project_id)
         self.assertIsNotNone(total_quotas)

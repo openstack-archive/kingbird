@@ -55,6 +55,8 @@ class OpenStackDriver(object):
                 region_name]['cinder']
             self.neutron_client = OpenStackDriver.os_clients_dict[
                 region_name]['neutron']
+            self.disabled_quotas = OpenStackDriver.os_clients_dict[
+                'disabled_quotas']
         else:
             # Create new objects and cache them
             LOG.info(_("Creating fresh OS Clients objects"))
@@ -74,6 +76,8 @@ class OpenStackDriver(object):
                 'cinder'] = self.cinder_client
             OpenStackDriver.os_clients_dict[region_name][
                 'neutron'] = self.neutron_client
+            OpenStackDriver.os_clients_dict['disabled_quotas'] = \
+                self.disabled_quotas
 
     def get_enabled_projects(self):
         try:
@@ -85,7 +89,7 @@ class OpenStackDriver(object):
         try:
             nova_usages = self.nova_client.get_resource_usages(project_id)
             neutron_usages = self.neutron_client.get_resource_usages(
-                project_id)
+                self.disabled_quotas, project_id)
             cinder_usages = self.cinder_client.get_resource_usages(project_id)
             return nova_usages, neutron_usages, cinder_usages
         except (exceptions.ConnectionRefused, exceptions.NotAuthorized,
@@ -99,11 +103,10 @@ class OpenStackDriver(object):
         try:
             self.nova_client.update_quota_limits(project_id,
                                                  **limits_to_write['nova'])
-            # TODO(Ashish): Include other clients after nova is fixed
-            # self.cinder_client.update_quota_limits(project_id,
-            #                                        **limits_to_write['cinder'])
-            # self.neutron_client.update_quota_limits(project_id,
-            #                                         **limits_to_write['neutron'])
+            self.cinder_client.update_quota_limits(project_id,
+                                                   **limits_to_write['cinder'])
+            self.neutron_client.update_quota_limits(project_id,
+                                                    limits_to_write['neutron'])
         except (exceptions.ConnectionRefused, exceptions.NotAuthorized,
                 exceptions.TimeOut):
             # Delete the cached objects for that region

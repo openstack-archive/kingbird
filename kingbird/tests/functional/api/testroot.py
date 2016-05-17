@@ -118,9 +118,11 @@ class TestV1Controller(KBFunctionalTest):
 
         links = json_body.get('links')
         v1_link = links[0]
-        quota_manager_link = links[1]
+        quota_class_link = links[1]
+        quota_manager_link = links[2]
         self.assertEqual('self', v1_link['rel'])
         self.assertEqual('os-quota-sets', quota_manager_link['rel'])
+        self.assertEqual('os-quota-class-sets', quota_class_link['rel'])
 
     def _test_method_returns_405(self, method):
         api_method = getattr(self.app, method)

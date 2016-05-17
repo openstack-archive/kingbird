@@ -47,6 +47,7 @@ class OpenStackDriver(object):
         else:
             self.keystone_client = KeystoneClient()
             OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
+        self.disabled_quotas = self._get_disabled_quotas(region_name)
         if region_name in OpenStackDriver.os_clients_dict:
             LOG.info(_LI('Using cached OS client objects'))
             self.nova_client = OpenStackDriver.os_clients_dict[
@@ -59,9 +60,10 @@ class OpenStackDriver(object):
             # Create new objects and cache them
             LOG.info(_("Creating fresh OS Clients objects"))
             self.neutron_client = NeutronClient(region_name,
+                                                self.disabled_quotas,
                                                 self.keystone_client.session)
-            self.disabled_quotas = self._get_disabled_quotas(region_name)
-            self.nova_client = NovaClient(region_name, self.disabled_quotas,
+            self.nova_client = NovaClient(region_name,
+                                          self.disabled_quotas,
                                           self.keystone_client.session)
             self.cinder_client = CinderClient(region_name,
                                               self.disabled_quotas,
@@ -101,9 +103,8 @@ class OpenStackDriver(object):
                                                  **limits_to_write['nova'])
             self.cinder_client.update_quota_limits(project_id,
                                                    **limits_to_write['cinder'])
-            # TODO(Ashish): Include other clients after nova is fixed
-            # self.neutron_client.update_quota_limits(project_id,
-            #                                         **limits_to_write['neutron'])
+            self.neutron_client.update_quota_limits(project_id,
+                                                    limits_to_write['neutron'])
         except (exceptions.ConnectionRefused, exceptions.NotAuthorized,
                 exceptions.TimeOut):
             # Delete the cached objects for that region
@@ -132,22 +133,9 @@ class OpenStackDriver(object):
         if not self.keystone_client.is_service_enabled('network'):
             disabled_quotas.extend(consts.NEUTRON_QUOTA_FIELDS)
         else:
-            # Remove the nova network quotas
             disabled_quotas.extend(['floating_ips', 'fixed_ips'])
-            if self.neutron_client.is_extension_supported('security-group'):
-                # If Neutron security group is supported, disable Nova quotas
-                disabled_quotas.extend(['security_groups',
-                                        'security_group_rules'])
-            else:
-                # If Nova security group is used, disable Neutron quotas
-                disabled_quotas.extend(['security_group',
-                                        'security_group_rule'])
-            try:
-                if not self.neutron_client.is_extension_supported('quotas'):
-                    disabled_quotas.extend(consts.NEUTRON_QUOTA_FIELDS)
-            except Exception:
-                LOG.error("There was an error checking if the Neutron "
-                          "quotas extension is enabled.")
+            disabled_quotas.extend(['security_groups',
+                                    'security_group_rules'])
         return disabled_quotas
 
     def get_all_regions_for_project(self, project_id):

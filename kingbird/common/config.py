@@ -35,6 +35,7 @@ neutron_quotas = [
     cfg.IntOpt('quota_subnet', default=10),
     cfg.IntOpt('quota_port', default=50),
     cfg.IntOpt('quota_security_group', default=10),
+    cfg.IntOpt('quota_security_group_rule', default=100),
     cfg.IntOpt('quota_router', default=10),
     cfg.IntOpt('quota_floatingip', default=50)
 ]

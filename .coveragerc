@@ -4,5 +4,5 @@ source = kingbird
 omit = kingbird/openstack/*
 
 [report]
-ignore-errors = True
+ignore_errors = True
 

@@ -48,7 +48,6 @@ function init_common_kingbird_conf {
 
     touch $conf_file
     iniset $conf_file DEFAULT debug $ENABLE_DEBUG_LOG_LEVEL
-    iniset $conf_file DEFAULT verbose True
     iniset $conf_file DEFAULT use_syslog $SYSLOG
 
     iniset $conf_file cache admin_username admin

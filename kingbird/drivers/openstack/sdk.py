@@ -99,9 +99,9 @@ class OpenStackDriver(object):
         try:
             self.nova_client.update_quota_limits(project_id,
                                                  **limits_to_write['nova'])
+            self.cinder_client.update_quota_limits(project_id,
+                                                   **limits_to_write['cinder'])
             # TODO(Ashish): Include other clients after nova is fixed
-            # self.cinder_client.update_quota_limits(project_id,
-            #                                        **limits_to_write['cinder'])
             # self.neutron_client.update_quota_limits(project_id,
             #                                         **limits_to_write['neutron'])
         except (exceptions.ConnectionRefused, exceptions.NotAuthorized,

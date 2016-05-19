@@ -1,4 +1,4 @@
-# Copyright 2012 OpenStack Foundation
+# Copyright 2016 Ericsson AB
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.api.kingbird import base
 from tempest import config
+from tempest.services.kingbird import base
 
 import novaclient
 

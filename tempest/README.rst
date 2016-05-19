@@ -21,7 +21,7 @@ I) Add kingbird configurations to config file::
                    default='publicURL',
                    help="Endpoint type of Kingbird service."),
         cfg.IntOpt('TIME_TO_SYNC',
-                   default=30),
+                   default=30,
                    help="Maximum time to wait for a sync call to complete."),
         cfg.StrOpt('endpoint_url',
                    help="Endpoint URL of Kingbird service."),
@@ -45,10 +45,12 @@ III) Add kingbird_group and KingbirdGroup to list of opts(_opts)
 4. Make sure the default values represented by DEFAULT_QUOTAS in tempest/api/kingbird/base.py
    has to be same as kingbird_global_limit section in kingbird.conf.
 
-5. Copy tempest testcases for Kingbird::
+5. Create Kingbird directories(with __init__.py inside all) and copy tempest testcases::
 
-    $ cp -r tempest/tests/api/kingbird <tempest root directory>/tempest/api/
-    $ cp tempest/tests/common/kingbird.py <tempest root directory>/tempest/common/
+    $ mkdir -p tempest/api/kingbird/v1
+    $ mkdir tempest/services/kingbird
+    $ cp tempest/tests/api/v1/* tempest/api/kingbird/v1/
+    $ cp tempest/services/* tempest/services/kingbird/
 
 6. Set kingbird = True under [service_available] section in tempest.conf::
 
@@ -57,7 +59,7 @@ To list all Kingbird tempest cases, go to tempest directory, then run::
    $ testr list-tests kingbird
 
 To run kingbird tempest with nosetests, go to tempest directory, then run::
-   $ nosetests -sv tempest/api/kingbird/test_kingbird_api.py
+   $ nosetests -sv tempest/api/kingbird/v1/test_kingbird_api.py
 
 To run kingbird tempest plugin tests using tox, go to tempest directory, then run::
 
@@ -65,7 +67,7 @@ To run kingbird tempest plugin tests using tox, go to tempest directory, then ru
 
 To run a specific test::
 
-   $ tox -eall-plugin tempest.api.kingbird.test_kingbird_api.KingbirdTestJSON.test_kingbird_delete_all_method
+   $ tox -eall-plugin tempest.api.kingbird.v1.test_kingbird_api.KingbirdTestJSON.test_kingbird_delete_all_method
 
 To run tempest with run_test, go to tempest directory, then run::
 
@@ -73,4 +75,4 @@ To run tempest with run_test, go to tempest directory, then run::
 
 To run a single test case, go to tempest directory, then run with test case name, e.g.::
 
-   $ ./run_tempest.sh -N -- tempest.api.kingbird.test_kingbird_api.KingbirdTestJSON.test_kingbird_delete_all_method
+   $ ./run_tempest.sh -N -- tempest.api.kingbird.v1.test_kingbird_api.KingbirdTestJSON.test_kingbird_delete_all_method

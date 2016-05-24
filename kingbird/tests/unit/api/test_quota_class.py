@@ -19,7 +19,7 @@ from oslo_config import cfg
 
 from kingbird.api.controllers.v1 import quota_class
 from kingbird.common import config
-from kingbird.tests.functional.api.testroot import KBFunctionalTest
+from kingbird.tests.unit.api.testroot import KBApiTest
 
 config.register_options()
 OPT_GROUP_NAME = 'keystone_authtoken'
@@ -33,7 +33,7 @@ class Result(object):
         self.hard_limit = hard_limit
 
 
-class TestQuotaClassController(KBFunctionalTest):
+class TestQuotaClassController(KBApiTest):
     def setUp(self):
         super(TestQuotaClassController, self).setUp()
         cfg.CONF.set_override('admin_tenant', 'fake_tenant_id',

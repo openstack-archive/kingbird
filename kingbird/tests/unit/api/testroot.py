@@ -39,10 +39,10 @@ def fake_delete_response(self, context):
     return resp
 
 
-class KBFunctionalTest(base.KingbirdTestCase):
+class KBApiTest(base.KingbirdTestCase):
 
     def setUp(self):
-        super(KBFunctionalTest, self).setUp()
+        super(KBApiTest, self).setUp()
 
         self.addCleanup(set_config, {}, overwrite=True)
 
@@ -71,11 +71,11 @@ class KBFunctionalTest(base.KingbirdTestCase):
         return load_test_app(self.config)
 
     def tearDown(self):
-        super(KBFunctionalTest, self).tearDown()
+        super(KBApiTest, self).tearDown()
         pecan.set_config({}, overwrite=True)
 
 
-class TestRootController(KBFunctionalTest):
+class TestRootController(KBApiTest):
     """Test version listing on root URI."""
 
     def test_get(self):
@@ -106,7 +106,7 @@ class TestRootController(KBFunctionalTest):
         self._test_method_returns_405('head')
 
 
-class TestV1Controller(KBFunctionalTest):
+class TestV1Controller(KBApiTest):
 
     @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_get(self):
@@ -150,7 +150,7 @@ class TestV1Controller(KBFunctionalTest):
         self._test_method_returns_405('head')
 
 
-class TestErrors(KBFunctionalTest):
+class TestErrors(KBApiTest):
 
     def setUp(self):
         super(TestErrors, self).setUp()
@@ -168,7 +168,7 @@ class TestErrors(KBFunctionalTest):
         self.assertEqual(response.status_int, 404)
 
 
-class TestRequestID(KBFunctionalTest):
+class TestRequestID(KBApiTest):
 
     def test_request_id(self):
         response = self.app.get('/')
@@ -179,10 +179,10 @@ class TestRequestID(KBFunctionalTest):
         self.assertTrue(uuidutils.is_uuid_like(id_part))
 
 
-class TestKeystoneAuth(KBFunctionalTest):
+class TestKeystoneAuth(KBApiTest):
 
     def setUp(self):
-        super(KBFunctionalTest, self).setUp()
+        super(KBApiTest, self).setUp()
 
         self.addCleanup(set_config, {}, overwrite=True)
 

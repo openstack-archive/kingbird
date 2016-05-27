@@ -34,6 +34,7 @@ NETWORK_NAME = "kb_test_network"
 SUBNET_NAME = "kb_test_subnet"
 SERVER_NAME = "kb_test_server"
 SUBNET_RANGE = "192.168.199.0/24"
+quota_api_url = "/os-quota-sets/"
 
 LOG = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def get_session():
     return get_current_session(
         CONF.identity.username,
         CONF.identity.password,
-        CONF.identity.tenant_name
+        CONF.identity.project_name
         )
 
 
@@ -100,35 +101,35 @@ def create_instance(openstack_drivers, resource_ids, count=1):
         raise e
 
 
-def get_urlstring_and_headers(token):
-    admin_tenant_id = CONF.auth.admin_tenant_name
+def get_urlstring_and_headers(token, api_url):
+    admin_tenant_id = CONF.auth.admin_project_name
     headers = {
         'Content-Type': 'application/json',
         'X-Auth-Token': token,
         'X-ROLE': 'admin',
     }
     url_string = CONF.kingbird.endpoint_url + CONF.kingbird.api_version + \
-        "/" + admin_tenant_id + "/os-quota-sets/"
+        "/" + admin_tenant_id + api_url
     return headers, url_string
 
 
 def create_custom_kingbird_quota(token, project_id, new_quota_values):
     body = json.dumps(new_quota_values)
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     url_string = url_string + project_id
     response = requests.put(url_string, headers=headers, data=body)
     return response.text
 
 
 def get_custom_kingbird_quota(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     url_string = url_string + project_id
     response = requests.get(url_string, headers=headers)
     return response.text
 
 
 def delete_custom_kingbird_quota(token, project_id, quota_to_delete=None):
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     url_string = url_string + project_id
     if quota_to_delete:
         body = json.dumps(quota_to_delete)
@@ -139,21 +140,21 @@ def delete_custom_kingbird_quota(token, project_id, quota_to_delete=None):
 
 
 def get_default_kingbird_quota(token):
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     url_string = url_string + "defaults"
     response = requests.get(url_string, headers=headers)
     return response.text
 
 
 def quota_sync_for_project(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     url_string = url_string + project_id + "/sync"
     response = requests.put(url_string, headers=headers)
     return response.text
 
 
 def get_quota_usage_for_project(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     url_string = url_string + project_id + "/detail"
     response = requests.get(url_string, headers=headers)
     return response.text
@@ -161,7 +162,7 @@ def get_quota_usage_for_project(token, project_id):
 
 def create_custom_kingbird_quota_wrong_token(token,
                                              project_id, new_quota_values):
-    headers, url_string = get_urlstring_and_headers(token)
+    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
     headers['X-Auth-Token'] = 'fake_token'
     url_string = url_string + project_id
     body = json.dumps(new_quota_values)

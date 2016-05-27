@@ -47,14 +47,14 @@ flake8args="kingbird"
 function run_tests {
     echo 'Running tests'
     # Remove any extraneous DB migrations
-    #find kingbird/db/sqlalchemy/migrate_repo/versions/ -name '*.pyc' -delete
+    find kingbird/db/sqlalchemy/migrate_repo/versions/ -name '*.pyc' -delete
 
     if [ $debug -eq 1 ]; then
       echo "Debugging..."
       if [ "$args" = "" ]; then
         # Default to running all tests if specific test is not
         # provided.
-        testrargs="discover ./kingbird/tests"
+        testrargs="discover ./kingbird/tests/unit"
       fi
       ${wrapper} python -m testtools.run $args $testrargs
 

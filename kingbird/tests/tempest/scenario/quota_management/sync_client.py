@@ -35,15 +35,16 @@ SUBNET_NAME = "kb_test_subnet"
 SERVER_NAME = "kb_test_server"
 SUBNET_RANGE = "192.168.199.0/24"
 quota_api_url = "/os-quota-sets/"
+quota_class_api_url = "/os-quota-class-sets/"
 
 LOG = logging.getLogger(__name__)
 
 
 def get_session():
     return get_current_session(
-        CONF.identity.username,
-        CONF.identity.password,
-        CONF.identity.project_name
+        CONF.auth.admin_username,
+        CONF.auth.admin_password,
+        CONF.auth.admin_project_name
         )
 
 
@@ -53,8 +54,8 @@ def get_current_session(username, password, tenant_name):
         username=username,
         password=password,
         project_name=tenant_name,
-        user_domain_name=CONF.identity.domain_name,
-        project_domain_name=CONF.identity.default_domain_id)
+        user_domain_name=CONF.auth.admin_domain_name,
+        project_domain_name=CONF.auth.admin_domain_name)
     sess = session.Session(auth=auth)
     return sess
 
@@ -63,8 +64,8 @@ def get_openstack_drivers(key_client, region, project_name, user_name,
                           password):
     # Create Project, User and asign role to new user
     project = key_client.projects.create(project_name,
-                                         CONF.identity.domain_name)
-    user = key_client.users.create(user_name, CONF.identity.domain_name,
+                                         CONF.auth.admin_domain_name)
+    user = key_client.users.create(user_name, CONF.auth.admin_domain_name,
                                    project.id, password)
     admin_role = [current_role.id for current_role in
                   key_client.roles.list() if current_role.name == 'admin'][0]
@@ -267,3 +268,25 @@ def set_default_quota(session, regions, project_id, **quota_to_set):
                                        session=session,
                                        region_name=current_region)
         nova_client.quotas.update(project_id, **quota_to_set)
+
+
+def update_quota_for_class(token, class_name, new_quota_values):
+    body = json.dumps(new_quota_values)
+    headers, url_string = get_urlstring_and_headers(token, quota_class_api_url)
+    url_string = url_string + class_name
+    response = requests.put(url_string, headers=headers, data=body)
+    return response.text
+
+
+def get_quota_for_class(token, class_name):
+    headers, url_string = get_urlstring_and_headers(token, quota_class_api_url)
+    url_string = url_string + class_name
+    response = requests.get(url_string, headers=headers)
+    return response.text
+
+
+def delete_quota_for_class(token, class_name):
+    headers, url_string = get_urlstring_and_headers(token, quota_class_api_url)
+    url_string = url_string + class_name
+    response = requests.delete(url_string, headers=headers)
+    return response.text

@@ -19,13 +19,13 @@ NOVA_QUOTA_FIELDS = ("metadata_items",
                      "key_pairs",
                      "floating_ips",
                      "fixed_ips",
-                     "security_groups",
-                     "security_group_rules",)
+                     "security_groups",)
 
 CINDER_QUOTA_FIELDS = ("volumes",
                        "snapshots",
                        "gigabytes",
-                       "backups",)
+                       "backups",
+                       "backup_gigabytes")
 
 NEUTRON_QUOTA_FIELDS = ("network",
                         "subnet",

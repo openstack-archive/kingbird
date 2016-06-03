@@ -40,6 +40,9 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
     def skip_checks(cls):
         super(BaseKingbirdTest, cls).skip_checks()
 
+    def setUp(self):
+        super(BaseKingbirdTest, self).setUp()
+
     @classmethod
     def setup_credentials(cls):
         super(BaseKingbirdTest, cls).setup_credentials()
@@ -55,28 +58,34 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
     @classmethod
     def resource_setup(cls):
         super(BaseKingbirdTest, cls).resource_setup()
+        cls.class_name = data_utils.rand_name('kb-class')
+
+    @classmethod
+    def create_resources(cls):
         # Create Project, User, flavor, subnet & network for test
         project_name = data_utils.rand_name('kb-project')
         user_name = data_utils.rand_name('kb-user')
         password = data_utils.rand_name('kb-password')
-        openstack_details = sync_client.get_openstack_drivers(cls.key_client,
-                                                              cls.regions[0],
-                                                              project_name,
-                                                              user_name,
-                                                              password)
-        cls.openstack_drivers = openstack_details['os_drivers']
+        cls.openstack_details = sync_client.get_openstack_drivers(
+            cls.key_client,
+            cls.regions[0],
+            project_name,
+            user_name,
+            password)
+        cls.openstack_drivers = cls.openstack_details['os_drivers']
+        cls.session = cls.openstack_details['session']
         cls.resource_ids = sync_client.create_resources(cls.openstack_drivers)
-        cls.resource_ids.update(openstack_details)
+        cls.resource_ids.update(cls.openstack_details)
         cls.resource_ids["server_ids"] = []
-        cls.session = openstack_details['session']
+        cls.session = cls.openstack_details['session']
 
     @classmethod
     def resource_cleanup(cls):
         super(BaseKingbirdTest, cls).resource_cleanup()
-        sync_client.resource_cleanup(cls.openstack_drivers, cls.resource_ids)
 
-    def setUp(self):
-        super(BaseKingbirdTest, self).setUp()
+    @classmethod
+    def delete_resources(cls):
+        sync_client.resource_cleanup(cls.openstack_drivers, cls.resource_ids)
 
     @classmethod
     def create_custom_kingbird_quota(cls, project_id, new_quota_values):
@@ -182,3 +191,21 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
     def set_default_quota(cls, project_id, quota_to_set):
         sync_client.set_default_quota(
             cls.session, cls.regions, project_id, **quota_to_set)
+
+    @classmethod
+    def update_quota_for_class(cls, class_name, new_quota_values):
+        new_values = sync_client.update_quota_for_class(
+            cls.auth_token, class_name, new_quota_values)
+        return new_values
+
+    @classmethod
+    def get_quota_for_class(cls, class_name):
+        return_quotas = sync_client.get_quota_for_class(
+            cls.auth_token, class_name)
+        return return_quotas
+
+    @classmethod
+    def delete_quota_for_class(cls, class_name):
+        deleted_quotas = sync_client.delete_quota_for_class(
+            cls.auth_token, class_name)
+        return deleted_quotas

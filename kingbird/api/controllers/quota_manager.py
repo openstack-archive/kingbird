@@ -16,13 +16,14 @@
 import collections
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 import oslo_messaging as messaging
 import pecan
 from pecan import expose
 from pecan import request
 
 import restcomm
-
+import six
 
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
@@ -34,17 +35,17 @@ from kingbird.db.sqlalchemy import api as db_api
 
 CONF = cfg.CONF
 
-rpcapi_cap_opt = cfg.StrOpt('kb-engine',
-                            help='Set a version cap for messages sent to'
-                                 'kb-engine services. If you plan to do a'
-                                 'live upgrade from an old version to a'
-                                 'newer version, you should set this option'
-                                 'to the old version before beginning the'
-                                 'live upgrade procedure. Only upgrading'
-                                 'to the next version is supported, so you'
-                                 'cannot skip a release for the live upgrade'
-                                 'procedure.')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+rpc_api_cap_opt = cfg.StrOpt('kb-engine',
+                             help='Set a version cap for messages sent to'
+                                  'kb-engine services. If you plan to do a'
+                                  'live upgrade from an old version to a'
+                                  'newer version, you should set this option'
+                                  'to the old version before beginning the'
+                                  'live upgrade procedure. Only upgrading'
+                                  'to the next version is supported, so you'
+                                  'cannot skip a release for the live upgrade'
+                                  'procedure.')
+CONF.register_opt(rpc_api_cap_opt, 'upgrade_levels')
 
 LOG = logging.getLogger(__name__)
 
@@ -87,9 +88,8 @@ class QuotaManagerController(object):
         try:
             if project_id == 'defaults':
                 # Get default quota limits from conf file
-                for resource, limit in \
-                        CONF.kingbird_global_limit.iteritems():
-                    result[resource.replace('quota_', '')] = limit
+                result = self._get_defaults(context,
+                                            CONF.kingbird_global_limit)
             else:
                 if action and action != 'detail':
                     pecan.abort(404, _('Invalid request URL'))
@@ -187,3 +187,32 @@ class QuotaManagerController(object):
         self.client.cast(context, 'quota_sync_for_project',
                          project_id=project_id)
         return 'triggered quota sync for ' + project_id
+
+    @staticmethod
+    def _get_defaults(context, config_defaults):
+        '''
+        Get default quota values. If the default class is defined, use
+        the values defined in the class, otherwise use the values from the config.
+        :param context:
+        :param config_defaults:
+        :return:
+        '''
+        quotas = {}
+        default_quotas = {}
+        if CONF.use_default_quota_class:
+            default_quotas = db_api.quota_class_get_default(context)
+
+        for resource, default in six.iteritems(config_defaults):
+            # get rid of the 'quota_' prefix
+            resource_name = resource[6:]
+            if default_quotas:
+                if resource_name not in default_quotas:
+                    versionutils.report_deprecated_feature(LOG, _(
+                        "Default quota for resource: %(res)s is set "
+                        "by the default quota flag: quota_%(res)s, "
+                        "it is now deprecated. Please use the "
+                        "default quota class for default "
+                        "quota.") % {'res': resource_name})
+            quotas[resource_name] = default_quotas.get(resource_name, default)
+
+        return quotas

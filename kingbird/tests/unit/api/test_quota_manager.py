@@ -55,7 +55,10 @@ class TestQuotaManager(KBApiTest):
                          eval(response.text))
 
     @mock.patch.object(rpc, 'get_client')
-    def test_get_default_admin(self, mock_client):
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_default_admin(self, mock_db_api, mock_client):
+        mock_db_api.quota_class_get_default.return_value = \
+            {'class_name': 'default'}
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-sets/defaults',
             headers={'X_ROLE': 'admin'})
@@ -177,7 +180,10 @@ class TestQuotaManager(KBApiTest):
                          eval(response.text))
 
     @mock.patch.object(rpc, 'get_client')
-    def test_get_default_nonadmin(self, mock_client):
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_default_nonadmin(self, mock_db_api, mock_client):
+        mock_db_api.quota_class_get_default.return_value = \
+            {'class_name': 'default'}
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-sets/defaults',
             headers={'X_TENANT_ID': 'fake_tenant', 'X_USER_ID': 'nonadmin'})

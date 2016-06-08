@@ -207,3 +207,18 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
         self.assertRaises(exceptions.QuotaClassNotFound,
                           db_api.quota_class_get,
                           self.ctx, class_name, 'ram')
+
+    def test_quota_class_get_default(self):
+        params = {
+            'test_resource1': '10',
+            'test_resource2': '20',
+            'test_resource3': '30',
+        }
+        for res, limit in params.items():
+            db_api.quota_class_create(self.ctx, 'default', res, limit)
+
+        defaults = db_api.quota_class_get_default(self.ctx)
+        self.assertEqual(defaults, dict(class_name='default',
+                                        test_resource1=10,
+                                        test_resource2=20,
+                                        test_resource3=30))

@@ -16,40 +16,95 @@ File to store all the configurations
 """
 from oslo_config import cfg
 
-
+global_opts = [
+    cfg.BoolOpt('use_default_quota_class',
+                default=True,
+                help='Enables or disables use of default quota class '
+                     'with default quota.'),
+]
 # Global nova quotas for all projects
 nova_quotas = [
-    cfg.IntOpt('quota_instances', default=10),
-    cfg.IntOpt('quota_cores', default=20),
-    cfg.IntOpt('quota_ram', default=50 * 1024),
-    cfg.IntOpt('quota_floating_ips', default=10),
-    cfg.IntOpt('quota_fixed_ips', default=-1),
-    cfg.IntOpt('quota_metadata_items', default=128),
-    cfg.IntOpt('quota_security_groups', default=10),
-    cfg.IntOpt('quota_key_pairs', default=100),
+    cfg.IntOpt('quota_instances',
+               default=10,
+               help='Number of instances allowed per project'),
+    cfg.IntOpt('quota_cores',
+               default=20,
+               help='Number of instance cores allowed per project'),
+    cfg.IntOpt('quota_ram',
+               default=50 * 1024,
+               help='Megabytes of instance RAM allowed per project'),
+    cfg.IntOpt('quota_floating_ips',
+               default=10,
+               help='Number of floating IPs allowed per project'),
+    cfg.IntOpt('quota_fixed_ips',
+               default=-1,
+               help='Number of fixed IPs allowed per project (this should be '
+                    'at least the number of instances allowed)'),
+    cfg.IntOpt('quota_metadata_items',
+               default=128,
+               help='Number of metadata items allowed per instance'),
+    cfg.IntOpt('quota_security_groups',
+               default=10,
+               help='Number of security groups per project'),
+    cfg.IntOpt('quota_key_pairs',
+               default=100,
+               help='Number of key pairs per user'),
 ]
 
 # Global neutron quotas for all projects
 neutron_quotas = [
-    cfg.IntOpt('quota_network', default=10),
-    cfg.IntOpt('quota_subnet', default=10),
-    cfg.IntOpt('quota_port', default=50),
-    cfg.IntOpt('quota_security_group', default=10),
-    cfg.IntOpt('quota_security_group_rule', default=100),
-    cfg.IntOpt('quota_router', default=10),
-    cfg.IntOpt('quota_floatingip', default=50)
+    cfg.IntOpt('quota_network',
+               default=10,
+               help='Number of networks allowed per project. '
+                    'A negative value means unlimited.'),
+    cfg.IntOpt('quota_subnet',
+               default=10,
+               help='Number of subnets allowed per project, '
+                    'A negative value means unlimited.'),
+    cfg.IntOpt('quota_port',
+               default=50,
+               help='Number of ports allowed per project. '
+                    'A negative value means unlimited.'),
+    cfg.IntOpt('quota_security_group',
+               default=10,
+               help='Number of security groups allowed per project. '
+                    'A negative value means unlimited.'),
+    cfg.IntOpt('quota_security_group_rule',
+               default=100,
+               help='Number of security rules allowed per project. '
+                    'A negative value means unlimited.'),
+    cfg.IntOpt('quota_router',
+               default=10,
+               help='Number of routers allowed per project. '
+                    'A negative value means unlimited.'),
+    cfg.IntOpt('quota_floatingip',
+               default=50,
+               help='Number of floating IPs allowed per project. '
+                    'A negative value means unlimited.')
 ]
 
 # Global cinder quotas for all projects
 cinder_quotas = [
-    cfg.IntOpt('quota_volumes', default=10),
-    cfg.IntOpt('quota_snapshots', default=10),
-    cfg.IntOpt('quota_consistencygroups', default=10),
-    cfg.IntOpt('quota_gigabytes', default=1000),
-    cfg.IntOpt('quota_backups', default=10),
-    cfg.IntOpt('quota_backup_gigabytes', default=1000)
+    cfg.IntOpt('quota_volumes',
+               default=10,
+               help='Number of volumes allowed per project.'),
+    cfg.IntOpt('quota_snapshots',
+               default=10,
+               help='Number of volume snapshots allowed per project.'),
+    cfg.IntOpt('quota_consistencygroups',
+               default=10,
+               help='Number of consistency groups allowed per project.'),
+    cfg.IntOpt('quota_gigabytes',
+               default=1000,
+               help='Total amount of storage, in gigabytes, allowed '
+                    'for volumes and snapshots per project.'),
+    cfg.IntOpt('quota_backups', default=10,
+               help='Number of volume backups allowed per project.'),
+    cfg.IntOpt('quota_backup_gigabytes',
+               default=1000,
+               help='Total amount of storage, in gigabytes, allowed '
+                    'for backups per project.')
 ]
-
 
 # OpenStack credentials used for Endpoint Cache
 cache_opts = [
@@ -92,5 +147,6 @@ def list_opts():
 
 
 def register_options():
+    cfg.CONF.register_opts(global_opts)
     for group, opts in list_opts():
         cfg.CONF.register_opts(opts, group=group)

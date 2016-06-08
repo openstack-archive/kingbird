@@ -207,3 +207,28 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
         self.assertRaises(exceptions.QuotaClassNotFound,
                           db_api.quota_class_get,
                           self.ctx, class_name, 'ram')
+
+    def test_quota_class_get_default(self):
+        defaults = db_api.quota_class_get_default(self.ctx)
+        self.assertEqual(defaults, dict(class_name='default',
+                                        backup_gigabytes=1000,
+                                        backups=10,
+                                        consistencygroups=10,
+                                        cores=20,
+                                        fixed_ips=-1,
+                                        floating_ips=10,
+                                        floatingip=50,
+                                        gigabytes=1000,
+                                        instances=10,
+                                        key_pairs=100,
+                                        metadata_items=128,
+                                        network=10,
+                                        port=50,
+                                        ram=51200,
+                                        router=10,
+                                        security_group=10,
+                                        security_group_rule=100,
+                                        security_groups=10,
+                                        snapshots=10,
+                                        subnet=10,
+                                        volumes=10))

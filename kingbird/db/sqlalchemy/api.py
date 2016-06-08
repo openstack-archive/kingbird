@@ -249,7 +249,7 @@ def quota_class_create(context, class_name, resource, limit):
 def quota_class_update(context, class_name, resource, limit):
     result = model_query(context, models.QuotaClass). \
         filter_by(deleted=False). \
-        filter_by(class_name=class_name) .\
+        filter_by(class_name=class_name). \
         filter_by(resource=resource). \
         update({'hard_limit': limit})
 
@@ -268,7 +268,7 @@ def quota_class_destroy(context, class_name, resource):
 def quota_class_destroy_all(context, class_name):
     session = _session(context)
 
-    quota_classes = model_query(context, models.QuotaClass) .\
+    quota_classes = model_query(context, models.QuotaClass). \
         filter_by(deleted=False). \
         filter_by(class_name=class_name). \
         all()

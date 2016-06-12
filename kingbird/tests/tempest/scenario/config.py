@@ -15,19 +15,35 @@
 """Configurations for Kingbird Tempest Plugin."""
 
 from oslo_config import cfg
+from tempest import config  # noqa
 
+
+service_available_group = cfg.OptGroup(
+    name="service_available",
+    title="Available OpenStack Services"
+)
+
+ServiceAvailableGroup = [
+    cfg.BoolOpt("kingbird", default=True,
+                help="Whether or not kingbird is expected to be available")
+]
+
+
+kb_group = cfg.OptGroup(
+    name="kingbird",
+    title="kingbird configuration options")
 
 KBGroup = [
-    cfg.StrOpt('endpoint_type',
+    cfg.StrOpt(name='endpoint_type',
                default='publicURL',
                help="Endpoint type of Kingbird service."),
-    cfg.IntOpt('TIME_TO_SYNC',
+    cfg.IntOpt(name='TIME_TO_SYNC',
                default=30,
                help="Maximum time to wait for a sync call to complete."),
-    cfg.StrOpt('endpoint_url',
+    cfg.StrOpt(name='endpoint_url',
                default='http://127.0.0.1:8118/',
                help="Endpoint URL of Kingbird service."),
-    cfg.StrOpt('api_version',
+    cfg.StrOpt(name='api_version',
                default='v1.0',
                help="Api version of Kingbird service.")
 ]

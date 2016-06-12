@@ -16,9 +16,10 @@
 
 import os
 
+from tempest import config
 from tempest.test_discover import plugins
 
-import kingbird.tests.tempest.scenario.config as kb_config
+from kingbird.tests.tempest.scenario import config as kb_config
 
 
 class KingbirdTempestPlugin(plugins.TempestPlugin):
@@ -31,8 +32,14 @@ class KingbirdTempestPlugin(plugins.TempestPlugin):
 
     def register_opts(self, conf):
         # additional options for Kingbird
-        conf.register_opts(kb_config.KBGroup,
-                           'kingbird')
+        config.register_opt_group(conf, kb_config.kb_group, kb_config.KBGroup)
+        config.register_opt_group(
+            conf,
+            kb_config.service_available_group,
+            kb_config.ServiceAvailableGroup)
 
     def get_opt_lists(self):
-        return [('kingbird', kb_config.KbGroup)]
+        return [(
+            kb_config.kb_group.name,
+            kb_config.KBGroup)]
+        pass

@@ -41,9 +41,9 @@ LOG = logging.getLogger(__name__)
 
 def get_session():
     return get_current_session(
-        CONF.identity.username,
-        CONF.identity.password,
-        CONF.identity.project_name
+        CONF.auth.admin_username,
+        CONF.auth.admin_password,
+        CONF.auth.admin_project_name
         )
 
 
@@ -53,8 +53,8 @@ def get_current_session(username, password, tenant_name):
         username=username,
         password=password,
         project_name=tenant_name,
-        user_domain_name=CONF.identity.domain_name,
-        project_domain_name=CONF.identity.default_domain_id)
+        user_domain_name=CONF.auth.admin_domain_name,
+        project_domain_name=CONF.auth.admin_domain_name)
     sess = session.Session(auth=auth)
     return sess
 
@@ -63,8 +63,8 @@ def get_openstack_drivers(key_client, region, project_name, user_name,
                           password):
     # Create Project, User and asign role to new user
     project = key_client.projects.create(project_name,
-                                         CONF.identity.domain_name)
-    user = key_client.users.create(user_name, CONF.identity.domain_name,
+                                         CONF.auth.admin_domain_name)
+    user = key_client.users.create(user_name, CONF.auth.admin_domain_name,
                                    project.id, password)
     admin_role = [current_role.id for current_role in
                   key_client.roles.list() if current_role.name == 'admin'][0]
@@ -110,6 +110,7 @@ def get_urlstring_and_headers(token, api_url):
     }
     url_string = CONF.kingbird.endpoint_url + CONF.kingbird.api_version + \
         "/" + admin_tenant_id + api_url
+
     return headers, url_string
 
 

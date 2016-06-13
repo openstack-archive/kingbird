@@ -100,7 +100,6 @@ class KingbirdTestJSON(base.BaseKingbirdTest):
         response = self.create_custom_kingbird_quota_wrong_token(
             self.PROJECT_ID, new_quota)
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.text, u'Authentication required')
 
     def test_kingbird_get_default_method_after_delete(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
@@ -137,7 +136,3 @@ class KingbirdTestJSON(base.BaseKingbirdTest):
             message = exp.message
         self.assertIn(u"Quota exceeded for instances", message)
         self.delete_instance()
-        default_quota = {'instances': DEFAULT_QUOTAS['quota_set']['instances'],
-                         'cores': DEFAULT_QUOTAS['quota_set']['cores'],
-                         'ram': DEFAULT_QUOTAS['quota_set']['ram']}
-        self.set_default_quota(self.PROJECT_ID, default_quota)

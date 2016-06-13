@@ -67,18 +67,13 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
         cls.openstack_drivers = openstack_details['os_drivers']
         cls.resource_ids = sync_client.create_resources(cls.openstack_drivers)
         cls.resource_ids.update(openstack_details)
+        cls.resource_ids["server_ids"] = []
         cls.session = openstack_details['session']
 
     @classmethod
     def resource_cleanup(cls):
         super(BaseKingbirdTest, cls).resource_cleanup()
-        default_quota = {'instances': DEFAULT_QUOTAS['quota_set']['instances'],
-                         'cores': DEFAULT_QUOTAS['quota_set']['cores'],
-                         'ram': DEFAULT_QUOTAS['quota_set']['ram']}
-        cls.set_default_quota(cls.resource_ids['project_id'], default_quota)
         sync_client.resource_cleanup(cls.openstack_drivers, cls.resource_ids)
-        sync_client.delete_custom_kingbird_quota(
-            cls.auth_token, cls.resource_ids['project_id'], None)
 
     def setUp(self):
         super(BaseKingbirdTest, self).setUp()
@@ -131,15 +126,14 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
             server_ids = sync_client.create_instance(cls.openstack_drivers,
                                                      cls.resource_ids, count)
         except Exception as e:
-            server_ids = {'server_ids': list(e.args)}
+            server_ids = list(e.args)
             raise
         finally:
-            cls.resource_ids.update(server_ids)
+            cls.resource_ids["server_ids"].extend(server_ids)
 
     @classmethod
     def delete_instance(cls):
         sync_client.delete_instance(cls.openstack_drivers, cls.resource_ids)
-        cls.resource_ids['instances'] = None
 
     @classmethod
     def calculate_quota_limits(cls, project_id):

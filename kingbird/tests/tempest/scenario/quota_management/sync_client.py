@@ -95,7 +95,7 @@ def create_instance(openstack_drivers, resource_ids, count=1):
                 SERVER_NAME, image, flavor,
                 nics=[{'net-id': resource_ids['network_id']}])
             server_ids.append(server.id)
-        return {'server_ids': server_ids}
+        return server_ids
     except Exception as e:
         e.args = tuple(server_ids)
         raise e
@@ -177,29 +177,31 @@ def get_regions(key_client):
 
 def delete_instance(openstack_drivers, resource_ids):
     nova_client = openstack_drivers[1]
-    if 'server_ids' in resource_ids:
-        for server_id in resource_ids['server_ids']:
-            nova_client.servers.delete(server_id)
-        retries = 6
-        # Delete may take time, So wait(with timeout) till the
-        # instance is deleted
-        while retries > 0:
-            LOG.debug("waiting for instance to get deleted")
-            time.sleep(1)
-            nova_list = [current_server.id for current_server in
-                         nova_client.servers.list()]
-            if len(set(resource_ids['server_ids']) & set(nova_list)):
-                continue
-            else:
-                return
-        LOG.exception('Resource deleting failed, manually delete with IDs %s'
-                      % resource_ids)
+    for server_id in resource_ids['server_ids']:
+        nova_client.servers.delete(server_id)
+    retries = 6
+    # Delete may take time, So wait(with timeout) till the
+    # instance is deleted
+    while retries > 0:
+        LOG.debug("waiting for instance to get deleted")
+        time.sleep(1)
+        nova_list = [current_server.id for current_server in
+                     nova_client.servers.list()]
+        if len(set(resource_ids['server_ids']) & set(nova_list)):
+            continue
+        else:
+            # After deleting all, remove it from list
+            resource_ids['server_ids'] = []
+            return
+    LOG.exception('Resource deleting failed, manually delete with IDs %s'
+                  % resource_ids)
 
 
 def resource_cleanup(openstack_drivers, resource_ids):
     key_client = openstack_drivers[0]
     nova_client = openstack_drivers[1]
     neutron_client = openstack_drivers[2]
+    delete_instance(openstack_drivers, resource_ids)
     nova_client.flavors.delete(resource_ids['flavor_id'])
     neutron_client.delete_subnet(resource_ids['subnet_id'])
     neutron_client.delete_network(resource_ids['network_id'])

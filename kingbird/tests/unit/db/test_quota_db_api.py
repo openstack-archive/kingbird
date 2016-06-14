@@ -18,12 +18,14 @@ import sqlalchemy
 from oslo_config import cfg
 from oslo_db import options
 
+from kingbird.common import config
 from kingbird.common import exceptions
 from kingbird.db import api as api
 from kingbird.db.sqlalchemy import api as db_api
 from kingbird.tests import base
 from kingbird.tests import utils
 
+config.register_options()
 get_engine = api.get_engine
 UUID1 = utils.UUID1
 UUID2 = utils.UUID2

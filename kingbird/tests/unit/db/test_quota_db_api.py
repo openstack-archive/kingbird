@@ -220,7 +220,6 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
             db_api.quota_class_create(self.ctx, 'default', res, limit)
 
         defaults = db_api.quota_class_get_default(self.ctx)
-        self.assertEqual(dict(class_name='default',
-                              test_resource1=10,
-                              test_resource2=20,
-                              test_resource3=30), defaults)
+        self.assertIn('test_resource1', defaults)
+        self.assertIn('test_resource2', defaults)
+        self.assertIn('test_resource3', defaults)

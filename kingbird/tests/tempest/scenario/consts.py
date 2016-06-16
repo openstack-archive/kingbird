@@ -16,7 +16,7 @@
 
 DEFAULT_QUOTAS = {
     u'quota_set': {
-        u'metadata_items': 128, u'subnet': 10, u'consistencygroups': 10,
+        u'metadata_items': 128, u'subnet': 10,
         u'floatingip': 50, u'gigabytes': 1000, u'backup_gigabytes': 1000,
         u'ram': 51200, u'floating_ips': 10, u'snapshots': 10,
         u'security_group_rule': 100,

@@ -91,9 +91,6 @@ cinder_quotas = [
     cfg.IntOpt('quota_snapshots',
                default=10,
                help='Number of volume snapshots allowed per project.'),
-    cfg.IntOpt('quota_consistencygroups',
-               default=10,
-               help='Number of consistency groups allowed per project.'),
     cfg.IntOpt('quota_gigabytes',
                default=1000,
                help='Total amount of storage, in gigabytes, allowed '

@@ -212,16 +212,26 @@ def resource_cleanup(openstack_drivers, resource_ids):
 
 def get_usage_from_os_client(session, regions, project_id):
     resource_usage_all = collections.defaultdict(dict)
+    neutron_opts = {'tenant_id': project_id}
     for current_region in regions:
         resource_usage = collections.defaultdict(dict)
         nova_client = nv_client.Client(NOVA_API_VERSION,
                                        session=session,
                                        region_name=current_region)
+        neutron_client = nt_client.Client(NEUTRON_API_VERSION,
+                                          session=session,
+                                          region_name=current_region)
         limits = nova_client.limits.get().to_dict()
+        # Read nova usages
         resource_usage['ram'] = limits['absolute']['totalRAMUsed']
         resource_usage['cores'] = limits['absolute']['totalCoresUsed']
         resource_usage['instances'] = limits['absolute']['totalInstancesUsed']
         resource_usage['key_pairs'] = len(nova_client.keypairs.list())
+        # Read neutron usages
+        resource_usage['network'] = len(neutron_client.list_networks(
+            **neutron_opts)['networks'])
+        resource_usage['subnet'] = len(neutron_client.list_subnets(
+            **neutron_opts)['subnets'])
         resource_usage_all[current_region] = resource_usage
     return resource_usage_all
 
@@ -232,8 +242,14 @@ def get_actual_limits(session, regions, project_id):
         nova_client = nv_client.Client(NOVA_API_VERSION,
                                        session=session,
                                        region_name=current_region)
-        updated_quota = nova_client.quotas.get(project_id)
-        resource_usage.update({current_region: updated_quota.instances})
+        neutron_client = nt_client.Client(NEUTRON_API_VERSION,
+                                          session=session,
+                                          region_name=current_region)
+        updated_nova_quota = nova_client.quotas.get(project_id)
+        updated_neutron_quota = neutron_client.show_quota(
+            project_id)['quota']['network']
+        resource_usage.update({current_region: [updated_nova_quota.instances,
+                              updated_neutron_quota]})
     return resource_usage
 
 

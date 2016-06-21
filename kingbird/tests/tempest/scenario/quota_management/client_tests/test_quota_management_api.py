@@ -109,6 +109,10 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
                          expected_usage["quota_set"]["cores"])
         self.assertEqual(eval(actual_usage)["quota_set"]["instances"],
                          expected_usage["quota_set"]["instances"])
+        self.assertEqual(eval(actual_usage)["quota_set"]["network"],
+                         expected_usage["quota_set"]["network"])
+        self.assertEqual(eval(actual_usage)["quota_set"]["subnet"],
+                         expected_usage["quota_set"]["subnet"])
         self.delete_instance()
 
     def test_kingbird_put_method_wrong_token(self):

@@ -28,6 +28,7 @@ from kingbird.tests.tempest.scenario.quota_management \
 CONF = config.CONF
 GLOBAL_INSTANCE_LIMIT = 10
 GLOBAL_NETWORK_LIMIT = 10
+GLOBAL_VOLUME_LIMIT = 10
 DEFAULT_QUOTAS = consts.DEFAULT_QUOTAS
 # Time to wait for sync to finish
 TIME_TO_SYNC = CONF.kingbird.TIME_TO_SYNC
@@ -162,8 +163,14 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
                 total_usages['network']
             network_limit = global_remaining_limit + resource_usage[
                 current_region]['network']
+            # Calculate new limit for volume count
+            global_remaining_limit = GLOBAL_VOLUME_LIMIT - \
+                total_usages['volumes']
+            volume_limit = global_remaining_limit + resource_usage[
+                current_region]['volumes']
             calculated_quota_limits.update(
-                {current_region: [instances_limit, network_limit]})
+                {current_region: [instances_limit, network_limit,
+                                  volume_limit]})
         return calculated_quota_limits
 
     @classmethod

@@ -18,6 +18,7 @@ import json
 import requests
 import time
 
+from cinderclient import client as ci_client
 from keystoneclient.auth.identity import v3
 from keystoneclient import session
 from keystoneclient.v3 import client as ks_client
@@ -29,6 +30,9 @@ from tempest import config
 CONF = config.CONF
 NOVA_API_VERSION = "2.1"
 NEUTRON_API_VERSION = "2.0"
+CINDER_API_VERSION = "2"
+VOLUME_SIZE = 1
+VOLUME_NAME = "kb_test_volume"
 FLAVOR_NAME = "kb_test_flavor"
 NETWORK_NAME = "kb_test_network"
 SUBNET_NAME = "kb_test_subnet"
@@ -77,8 +81,11 @@ def get_openstack_drivers(key_client, region, project_name, user_name,
                                    region_name=region)
     neutron_client = nt_client.Client(NEUTRON_API_VERSION, session=session,
                                       region_name=region)
+    cinder_client = ci_client.Client(CINDER_API_VERSION, session=session,
+                                     region_name=region)
     return {"user_id": user.id, "project_id": project.id, "session": session,
-            "os_drivers": [key_client, nova_client, neutron_client]}
+            "os_drivers": [key_client, nova_client, neutron_client,
+                           cinder_client]}
 
 
 def get_key_client(session):
@@ -176,26 +183,52 @@ def get_regions(key_client):
             key_client.regions.list()]
 
 
-def delete_instance(openstack_drivers, resource_ids):
-    nova_client = openstack_drivers[1]
-    for server_id in resource_ids['server_ids']:
-        nova_client.servers.delete(server_id)
+def delete_resource_with_timeout(service_client, resource_ids, service_type):
+    # Delete the resources based on service_type argument
+    for resource_id in resource_ids:
+        if service_type == 'nova':
+            # Delete nova servers
+            service_client.servers.delete(resource_id)
+        elif service_type == 'cinder':
+            # Delete cinder volumes
+            service_client.volumes.delete(resource_id)
+        else:
+            LOG.exception('Invalid service type: %s' % service_type)
+            return
     retries = 6
     # Delete may take time, So wait(with timeout) till the
-    # instance is deleted
+    # resources are deleted
     while retries > 0:
-        LOG.debug("waiting for instance to get deleted")
+        LOG.debug("waiting for resources to get deleted")
         time.sleep(1)
-        nova_list = [current_server.id for current_server in
-                     nova_client.servers.list()]
-        if len(set(resource_ids['server_ids']) & set(nova_list)):
+        if service_type == 'nova':
+            resource_list = [current_server.id for current_server in
+                             service_client.servers.list()]
+        elif service_type == 'cinder':
+            resource_list = [current_volume.id for current_volume in
+                             service_client.volumes.list()]
+        # Check if there is any resource left in resource list
+        if len(set(resource_ids) & set(resource_list)):
             continue
         else:
-            # After deleting all, remove it from list
-            resource_ids['server_ids'] = []
+            # Deleted all the resources
             return
     LOG.exception('Resource deleting failed, manually delete with IDs %s'
                   % resource_ids)
+
+
+def delete_instance(openstack_drivers, resource_ids):
+    delete_resource_with_timeout(
+        openstack_drivers[1],
+        resource_ids['server_ids'], 'nova')
+    resource_ids['server_ids'] = []
+
+
+def delete_volume(openstack_drivers, resource_ids):
+    delete_resource_with_timeout(
+        openstack_drivers[3],
+        resource_ids['volume_ids'], 'cinder')
+    resource_ids['volume_ids'] = []
 
 
 def resource_cleanup(openstack_drivers, resource_ids):
@@ -203,6 +236,7 @@ def resource_cleanup(openstack_drivers, resource_ids):
     nova_client = openstack_drivers[1]
     neutron_client = openstack_drivers[2]
     delete_instance(openstack_drivers, resource_ids)
+    delete_volume(openstack_drivers, resource_ids)
     nova_client.flavors.delete(resource_ids['flavor_id'])
     neutron_client.delete_subnet(resource_ids['subnet_id'])
     neutron_client.delete_network(resource_ids['network_id'])
@@ -213,6 +247,7 @@ def resource_cleanup(openstack_drivers, resource_ids):
 def get_usage_from_os_client(session, regions, project_id):
     resource_usage_all = collections.defaultdict(dict)
     neutron_opts = {'tenant_id': project_id}
+    cinder_opts = {'all_tenants': 1, 'project_id': project_id}
     for current_region in regions:
         resource_usage = collections.defaultdict(dict)
         nova_client = nv_client.Client(NOVA_API_VERSION,
@@ -221,6 +256,9 @@ def get_usage_from_os_client(session, regions, project_id):
         neutron_client = nt_client.Client(NEUTRON_API_VERSION,
                                           session=session,
                                           region_name=current_region)
+        cinder_client = ci_client.Client(CINDER_API_VERSION,
+                                         session=session,
+                                         region_name=current_region)
         limits = nova_client.limits.get().to_dict()
         # Read nova usages
         resource_usage['ram'] = limits['absolute']['totalRAMUsed']
@@ -232,6 +270,9 @@ def get_usage_from_os_client(session, regions, project_id):
             **neutron_opts)['networks'])
         resource_usage['subnet'] = len(neutron_client.list_subnets(
             **neutron_opts)['subnets'])
+        # Read cinder usages
+        resource_usage['volumes'] = len(cinder_client.volumes.list(
+            search_opts=cinder_opts))
         resource_usage_all[current_region] = resource_usage
     return resource_usage_all
 
@@ -245,17 +286,25 @@ def get_actual_limits(session, regions, project_id):
         neutron_client = nt_client.Client(NEUTRON_API_VERSION,
                                           session=session,
                                           region_name=current_region)
+        cinder_client = ci_client.Client(CINDER_API_VERSION,
+                                         session=session,
+                                         region_name=current_region)
         updated_nova_quota = nova_client.quotas.get(project_id)
         updated_neutron_quota = neutron_client.show_quota(
             project_id)['quota']['network']
+        updated_cinder_quota = cinder_client.quotas.get(project_id)
         resource_usage.update({current_region: [updated_nova_quota.instances,
-                              updated_neutron_quota]})
+                              updated_neutron_quota,
+                              updated_cinder_quota.volumes]})
     return resource_usage
 
 
 def create_resources(openstack_drivers):
     nova_client = openstack_drivers[1]
     neutron_client = openstack_drivers[2]
+    cinder_client = openstack_drivers[3]
+    volume = cinder_client.volumes.create(VOLUME_SIZE,
+                                          name=VOLUME_NAME)
     flavor = nova_client.flavors.create(
         FLAVOR_NAME, 128, 1, 1, flavorid='auto')
     network_body = {'network': {'name': NETWORK_NAME, 'admin_state_up': True}}
@@ -274,7 +323,8 @@ def create_resources(openstack_drivers):
     return {
         'subnet_id': subnet['subnets'][0]['id'],
         'network_id': network['network']['id'],
-        'flavor_id': flavor.id
+        'flavor_id': flavor.id,
+        'volume_ids': [volume.id]
     }
 
 

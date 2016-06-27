@@ -118,6 +118,7 @@ def get_urlstring_and_headers(token, api_url):
     }
     url_string = CONF.kingbird.endpoint_url + CONF.kingbird.api_version + \
         "/" + admin_tenant_id + api_url
+
     return headers, url_string
 
 

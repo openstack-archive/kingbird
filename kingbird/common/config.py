@@ -128,6 +128,31 @@ cache_opts = [
                     ' auto_refresh_endpoint set to True')
 ]
 
+scheduler_opts = [
+    cfg.BoolOpt('periodic_enable',
+                default=True,
+                help='boolean value for enable/disenable periodic tasks'),
+    cfg.IntOpt('periodic_interval',
+               default=900,
+               help='periodic time interval for automatic quota sync job')
+]
+
+host_opts = [
+    cfg.StrOpt('host',
+               default='localhost',
+               help='hostname of the machine')
+]
+
+common_opts = [
+    cfg.IntOpt('workers', default=1,
+               help='number of workers'),
+]
+
+
+scheduler_opt_group = cfg.OptGroup('scheduler',
+                                   title='Scheduler options for periodic job')
+host_opt_group = cfg.OptGroup('host_details',
+                              title='IP address of RPC Server')
 # The group stores Kingbird global limit for all the projects
 default_quota_group = cfg.OptGroup(name='kingbird_global_limit',
                                    title='Global quota limit for all projects')
@@ -141,7 +166,10 @@ def list_opts():
     yield default_quota_group.name, neutron_quotas
     yield default_quota_group.name, cinder_quotas
     yield cache_opt_group.name, cache_opts
+    yield scheduler_opt_group.name, scheduler_opts
+    yield host_opt_group.name, host_opts
     yield None, global_opts
+    yield None, common_opts
 
 
 def register_options():

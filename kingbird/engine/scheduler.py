@@ -1,5 +1,3 @@
-# Copyright 2016 Ericsson AB
-
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
@@ -23,9 +21,6 @@ from oslo_service import threadgroup
 LOG = logging.getLogger(__name__)
 
 wallclock = time.time
-
-CONF = cfg.CONF
-LOG = logging.getLogger(__name__)
 
 
 class ThreadGroupManager(object):

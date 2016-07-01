@@ -42,19 +42,11 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import periodic_task
 
+from kingbird.common import config
 
 CONF = cfg.CONF
+config.register_options()
 LOG = logging.getLogger(__name__)
-
-host_opts = [
-    cfg.StrOpt('host',
-               default='localhost',
-               help='hostname of the machine')
-]
-
-host_opt_group = cfg.OptGroup('host_details')
-cfg.CONF.register_group(host_opt_group)
-cfg.CONF.register_opts(host_opts, group=host_opt_group)
 
 
 class PeriodicTasks(periodic_task.PeriodicTasks):
@@ -66,7 +58,7 @@ class Manager(PeriodicTasks):
 
     def __init__(self, host=None, service_name='undefined'):
         if not host:
-            host = cfg.CONF.host_details.host
+            host = cfg.CONF.host
         self.host = host
         self.service_name = service_name
         # self.notifier = rpc.get_notifier(self.service_name, self.host)
@@ -123,7 +115,3 @@ class Manager(PeriodicTasks):
         """
 
         pass
-
-
-def list_opts():
-    yield host_opt_group.name, host_opts

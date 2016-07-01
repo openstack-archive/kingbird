@@ -83,7 +83,7 @@ class QuotaManager(manager.Manager):
         # Divide list of projects into batches and perfrom quota sync
         # for one batch at a time.
         for current_batch_projects in utils.get_batch_projects(
-            cfg.CONF.batch.batch_size, project_list):
+                cfg.CONF.batch.batch_size, project_list):
             LOG.info(_LI("Syncing quota for current batch with projects: %s"),
                      current_batch_projects)
             for current_project in current_batch_projects:

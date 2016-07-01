@@ -29,7 +29,6 @@ from kingbird.common.i18n import _LI
 
 
 # from kingbird import policy
-from kingbird.common import rpc
 from kingbird.common import version
 
 LOG = logging.getLogger(__name__)
@@ -72,8 +71,6 @@ def init(args, **kwargs):
     cfg.CONF(args=args, project='kingbird',
              version='%%(prog)s %s' % version.version_info.release_string(),
              **kwargs)
-
-    rpc.init(cfg.CONF)
 
 
 def setup_logging():

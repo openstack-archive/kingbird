@@ -17,7 +17,6 @@ import collections
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_log import versionutils
-import oslo_messaging as messaging
 import pecan
 from pecan import expose
 from pecan import request
@@ -27,11 +26,9 @@ import six
 
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
-from kingbird.common import rpc
-from kingbird.common.serializer import KingbirdSerializer as Serializer
-from kingbird.common import topics
 from kingbird.common import utils
 from kingbird.db.sqlalchemy import api as db_api
+from kingbird.rpc import client as rpc_client
 
 CONF = cfg.CONF
 
@@ -57,18 +54,7 @@ class QuotaManagerController(object):
 
     def __init__(self, *args, **kwargs):
         super(QuotaManagerController, self).__init__(*args, **kwargs)
-        target = messaging.Target(topic=topics.TOPIC_KB_ENGINE, version='1.0')
-        upgrade_level = CONF.upgrade_levels.kb_engine
-        version_cap = 1.0
-        if upgrade_level == 'auto':
-            version_cap = self._determine_version_cap(target)
-        else:
-            version_cap = self.VERSION_ALIASES.get(upgrade_level,
-                                                   upgrade_level)
-        serializer = Serializer()
-        self.client = rpc.get_client(target,
-                                     version_cap=version_cap,
-                                     serializer=serializer)
+        self.rpc_client = rpc_client.EngineClient()
 
     # to do the version compatibility for future purpose
     def _determine_version_cap(self, target):
@@ -95,10 +81,8 @@ class QuotaManagerController(object):
                     pecan.abort(404, _('Invalid request URL'))
                 elif action == 'detail':
                     # Get the current quota usages for a project
-                    result = self.client.call(
-                        context,
-                        'get_total_usage_for_tenant',
-                        project_id=project_id)
+                    result = self.rpc_client.get_total_usage_for_tenant(
+                        context, project_id)
                 else:
                     # Get quota limits for all the resources for a project
                     result = db_api.quota_get_all_by_project(
@@ -184,8 +168,8 @@ class QuotaManagerController(object):
         if not context.is_admin:
             pecan.abort(403, _('Admin required'))
 
-        self.client.cast(context, 'quota_sync_for_project',
-                         project_id=project_id)
+        self.rpc_client.quota_sync_for_project(
+            context, project_id)
         return 'triggered quota sync for ' + project_id
 
     @staticmethod

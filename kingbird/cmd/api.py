@@ -19,8 +19,10 @@
 
 import sys
 
+import eventlet
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import systemd
 from oslo_service import wsgi
 
 import logging as std_logging
@@ -31,10 +33,12 @@ from kingbird.api import app
 from kingbird.common import config
 from kingbird.common.i18n import _LI
 from kingbird.common.i18n import _LW
+from kingbird.common import messaging
 
 CONF = cfg.CONF
 config.register_options()
 LOG = logging.getLogger('kingbird.api')
+eventlet.monkey_patch(os=False)
 
 
 def main():
@@ -52,7 +56,8 @@ def main():
 
     LOG.info(_LI("Server on http://%(host)s:%(port)s with %(workers)s"),
              {'host': host, 'port': port, 'workers': workers})
-
+    messaging.setup()
+    systemd.notify_once()
     service = wsgi.Server(CONF, "Kingbird", application, host, port)
 
     app.serve(service, CONF, workers)

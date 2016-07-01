@@ -17,4 +17,4 @@ CREATE = 'create'
 DELETE = 'delete'
 UPDATE = 'update'
 
-TOPIC_KB_ENGINE = 'engine'
+TOPIC_KB_ENGINE = 'kingbird-engine'

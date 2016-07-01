@@ -37,4 +37,4 @@ def extract_context_from_environ():
     role = environ.get('HTTP_X_ROLE')
 
     context_paras['is_admin'] = role == 'admin'
-    return k_context.Context(**context_paras)
+    return k_context.RequestContext(**context_paras)

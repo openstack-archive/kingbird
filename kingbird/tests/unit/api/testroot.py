@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 import pecan
 from pecan.configuration import set_config
 from pecan.testing import load_test_app
@@ -26,7 +24,6 @@ from oslo_utils import uuidutils
 
 from kingbird.api import api_config
 from kingbird.common import config
-from kingbird.common import rpc
 from kingbird.tests import base
 
 config.register_options()
@@ -108,7 +105,6 @@ class TestRootController(KBApiTest):
 
 class TestV1Controller(KBApiTest):
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_get(self):
         response = self.app.get('/v1.0')
         self.assertEqual(response.status_int, 200)
@@ -129,23 +125,18 @@ class TestV1Controller(KBApiTest):
         response = api_method('/v1.0', expect_errors=True)
         self.assertEqual(response.status_int, 405)
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_post(self):
         self._test_method_returns_405('post')
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_put(self):
         self._test_method_returns_405('put')
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_patch(self):
         self._test_method_returns_405('patch')
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_delete(self):
         self._test_method_returns_405('delete')
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_head(self):
         self._test_method_returns_405('head')
 
@@ -161,7 +152,6 @@ class TestErrors(KBApiTest):
         response = self.app.get('/assert_called_once', expect_errors=True)
         self.assertEqual(response.status_int, 404)
 
-    @mock.patch.object(rpc, 'get_client', new=mock.Mock())
     def test_bad_method(self):
         response = self.app.patch('/v1.0/fake_tenant_id/bad_method',
                                   expect_errors=True)

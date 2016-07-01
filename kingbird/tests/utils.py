@@ -82,7 +82,7 @@ def create_quota_limit(ctxt, **kwargs):
 
 def dummy_context(user='test_username', tenant='test_project_id',
                   region_name=None):
-    return context.ContextBase.from_dict({
+    return context.RequestContext.from_dict({
         'auth_token': 'abcd1234',
         'user': user,
         'tenant': tenant,

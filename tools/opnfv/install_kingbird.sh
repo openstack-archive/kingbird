@@ -8,20 +8,28 @@ set -o pipefail
 # Ensure that openrc containing OpenStack environment variables is present.
 source openrc
 
+# Endpoints. Dynamically get IP addresses from another service (keystone)
+KINGBIRD_PUBLIC_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 6 | cut -d '/' -f 3 | cut -d ':' -f 1)
+KINGBIRD_ADMIN_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 7 | cut -d '/' -f 3 | cut -d ':' -f 1)
+KINGBIRD_INTERNAL_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 7 | cut -d '/' -f 3 | cut -d ':' -f 1)
+
 # MySQL
 mysql_host=$(mysql -uroot -se "SELECT SUBSTRING_INDEX(USER(), '@', -1);")
 mysql_user='kingbird'
 mysql_pass='mysql_kb'
 mysql_db='kingbird'
+
 # Keystone
 admin_password='keystone_kb_pass'
 admin_user='kingbird'
 admin_tenant_name='services'
 auth_uri=$OS_AUTH_URL"v3"
+
 # Rabbit
 rabbit_user='nova'
 rabbit_password=$(sed -n 's/^rabbit_password *= *\([^ ]*.*\)/\1/p' < /etc/nova/nova.conf)
 rabbit_hosts=$(sed -n 's/^rabbit_hosts *= *\([^ ]*.*\)/\1/p' < /etc/nova/nova.conf)
+
 # Config
 KINGBIRD_CONF_FILE='/etc/kingbird/kingbird.conf'
 bind_host=$(sed -n 's/^admin_bind_host *= *\([^ ]*.*\)/\1/p' < /etc/keystone/keystone.conf)
@@ -153,5 +161,5 @@ iniset $KINGBIRD_CONF_FILE database max_pool_size 1000
 
 mkdir -p /var/log/kingbird
 kingbird-manage --config-file $KINGBIRD_CONF_FILE db_sync
-nohup kingbird-engine --config-file $KINGBIRD_CONF_FILE > /var/log/kingbird/kingbird-engine.log &
-nohup kingbird-api --config-file $KINGBIRD_CONF_FILE > /var/log/kingbird/kingbird-api.log &
+nohup kingbird-engine --config-file $KINGBIRD_CONF_FILE --log-file /var/log/kingbird/kingbird-engine.log &
+nohup kingbird-api --config-file $KINGBIRD_CONF_FILE --log-file /var/log/kingbird/kingbird-api.log &

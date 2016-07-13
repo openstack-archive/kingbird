@@ -157,8 +157,11 @@ iniset $KINGBIRD_CONF_FILE database connection "mysql://$mysql_user:$mysql_pass@
 iniset $KINGBIRD_CONF_FILE database max_overflow -1
 iniset $KINGBIRD_CONF_FILE database max_pool_size 1000
 
-# Run kingbird
+# Kill kingbird
+if pgrep kingbird-api &> /dev/null ; then  pkill -f kingbird-api ; fi
+if pgrep kingbird-engine &> /dev/null ; then  pkill -f kingbird-engine ; fi
 
+# Run kingbird
 mkdir -p /var/log/kingbird
 kingbird-manage --config-file $KINGBIRD_CONF_FILE db_sync
 nohup kingbird-engine --config-file $KINGBIRD_CONF_FILE --log-file /var/log/kingbird/kingbird-engine.log &

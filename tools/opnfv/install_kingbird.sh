@@ -157,6 +157,9 @@ iniset $KINGBIRD_CONF_FILE database connection "mysql://$mysql_user:$mysql_pass@
 iniset $KINGBIRD_CONF_FILE database max_overflow -1
 iniset $KINGBIRD_CONF_FILE database max_pool_size 1000
 
+# Kill kingbird
+pkill -f kingbird-api
+pkill -f kingbird-engine
 # Run kingbird
 
 mkdir -p /var/log/kingbird

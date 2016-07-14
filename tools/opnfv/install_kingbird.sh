@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -o xtrace
-set -o errexit
 set -o nounset
 set -o pipefail
 
@@ -12,7 +11,8 @@ source openrc
 KINGBIRD_PUBLIC_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 6 | cut -d '/' -f 3 | cut -d ':' -f 1)
 KINGBIRD_ADMIN_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 7 | cut -d '/' -f 3 | cut -d ':' -f 1)
 KINGBIRD_INTERNAL_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 7 | cut -d '/' -f 3 | cut -d ':' -f 1)
-
+KINGBIRD_PORT=8118
+KINGBIRD_VERSION='v1.0'
 # MySQL
 mysql_host=$(mysql -uroot -se "SELECT SUBSTRING_INDEX(USER(), '@', -1);")
 mysql_user='kingbird'
@@ -94,8 +94,8 @@ if [ $? -eq 0 ]; then
     echo "User already exists. Skipping.."
 else
     echo "Creating Kingbird user.."
-    openstack user create --project=$admin_tenant_name --password=$admin_password $admin_user
-    openstack role add --user=$admin_user --project=$admin_tenant_name admin
+    openstack user create --project=${admin_tenant_name} --password=${admin_password} ${admin_user}
+    openstack role add --user=${admin_user} --project=${admin_tenant_name} admin
 fi
 
 #Configure kingbird endpoints
@@ -106,10 +106,10 @@ else
     echo "Creating Kingbird endpoints.."
     openstack service create --name=kingbird --description="Kingbird" multisite
     openstack endpoint create kingbird \
-        --publicurl $KINGBIRD_PUBLIC_URL \
-        --adminurl $KINGBIRD_ADMIN_URL \
-        --internalurl $KINGBIRD_INTERNAL_URL \
-        --region $OS_REGION_NAME
+        --publicurl http://${KINGBIRD_PUBLIC_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION} \
+        --adminurl http://${KINGBIRD_ADMIN_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION} \
+        --internalurl http://${KINGBIRD_INTERNAL_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION} \
+        --region ${OS_REGION_NAME}
 fi
 
 #Setup Kingbird
@@ -119,43 +119,43 @@ pip install -r requirements.txt
 pip install .
 
 mkdir -p /etc/kingbird/
-oslo-config-generator --config-file tools/config-generator.conf --output-file $KINGBIRD_CONF_FILE
+oslo-config-generator --config-file tools/config-generator.conf --output-file ${KINGBIRD_CONF_FILE}
 
 # Delete previous repo clone
 cd ..
 rm -rf kingbird/
 
 # Configure host section
-iniset $KINGBIRD_CONF_FILE DEFAULT bind_host $bind_host
-iniset $KINGBIRD_CONF_FILE DEFAULT bind_port 8118
-iniset $KINGBIRD_CONF_FILE host_details host $bind_host
+iniset ${KINGBIRD_CONF_FILE} DEFAULT bind_host ${bind_host}
+iniset ${KINGBIRD_CONF_FILE} DEFAULT bind_port ${KINGBIRD_PORT}
+iniset ${KINGBIRD_CONF_FILE} host_details host ${bind_host}
 
 # Configure cache section. Ideally should be removed
-iniset $KINGBIRD_CONF_FILE cache admin_tenant $admin_tenant_name
-iniset $KINGBIRD_CONF_FILE cache admin_username $admin_user
-iniset $KINGBIRD_CONF_FILE cache admin_password $admin_password
-iniset $KINGBIRD_CONF_FILE cache auth_uri $auth_uri
-iniset $KINGBIRD_CONF_FILE cache identity_uri $OS_AUTH_URL
+iniset ${KINGBIRD_CONF_FILE} cache admin_tenant ${admin_tenant_name}
+iniset ${KINGBIRD_CONF_FILE} cache admin_username ${admin_user}
+iniset ${KINGBIRD_CONF_FILE} cache admin_password ${admin_password}
+iniset ${KINGBIRD_CONF_FILE} cache auth_uri ${auth_uri}
+iniset ${KINGBIRD_CONF_FILE} cache identity_uri ${OS_AUTH_URL}
 
 # Configure keystone_authtoken section
-iniset $KINGBIRD_CONF_FILE keystone_authtoken admin_tenant_name $admin_tenant_name
-iniset $KINGBIRD_CONF_FILE keystone_authtoken admin_user $admin_user
-iniset $KINGBIRD_CONF_FILE keystone_authtoken admin_password $admin_password
-iniset $KINGBIRD_CONF_FILE keystone_authtoken auth_uri $auth_uri
-iniset $KINGBIRD_CONF_FILE keystone_authtoken identity_uri $OS_AUTH_URL
+iniset ${KINGBIRD_CONF_FILE} keystone_authtoken admin_tenant_name ${admin_tenant_name}
+iniset ${KINGBIRD_CONF_FILE} keystone_authtoken admin_user ${admin_user}
+iniset ${KINGBIRD_CONF_FILE} keystone_authtoken admin_password ${admin_password}
+iniset ${KINGBIRD_CONF_FILE} keystone_authtoken auth_uri ${auth_uri}
+iniset ${KINGBIRD_CONF_FILE} keystone_authtoken identity_uri ${OS_AUTH_URL}
 
 # Configure RabbitMQ credentials
-iniset $KINGBIRD_CONF_FILE oslo_messaging_rabbit rabbit_userid $rabbit_user
-iniset $KINGBIRD_CONF_FILE oslo_messaging_rabbit rabbit_password $rabbit_password
-iniset $KINGBIRD_CONF_FILE oslo_messaging_rabbit rabbit_hosts $rabbit_hosts
-iniset $KINGBIRD_CONF_FILE oslo_messaging_rabbit rabbit_virtual_host /
-iniset $KINGBIRD_CONF_FILE oslo_messaging_rabbit rabbit_ha_queues False
+iniset ${KINGBIRD_CONF_FILE} oslo_messaging_rabbit rabbit_userid ${rabbit_user}
+iniset ${KINGBIRD_CONF_FILE} oslo_messaging_rabbit rabbit_password ${rabbit_password}
+iniset ${KINGBIRD_CONF_FILE} oslo_messaging_rabbit rabbit_hosts ${rabbit_hosts}
+iniset ${KINGBIRD_CONF_FILE} oslo_messaging_rabbit rabbit_virtual_host /
+iniset ${KINGBIRD_CONF_FILE} oslo_messaging_rabbit rabbit_ha_queues False
 
 
 # Configure the database.
-iniset $KINGBIRD_CONF_FILE database connection "mysql://$mysql_user:$mysql_pass@$mysql_host/$mysql_db?charset=utf8"
-iniset $KINGBIRD_CONF_FILE database max_overflow -1
-iniset $KINGBIRD_CONF_FILE database max_pool_size 1000
+iniset ${KINGBIRD_CONF_FILE} database connection "mysql://$mysql_user:$mysql_pass@$mysql_host/$mysql_db?charset=utf8"
+iniset ${KINGBIRD_CONF_FILE} database max_overflow -1
+iniset ${KINGBIRD_CONF_FILE} database max_pool_size 1000
 
 # Kill kingbird
 if pgrep kingbird-api &> /dev/null ; then  pkill -f kingbird-api ; fi
@@ -163,6 +163,6 @@ if pgrep kingbird-engine &> /dev/null ; then  pkill -f kingbird-engine ; fi
 
 # Run kingbird
 mkdir -p /var/log/kingbird
-kingbird-manage --config-file $KINGBIRD_CONF_FILE db_sync
-nohup kingbird-engine --config-file $KINGBIRD_CONF_FILE --log-file /var/log/kingbird/kingbird-engine.log &
-nohup kingbird-api --config-file $KINGBIRD_CONF_FILE --log-file /var/log/kingbird/kingbird-api.log &
+kingbird-manage --config-file ${KINGBIRD_CONF_FILE} db_sync
+nohup kingbird-engine --config-file ${KINGBIRD_CONF_FILE} --log-file /var/log/kingbird/kingbird-engine.log &
+nohup kingbird-api --config-file ${KINGBIRD_CONF_FILE} --log-file /var/log/kingbird/kingbird-api.log &

@@ -116,7 +116,7 @@ fi
 git clone https://github.com/openstack/kingbird.git && cd kingbird/
 
 pip install -r requirements.txt
-pip install .
+pip install --force-reinstall .
 
 mkdir -p /etc/kingbird/
 oslo-config-generator --config-file tools/config-generator.conf --output-file ${KINGBIRD_CONF_FILE}

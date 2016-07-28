@@ -101,5 +101,5 @@ def sync_lock_release(context, engine_id, task_type):
     return db_api.sync_lock_release(context, task_type)
 
 
-def list_opt():
+def list_opts():
     yield lock_opts_group.name, lock_opts

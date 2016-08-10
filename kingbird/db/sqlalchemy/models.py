@@ -20,7 +20,7 @@ from oslo_config import cfg
 from oslo_db.sqlalchemy import models
 
 from sqlalchemy.orm import session as orm_session
-from sqlalchemy import (Column, Integer, String, schema)
+from sqlalchemy import (Column, Integer, String, Boolean, schema)
 from sqlalchemy.ext.declarative import declarative_base
 
 CONF = cfg.CONF
@@ -126,3 +126,21 @@ class SyncLock(BASE, KingbirdBase):
     timer_lock = Column(String(255), nullable=False)
 
     task_type = Column(String(36), nullable=False)
+
+
+class Service(BASE, KingbirdBase):
+    """"Kingbird service engine registry"""
+
+    __tablename__ = 'service'
+
+    id = Column('id', String(36), primary_key=True, nullable=False)
+
+    host = Column(String(255))
+
+    binary = Column(String(255))
+
+    topic = Column(String(255))
+
+    disabled = Column(Boolean, default=False)
+
+    disabled_reason = Column(String(255))

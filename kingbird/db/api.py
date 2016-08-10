@@ -23,7 +23,6 @@ from oslo_db import api
 
 CONF = cfg.CONF
 
-
 _BACKEND_MAPPING = {'sqlalchemy': 'kingbird.db.sqlalchemy.api'}
 
 IMPL = api.DBAPI.from_config(CONF, backend_mapping=_BACKEND_MAPPING)
@@ -35,6 +34,7 @@ def get_engine():
 
 def get_session():
     return IMPL.get_session()
+
 
 # quota usage db methods
 
@@ -126,3 +126,25 @@ def sync_lock_release(context, task_type):
 
 def sync_lock_steal(context, engine_id, task_type):
     return IMPL.sync_lock_steal(context, engine_id, task_type)
+
+
+def service_create(context, service_id, host=None, binary=None,
+                   topic=None):
+    return IMPL.service_create(context, service_id=service_id, host=host,
+                               binary=binary, topic=topic)
+
+
+def service_update(context, service_id, values=None):
+    return IMPL.service_update(context, service_id, values=values)
+
+
+def service_delete(context, service_id):
+    return IMPL.service_delete(context, service_id)
+
+
+def service_get(context, service_id):
+    return IMPL.service_get(context, service_id)
+
+
+def service_get_all(context):
+    return IMPL.service_get_all(context)

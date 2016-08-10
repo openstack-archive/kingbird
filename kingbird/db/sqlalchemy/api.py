@@ -23,6 +23,7 @@ from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db.sqlalchemy import session as db_session
 from oslo_log import log as logging
+from oslo_utils import timeutils
 
 from kingbird.common import exceptions as exception
 from kingbird.common.i18n import _
@@ -316,3 +317,56 @@ def sync_lock_release(context, task_type):
 def sync_lock_steal(context, engine_id, task_type):
     sync_lock_release(context, task_type)
     return sync_lock_acquire(context, engine_id, task_type)
+
+
+def service_create(context, service_id, host=None, binary=None,
+                   topic=None):
+    session = _session(context)
+    with session.begin():
+        time_now = timeutils.utcnow()
+        svc = models.Service(id=service_id,
+                             host=host,
+                             binary=binary,
+                             topic=topic,
+                             created_at=time_now,
+                             updated_at=time_now)
+        session.add(svc)
+        return svc
+
+
+def service_update(context, service_id, values=None):
+    session = _session(context)
+    with session.begin():
+        service = session.query(models.Service).get(service_id)
+        if not service:
+            return
+
+        if values is None:
+            values = {}
+
+        values.update({'updated_at': timeutils.utcnow()})
+        service.update(values)
+        service.save(session)
+        return service
+
+
+def service_delete(context, service_id):
+    session = _session(context)
+
+    with session.begin():
+        session.query(models.Service).filter_by(
+            id=service_id).delete(synchronize_session='fetch')
+
+    # Remove all engine locks
+    locks = model_query(context, models.SyncLock). \
+        filter_by(engine_id=service_id).all()
+    for lock in locks:
+        lock.delete(session=session)
+
+
+def service_get(context, service_id):
+    return model_query(context, models.Service).get(service_id)
+
+
+def service_get_all(context):
+    return model_query(context, models.Service).all()

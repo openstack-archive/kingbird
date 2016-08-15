@@ -21,6 +21,9 @@ global_opts = [
                 default=True,
                 help='Enables or disables use of default quota class '
                      'with default quota.'),
+    cfg.IntOpt('report_interval',
+               default=60,
+               help='Seconds between running periodic reporting tasks.'),
 ]
 # Global nova quotas for all projects
 nova_quotas = [
@@ -137,7 +140,6 @@ scheduler_opts = [
                help='periodic time interval for automatic quota sync job')
 ]
 
-
 common_opts = [
     cfg.IntOpt('workers', default=1,
                help='number of workers'),
@@ -145,7 +147,6 @@ common_opts = [
                default='localhost',
                help='hostname of the machine')
 ]
-
 
 scheduler_opt_group = cfg.OptGroup('scheduler',
                                    title='Scheduler options for periodic job')

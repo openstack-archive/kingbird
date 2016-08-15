@@ -12,13 +12,11 @@
 
 import six
 import time
-import uuid
 
 import functools
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging
-
 
 from kingbird.common import consts
 from kingbird.common import context
@@ -28,10 +26,11 @@ from kingbird.common.i18n import _LE
 from kingbird.common.i18n import _LI
 from kingbird.common import messaging as rpc_messaging
 from kingbird.engine.quota_manager import QuotaManager
-
 from kingbird.engine import scheduler
-
+from kingbird.objects import service as service_obj
 from oslo_service import service
+from oslo_utils import timeutils
+from oslo_utils import uuidutils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -83,7 +82,7 @@ class EngineService(service.Service):
         self.qm = QuotaManager()
 
     def start(self):
-        self.engine_id = str(uuid.uuid4())
+        self.engine_id = uuidutils.generate_uuid()
         self.init_tgm()
         self.init_qm()
         target = oslo_messaging.Target(version=self.rpc_api_version,
@@ -93,11 +92,41 @@ class EngineService(service.Service):
         self._rpc_server = rpc_messaging.get_rpc_server(self.target, self)
         self._rpc_server.start()
 
+        self.service_registry_cleanup()
+
+        self.TG.add_timer(cfg.CONF.report_interval,
+                          self.service_registry_report)
+
         super(EngineService, self).start()
         if self.periodic_enable:
             LOG.info("Adding periodic tasks for the engine to perform")
             self.TG.add_timer(self.periodic_interval,
                               self.periodic_balance_all, None, self.engine_id)
+
+    def service_registry_report(self):
+        ctx = context.get_admin_context()
+        try:
+            svc = service_obj.Service.update(ctx, self.engine_id)
+            # if svc is None, means it's not created.
+            if svc is None:
+                service_obj.Service.create(ctx, self.engine_id, self.host,
+                                           'kingbird-engine', self.topic)
+        except Exception as ex:
+            LOG.error(_LE('Service %(service_id)s update failed: %(error)s'),
+                      {'service_id': self.engine_id, 'error': ex})
+
+    def service_registry_cleanup(self):
+        ctx = context.get_admin_context()
+        time_window = (2 * cfg.CONF.report_interval)
+        services = service_obj.Service.get_all(ctx)
+        for svc in services:
+            if svc['id'] == self.engine_id:
+                continue
+            if timeutils.is_older_than(svc['updated_at'], time_window):
+                # < time_line:
+                # hasn't been updated, assuming it's died.
+                LOG.info(_LI('Service %s was aborted'), svc['id'])
+                service_obj.Service.delete(ctx, svc['id'])
 
     def periodic_balance_all(self, engine_id):
         # Automated Quota Sync for all the keystone projects

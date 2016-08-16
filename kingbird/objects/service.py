@@ -33,8 +33,8 @@ class Service(base.KingbirdObject, base.VersionedObjectDictCompat):
         'disabled_reason': fields.StringField(nullable=True),
         'created_at': fields.DateTimeField(),
         'updated_at': fields.DateTimeField(),
-        'deleted_at': fields.DateTimeField(),
-        'deleted': fields.IntegerField(),
+        'deleted_at': fields.DateTimeField(nullable=True),
+        'deleted': fields.IntegerField(nullable=True),
     }
 
     @classmethod

@@ -84,6 +84,7 @@ class TestEngineService(base.KingbirdTestCase):
 
     @mock.patch.object(service, 'QuotaManager')
     @mock.patch.object(service, 'rpc_messaging')
+    @mock.patch.object(service, 'service_obj')
     def test_stop_rpc_server(self, mock_rpc, mock_quota_manager):
         self.service_obj.start()
         self.service_obj._stop_rpc_server()
@@ -91,6 +92,7 @@ class TestEngineService(base.KingbirdTestCase):
 
     @mock.patch.object(service, 'QuotaManager')
     @mock.patch.object(service, 'rpc_messaging')
+    @mock.patch.object(service, 'service_obj')
     def test_stop(self, mock_rpc, mock_quota_manager):
         self.service_obj.start()
         self.service_obj.stop()

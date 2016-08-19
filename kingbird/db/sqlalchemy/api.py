@@ -18,12 +18,16 @@ Implementation of SQLAlchemy backend.
 '''
 
 import sys
+import threading
 
 from oslo_config import cfg
 from oslo_db import api as oslo_db_api
-from oslo_db.sqlalchemy import session as db_session
+from oslo_db.sqlalchemy import enginefacade
+
 from oslo_log import log as logging
 from oslo_utils import timeutils
+
+from sqlalchemy.orm import joinedload_all
 
 from kingbird.common import exceptions as exception
 from kingbird.common.i18n import _
@@ -36,17 +40,32 @@ CONF = cfg.CONF
 
 _facade = None
 
-
-def get_facade():
-    global _facade
-
-    if not _facade:
-        _facade = db_session.EngineFacade.from_config(CONF)
-    return _facade
+_main_context_manager = None
+_CONTEXT = threading.local()
 
 
-get_engine = lambda: get_facade().get_engine()
-get_session = lambda: get_facade().get_session()
+def _get_main_context_manager():
+    global _main_context_manager
+    if not _main_context_manager:
+        _main_context_manager = enginefacade.transaction_context()
+    return _main_context_manager
+
+
+def get_engine():
+    return _get_main_context_manager().get_legacy_facade().get_engine()
+
+
+def get_session():
+    return _get_main_context_manager().get_legacy_facade().get_session()
+
+
+def read_session():
+    return _get_main_context_manager().reader.using(_CONTEXT)
+
+
+def write_session():
+    return _get_main_context_manager().writer.using(_CONTEXT)
+
 
 _DEFAULT_QUOTA_NAME = 'default'
 
@@ -57,9 +76,9 @@ def get_backend():
 
 
 def model_query(context, *args):
-    session = _session(context)
-    query = session.query(*args)
-    return query
+    with read_session() as session:
+        query = session.query(*args).options(joinedload_all('*'))
+        return query
 
 
 def _session(context):
@@ -151,47 +170,48 @@ def quota_get_all_by_project(context, project_id):
 
 @require_admin_context
 def quota_create(context, project_id, resource, limit):
-    quota_ref = models.Quota()
-    quota_ref.project_id = project_id
-    quota_ref.resource = resource
-    quota_ref.hard_limit = limit
-
-    session = _session(context)
-    with session.begin():
-        quota_ref.save(session)
+    with write_session() as session:
+        quota_ref = models.Quota()
+        quota_ref.project_id = project_id
+        quota_ref.resource = resource
+        quota_ref.hard_limit = limit
+        session.add(quota_ref)
         return quota_ref
 
 
 @require_admin_context
 def quota_update(context, project_id, resource, limit):
-    session = _session(context)
-    with session.begin():
+    with write_session() as session:
         quota_ref = _quota_get(context, project_id, resource, session=session)
+        if not quota_ref:
+            raise exception.ProjectQuotaNotFound(project_id=project_id)
         quota_ref.hard_limit = limit
-        quota_ref.save(_session(context))
+        quota_ref.save(session)
         return quota_ref
 
 
 @require_admin_context
 def quota_destroy(context, project_id, resource):
-    session = _session(context)
-    quota_ref = _quota_get(context, project_id, resource, session=session)
-    quota_ref.delete(session=session)
+    with write_session() as session:
+        quota_ref = _quota_get(context, project_id, resource, session=session)
+        if not quota_ref:
+            raise exception.ProjectQuotaNotFound(project_id=project_id)
+        session.delete(quota_ref)
 
 
 @require_admin_context
 def quota_destroy_all(context, project_id):
-    session = _session(context)
+    with write_session() as session:
 
-    quotas = model_query(context, models.Quota). \
-        filter_by(project_id=project_id). \
-        all()
+        quotas = model_query(context, models.Quota). \
+            filter_by(project_id=project_id). \
+            all()
 
-    if not quotas:
-        raise exception.ProjectQuotaNotFound(project_id=project_id)
+        if not quotas:
+            raise exception.ProjectQuotaNotFound(project_id=project_id)
 
-    for quota_ref in quotas:
-        quota_ref.delete(session=session)
+        for quota_ref in quotas:
+            session.delete(quota_ref)
 
 
 ##########################
@@ -236,45 +256,45 @@ def quota_class_get_all_by_name(context, class_name):
 
 @require_admin_context
 def quota_class_create(context, class_name, resource, limit):
-    quota_class_ref = models.QuotaClass()
-    quota_class_ref.class_name = class_name
-    quota_class_ref.resource = resource
-    quota_class_ref.hard_limit = limit
-    session = _session(context)
-    with session.begin():
-        quota_class_ref.save(session)
+    with write_session() as session:
+        quota_class_ref = models.QuotaClass()
+        quota_class_ref.class_name = class_name
+        quota_class_ref.resource = resource
+        quota_class_ref.hard_limit = limit
+        session.add(quota_class_ref)
         return quota_class_ref
 
 
 @require_admin_context
 def quota_class_update(context, class_name, resource, limit):
-    result = model_query(context, models.QuotaClass). \
-        filter_by(deleted=False). \
-        filter_by(class_name=class_name). \
-        filter_by(resource=resource). \
-        update({'hard_limit': limit})
-
-    if not result:
-        raise exception.QuotaClassNotFound(class_name=class_name)
+    with write_session() as session:
+        quota_class_ref = session.query(models.QuotaClass). \
+            filter_by(deleted=False). \
+            filter_by(class_name=class_name). \
+            filter_by(resource=resource).first()
+        if not quota_class_ref:
+            raise exception.QuotaClassNotFound(class_name=class_name)
+        quota_class_ref.hard_limit = limit
+        quota_class_ref.save(session)
+        return quota_class_ref
 
 
 @require_admin_context
 def quota_class_destroy(context, class_name, resource):
-    session = _session(context)
-    quota_class_ref = _quota_class_get(context, class_name, resource)
-    quota_class_ref.delete(session=session)
+    with write_session() as session:
+        quota_class_ref = _quota_class_get(context, class_name, resource)
+        session.delete(quota_class_ref)
 
 
 @require_admin_context
 def quota_class_destroy_all(context, class_name):
-    session = _session(context)
-
-    quota_classes = model_query(context, models.QuotaClass). \
-        filter_by(deleted=False). \
-        filter_by(class_name=class_name). \
-        all()
-    for quota_class_ref in quota_classes:
-        quota_class_ref.delete(session=session)
+    with write_session() as session:
+        quota_classes = session.query(models.QuotaClass). \
+            filter_by(deleted=False). \
+            filter_by(class_name=class_name). \
+            all()
+        for quota_class_ref in quota_classes:
+            session.delete(quota_class_ref)
 
 
 def db_sync(engine, version=None):
@@ -290,16 +310,15 @@ def db_version(engine):
 @oslo_db_api.wrap_db_retry(max_retries=3, retry_on_deadlock=True,
                            retry_interval=0.5, inc_retry_interval=True)
 def sync_lock_acquire(context, engine_id, task_type):
-    lock = model_query(context, models.SyncLock). \
-        filter_by(task_type=task_type).all()
-    if not lock:
-        lock_ref = models.SyncLock()
-        lock_ref.engine_id = engine_id
-        lock_ref.timer_lock = "Lock Acquired for EngineId: " + engine_id
-        lock_ref.task_type = task_type
-        session = _session(context)
-        with session.begin():
-            lock_ref.save(session)
+    with write_session() as session:
+        lock = session.query(models.SyncLock). \
+            filter_by(task_type=task_type).all()
+        if not lock:
+            lock_ref = models.SyncLock()
+            lock_ref.engine_id = engine_id
+            lock_ref.timer_lock = "Lock Acquired for EngineId: " + engine_id
+            lock_ref.task_type = task_type
+            session.add(lock_ref)
             return True
     return False
 
@@ -307,11 +326,11 @@ def sync_lock_acquire(context, engine_id, task_type):
 @oslo_db_api.wrap_db_retry(max_retries=3, retry_on_deadlock=True,
                            retry_interval=0.5, inc_retry_interval=True)
 def sync_lock_release(context, task_type):
-    session = _session(context)
-    locks = model_query(context, models.SyncLock). \
-        filter_by(task_type=task_type).all()
-    for lock in locks:
-        lock.delete(session=session)
+    with write_session() as session:
+        locks = session.query(models.SyncLock). \
+            filter_by(task_type=task_type).all()
+        for lock in locks:
+            session.delete(lock)
 
 
 def sync_lock_steal(context, engine_id, task_type):
@@ -321,8 +340,7 @@ def sync_lock_steal(context, engine_id, task_type):
 
 def service_create(context, service_id, host=None, binary=None,
                    topic=None):
-    session = _session(context)
-    with session.begin():
+    with write_session() as session:
         time_now = timeutils.utcnow()
         svc = models.Service(id=service_id,
                              host=host,
@@ -335,8 +353,7 @@ def service_create(context, service_id, host=None, binary=None,
 
 
 def service_update(context, service_id, values=None):
-    session = _session(context)
-    with session.begin():
+    with write_session() as session:
         service = session.query(models.Service).get(service_id)
         if not service:
             return
@@ -351,17 +368,15 @@ def service_update(context, service_id, values=None):
 
 
 def service_delete(context, service_id):
-    session = _session(context)
-
-    with session.begin():
+    with write_session() as session:
         session.query(models.Service).filter_by(
             id=service_id).delete(synchronize_session='fetch')
 
-    # Remove all engine locks
-    locks = model_query(context, models.SyncLock). \
-        filter_by(engine_id=service_id).all()
-    for lock in locks:
-        lock.delete(session=session)
+        # Remove all engine locks
+        locks = session.query(models.SyncLock). \
+            filter_by(engine_id=service_id).all()
+        for lock in locks:
+            session.delete(lock)
 
 
 def service_get(context, service_id):

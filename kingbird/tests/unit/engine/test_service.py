@@ -84,14 +84,16 @@ class TestEngineService(base.KingbirdTestCase):
 
     @mock.patch.object(service, 'QuotaManager')
     @mock.patch.object(service, 'rpc_messaging')
-    def test_stop_rpc_server(self, mock_rpc, mock_quota_manager):
+    @mock.patch.object(service, 'service_obj')
+    def test_stop_rpc_server(self, service_obj, mock_rpc, mock_quota_manager):
         self.service_obj.start()
         self.service_obj._stop_rpc_server()
         mock_rpc.get_rpc_server().stop.assert_called_once_with()
 
     @mock.patch.object(service, 'QuotaManager')
     @mock.patch.object(service, 'rpc_messaging')
-    def test_stop(self, mock_rpc, mock_quota_manager):
+    @mock.patch.object(service, 'service_obj')
+    def test_stop(self, service_obj, mock_rpc, mock_quota_manager):
         self.service_obj.start()
         self.service_obj.stop()
         mock_rpc.get_rpc_server().stop.assert_called_once_with()

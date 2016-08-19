@@ -18,6 +18,7 @@ OpenStack Driver
 import collections
 
 from oslo_log import log
+from oslo_utils import timeutils
 
 from kingbird.common import consts
 from kingbird.common import endpoint_cache
@@ -42,13 +43,15 @@ class OpenStackDriver(object):
     def __init__(self, region_name=None):
         # Check if objects are cached and try to use those
         self.region_name = region_name
-        if 'keystone' in OpenStackDriver.os_clients_dict:
+        if 'keystone' in OpenStackDriver.os_clients_dict and \
+                self._is_token_valid():
             self.keystone_client = OpenStackDriver.os_clients_dict['keystone']
         else:
             self.keystone_client = KeystoneClient()
             OpenStackDriver.os_clients_dict['keystone'] = self.keystone_client
         self.disabled_quotas = self._get_disabled_quotas(region_name)
-        if region_name in OpenStackDriver.os_clients_dict:
+        if region_name in OpenStackDriver.os_clients_dict and \
+                self._is_token_valid():
             LOG.info(_LI('Using cached OS client objects'))
             self.nova_client = OpenStackDriver.os_clients_dict[
                 region_name]['nova']
@@ -153,3 +156,17 @@ class OpenStackDriver(object):
 
     def _get_filtered_regions(self, project_id):
         return self.keystone_client.get_filtered_region(project_id)
+
+    def _is_token_valid(self):
+        keystone = self.os_clients_dict['keystone'].keystone_client
+        token = keystone.tokens.validate(keystone.session.get_token())
+        expiry_time = timeutils.normalize_time(timeutils.parse_isotime(
+            token['expires_at']))
+        current_time = timeutils.utcnow()
+        if expiry_time > current_time:
+            return True
+        else:
+            LOG.info(_("The cached keystone token has expired"))
+            # Reset the cached dictionary
+            OpenStackDriver.os_clients_dict = collections.defaultdict(dict)
+            return False

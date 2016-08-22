@@ -1,0 +1,9 @@
+Code-Review+2: Chaoyi Huang <joehuang@huawei.com>
+Code-Review+2: ashish singh <ashishsingh2k8@gmail.com>
+Workflow+1: ashish singh <ashishsingh2k8@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 22 Aug 2016 07:04:54 +0000
+Reviewed-on: https://review.openstack.org/357821
+Project: openstack/kingbird
+Branch: refs/heads/master

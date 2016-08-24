@@ -180,11 +180,12 @@ class TestQuotaManager(base.KingbirdTestCase):
         mock_quota_usage.assert_called_once_with(FAKE_PROJECT, FAKE_REGION,
                                                  mock_queue())
 
+    @mock.patch.object(quota_manager, 'db_api')
     @mock.patch.object(quota_manager, 'endpoint_cache')
     @mock.patch.object(quota_manager.QuotaManager,
                        'get_tenant_quota_usage_per_region')
     def test_get_total_usage_for_tenant(self, mock_quota_usage,
-                                        mock_endpoint):
+                                        mock_endpoint, mock_db_api):
         qm = quota_manager.QuotaManager()
         qm.get_total_usage_for_tenant(FAKE_PROJECT)
         mock_quota_usage.assert_called_once_with(FAKE_PROJECT)

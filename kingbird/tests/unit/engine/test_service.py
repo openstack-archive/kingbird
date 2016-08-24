@@ -48,9 +48,11 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_qm()
         self.assertIsNotNone(self.service_obj.qm)
 
+    @mock.patch.object(service.EngineService, 'service_registry_cleanup')
     @mock.patch.object(service, 'QuotaManager')
     @mock.patch.object(service, 'rpc_messaging')
-    def test_start(self, mock_rpc, mock_quota_manager):
+    def test_start(self, mock_rpc, mock_quota_manager,
+                   mock_service_registry):
         self.service_obj.start()
         mock_rpc.get_rpc_server.assert_called_once_with(
             self.service_obj.target, self.service_obj)

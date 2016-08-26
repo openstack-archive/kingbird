@@ -106,7 +106,7 @@ def create_instance(openstack_drivers, resource_ids, count=1):
         return server_ids
     except Exception as e:
         e.args = tuple(server_ids)
-        raise e
+        raise
 
 
 def get_urlstring_and_headers(token, api_url):

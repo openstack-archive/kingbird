@@ -39,14 +39,12 @@ This module provides Manager, a base class for managers.
 """
 
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_service import periodic_task
 
 from kingbird.common import config
 
 CONF = cfg.CONF
 config.register_options()
-LOG = logging.getLogger(__name__)
 
 
 class PeriodicTasks(periodic_task.PeriodicTasks):

@@ -15,14 +15,12 @@ Client side of the Kingbird RPC API.
 '''
 
 from oslo_config import cfg
-from oslo_log import log as logging
 
 from kingbird.common import config
 from kingbird.common import consts
 from kingbird.common import messaging
 
 CONF = cfg.CONF
-LOG = logging.getLogger(__name__)
 config.register_options()
 
 

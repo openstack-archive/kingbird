@@ -13,15 +13,12 @@
 # under the License.
 import collections
 
-from oslo_log import log
-
 from kingbird.common import consts
 from kingbird.common import exceptions
 from kingbird.drivers import base
 
 from novaclient import client
 
-LOG = log.getLogger(__name__)
 API_VERSION = '2.1'
 
 

@@ -12,14 +12,11 @@
 
 from collections import defaultdict
 
-from oslo_log import log
-
 from kingbird.common import exceptions
 from kingbird.drivers import base
 
 from neutronclient.neutron import client
 
-LOG = log.getLogger(__name__)
 API_VERSION = '2.0'
 
 

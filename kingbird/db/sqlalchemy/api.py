@@ -100,7 +100,7 @@ def is_user_context(context):
         return False
     if context.is_admin:
         return False
-    if not context.user or not context.tenant_id:
+    if not context.user or not context.project:
         return False
     return True
 

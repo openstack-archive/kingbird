@@ -22,7 +22,7 @@ import kingbird.common.context as k_context
 def extract_context_from_environ():
     context_paras = {'auth_token': 'HTTP_X_AUTH_TOKEN',
                      'user': 'HTTP_X_USER_ID',
-                     'tenant': 'HTTP_X_TENANT_ID',
+                     'project': 'HTTP_X_TENANT_ID',
                      'user_name': 'HTTP_X_USER_NAME',
                      'tenant_name': 'HTTP_X_PROJECT_NAME',
                      'domain': 'HTTP_X_DOMAIN_ID',

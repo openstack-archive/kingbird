@@ -105,17 +105,17 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
             self.resource_ids["project_id"])
         expected_usage = self.get_usage_manually(
             self.resource_ids["project_id"])
-        self.assertEqual(eval(actual_usage)["quota_set"]["ram"],
+        self.assertEqual(eval(actual_usage)["quota_set"]['usage']["ram"],
                          expected_usage["quota_set"]["ram"])
-        self.assertEqual(eval(actual_usage)["quota_set"]["cores"],
+        self.assertEqual(eval(actual_usage)["quota_set"]['usage']["cores"],
                          expected_usage["quota_set"]["cores"])
-        self.assertEqual(eval(actual_usage)["quota_set"]["instances"],
+        self.assertEqual(eval(actual_usage)["quota_set"]['usage']["instances"],
                          expected_usage["quota_set"]["instances"])
-        self.assertEqual(eval(actual_usage)["quota_set"]["network"],
+        self.assertEqual(eval(actual_usage)["quota_set"]['usage']["network"],
                          expected_usage["quota_set"]["network"])
-        self.assertEqual(eval(actual_usage)["quota_set"]["subnet"],
+        self.assertEqual(eval(actual_usage)["quota_set"]['usage']["subnet"],
                          expected_usage["quota_set"]["subnet"])
-        self.assertEqual(eval(actual_usage)["quota_set"]["volumes"],
+        self.assertEqual(eval(actual_usage)["quota_set"]['usage']["volumes"],
                          expected_usage["quota_set"]["volumes"])
         self.delete_instance()
 

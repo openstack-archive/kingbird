@@ -21,7 +21,6 @@ from kingbird.db import api as db_api
 from kingbird.engine import scheduler
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 lock_opts = [

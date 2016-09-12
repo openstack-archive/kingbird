@@ -21,9 +21,7 @@ import oslo_messaging
 from kingbird.common import consts
 from kingbird.common import context
 from kingbird.common import exceptions
-from kingbird.common.i18n import _
-from kingbird.common.i18n import _LE
-from kingbird.common.i18n import _LI
+from kingbird.common.i18n import _, _LE, _LI
 from kingbird.common import messaging as rpc_messaging
 from kingbird.engine.quota_manager import QuotaManager
 from kingbird.engine import scheduler

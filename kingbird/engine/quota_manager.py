@@ -26,9 +26,7 @@ from kingbird.common import consts
 from kingbird.common import context
 from kingbird.common import endpoint_cache
 from kingbird.common import exceptions
-from kingbird.common.i18n import _
-from kingbird.common.i18n import _LE
-from kingbird.common.i18n import _LI
+from kingbird.common.i18n import _, _LE, _LI
 from kingbird.common import manager
 from kingbird.common import utils
 from kingbird.db import api as db_api

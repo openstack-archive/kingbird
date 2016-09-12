@@ -23,9 +23,7 @@ from oslo_utils import timeutils
 from kingbird.common import consts
 from kingbird.common import endpoint_cache
 from kingbird.common import exceptions
-from kingbird.common.i18n import _
-from kingbird.common.i18n import _LE
-from kingbird.common.i18n import _LI
+from kingbird.common.i18n import _, _LE, _LI
 
 from kingbird.drivers.openstack.cinder_v2 import CinderClient
 from kingbird.drivers.openstack.keystone_v3 import KeystoneClient

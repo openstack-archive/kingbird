@@ -31,8 +31,7 @@ from kingbird.api import api_config
 from kingbird.api import app
 
 from kingbird.common import config
-from kingbird.common.i18n import _LI
-from kingbird.common.i18n import _LW
+from kingbird.common.i18n import _LI, _LW
 from kingbird.common import messaging
 
 CONF = cfg.CONF

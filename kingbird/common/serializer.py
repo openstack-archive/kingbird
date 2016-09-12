@@ -14,7 +14,7 @@
 # limitations under the License.
 import six
 
-from oslo_messaging import Serializer
+import oslo_messaging
 
 ATTR_NOT_SPECIFIED = object()
 
@@ -31,7 +31,7 @@ _SINGLETON_MAPPING = Mapping({
 })
 
 
-class KingbirdSerializer(Serializer):
+class KingbirdSerializer(oslo_messaging.Serializer):
     def __init__(self, base=None):
         super(KingbirdSerializer, self).__init__()
         self._base = base

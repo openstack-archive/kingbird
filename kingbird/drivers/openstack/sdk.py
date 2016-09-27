@@ -32,6 +32,10 @@ from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient
 
+from keystoneauth1.exceptions.http import Unauthorized
+
+# gap, in seconds, to determine whether the given token is about to expire
+STALE_TOKEN_DURATION = 30
 
 LOG = log.getLogger(__name__)
 
@@ -159,14 +163,26 @@ class OpenStackDriver(object):
 
     def _is_token_valid(self):
         keystone = self.os_clients_dict['keystone'].keystone_client
-        token = keystone.tokens.validate(keystone.session.get_token())
-        expiry_time = timeutils.normalize_time(timeutils.parse_isotime(
-            token['expires_at']))
-        current_time = timeutils.utcnow()
-        if expiry_time > current_time:
-            return True
-        else:
-            LOG.info(_("The cached keystone token has expired"))
+        try:
+            token = keystone.tokens.validate(keystone.session.get_token())
+        except Unauthorized as unauthexception:
+            LOG.info(_LE('The cached keystone token has expired: %s'),
+                     unauthexception.message)
             # Reset the cached dictionary
             OpenStackDriver.os_clients_dict = collections.defaultdict(dict)
             return False
+        except Exception as exception:
+            LOG.error(_LE('Error Occurred: %s'), exception.message)
+            # Reset the cached dictionary
+            OpenStackDriver.os_clients_dict = collections.defaultdict(dict)
+            return False
+        else:
+            expiry_time = timeutils.normalize_time(timeutils.parse_isotime(
+                token['expires_at']))
+            if timeutils.is_soon(expiry_time, STALE_TOKEN_DURATION):
+                LOG.info(_LE('The cached keystone token will expire soon'))
+                # Reset the cached dictionary
+                OpenStackDriver.os_clients_dict = collections.defaultdict(dict)
+                return False
+            else:
+                return True

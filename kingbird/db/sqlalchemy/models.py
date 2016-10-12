@@ -16,14 +16,12 @@
 SQLAlchemy models for kingbird data.
 """
 
-from oslo_config import cfg
 from oslo_db.sqlalchemy import models
 
 from sqlalchemy.orm import session as orm_session
 from sqlalchemy import (Column, Integer, String, Boolean, schema)
 from sqlalchemy.ext.declarative import declarative_base
 
-CONF = cfg.CONF
 BASE = declarative_base()
 
 

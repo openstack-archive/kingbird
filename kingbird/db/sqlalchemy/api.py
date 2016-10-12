@@ -20,7 +20,6 @@ Implementation of SQLAlchemy backend.
 import sys
 import threading
 
-from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db.sqlalchemy import enginefacade
 
@@ -35,8 +34,6 @@ from kingbird.db.sqlalchemy import migration
 from kingbird.db.sqlalchemy import models
 
 LOG = logging.getLogger(__name__)
-
-CONF = cfg.CONF
 
 _facade = None
 

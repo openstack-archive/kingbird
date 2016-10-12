@@ -14,9 +14,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from kingbird.common.i18n import _
-from kingbird.common.i18n import _LE
-from kingbird.common.i18n import _LI
+from kingbird.common.i18n import _, _LE, _LI
 from kingbird.db import api as db_api
 from kingbird.engine import scheduler
 

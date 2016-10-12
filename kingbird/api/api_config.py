@@ -24,8 +24,7 @@ import sys
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from kingbird.common.i18n import _
-from kingbird.common.i18n import _LI
+from kingbird.common.i18n import _, _LI
 
 
 # from kingbird import policy

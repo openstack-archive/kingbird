@@ -21,7 +21,7 @@ from oslo_config import cfg
 from kingbird.api.controllers import quota_manager
 from kingbird.common import config
 from kingbird.rpc import client as rpc_client
-from kingbird.tests.unit.api.testroot import KBApiTest
+from kingbird.tests.unit.api import testroot
 config.register_options()
 OPT_GROUP_NAME = 'keystone_authtoken'
 cfg.CONF.import_group(OPT_GROUP_NAME, "keystonemiddleware.auth_token")
@@ -34,7 +34,7 @@ class Result(object):
         self.hard_limit = hard_limit
 
 
-class TestQuotaManager(KBApiTest):
+class TestQuotaManager(testroot.KBApiTest):
     def setUp(self):
         super(TestQuotaManager, self).setUp()
         cfg.CONF.set_override('admin_tenant', 'fake_tenant_id',

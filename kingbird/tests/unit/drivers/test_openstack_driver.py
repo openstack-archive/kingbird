@@ -141,6 +141,22 @@ class TestOpenStackDriver(base.KingbirdTestCase):
     @mock.patch.object(sdk, 'NovaClient')
     @mock.patch.object(sdk, 'NeutronClient')
     @mock.patch.object(sdk, 'CinderClient')
+    def test_get_enabled_users(self, mock_cinder_client,
+                               mock_network_client, mock_nova_client,
+                               mock_keystone_client, mock_is_token_valid):
+        mock_is_token_valid.return_value = True
+        input_users_list = ['user_1', 'user_2', 'user_3']
+        os_driver = sdk.OpenStackDriver('fake_region_5')
+        os_driver.keystone_client.get_enabled_users.return_value = \
+            input_users_list
+        output_users_list = os_driver.get_enabled_users()
+        self.assertEqual(output_users_list, input_users_list)
+
+    @mock.patch.object(sdk.OpenStackDriver, '_is_token_valid')
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
     def test_cache_os_clients(self, mock_cinder_client,
                               mock_network_client, mock_nova_client,
                               mock_keystone_client, mock_is_token_valid):

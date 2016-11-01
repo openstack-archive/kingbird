@@ -22,7 +22,7 @@ from kingbird.drivers import base
 from novaclient import client
 
 LOG = log.getLogger(__name__)
-API_VERSION = '2.1'
+API_VERSION = '2.10'
 
 
 class NovaClient(base.DriverBase):

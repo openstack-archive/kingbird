@@ -86,6 +86,12 @@ class OpenStackDriver(object):
         except Exception as exception:
             LOG.error(_LE('Error Occurred: %s'), exception.message)
 
+    def get_enabled_users(self):
+        try:
+            return self.keystone_client.get_enabled_users()
+        except Exception as exception:
+            LOG.error(_LE('Error Occured : %s'), exception.message)
+
     def get_resource_usages(self, project_id):
         try:
             nova_usages = self.nova_client.get_resource_usages(project_id)

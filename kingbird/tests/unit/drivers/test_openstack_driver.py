@@ -30,6 +30,13 @@ class FakeService(object):
         self.name = name
 
 
+class User(object):
+    def __init__(self, user_name, id, enabled=True):
+        self.user_name = user_name
+        self.id = id
+        self.enabled = enabled
+
+
 class TestOpenStackDriver(base.KingbirdTestCase):
     def setUp(self):
         super(TestOpenStackDriver, self).setUp()
@@ -135,6 +142,24 @@ class TestOpenStackDriver(base.KingbirdTestCase):
             input_project_list
         output_project_list = os_driver.get_enabled_projects()
         self.assertEqual(output_project_list, input_project_list)
+
+    @mock.patch.object(sdk.OpenStackDriver, '_is_token_valid')
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_get_enabled_users(self, mock_cinder_client,
+                               mock_network_client, mock_nova_client,
+                               mock_keystone_client, mock_is_token_valid):
+        mock_is_token_valid.return_value = True
+        user_1 = User('user1', '123')
+        user_2 = User('user2', '456')
+        input_users_list = [user_1, user_2]
+        os_driver = sdk.OpenStackDriver('fake_region_5')
+        os_driver.keystone_client.get_enabled_users.return_value = \
+            input_users_list
+        output_users_list = os_driver.get_enabled_users()
+        self.assertEqual(output_users_list, input_users_list)
 
     @mock.patch.object(sdk.OpenStackDriver, '_is_token_valid')
     @mock.patch.object(sdk, 'KeystoneClient')

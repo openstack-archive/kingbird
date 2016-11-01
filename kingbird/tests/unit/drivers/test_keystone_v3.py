@@ -29,6 +29,13 @@ class Project(object):
         self.enabled = enabled
 
 
+class User(object):
+    def __init__(self, user_name, id, enabled=True):
+        self.user_name = user_name
+        self.id = id
+        self.enabled = enabled
+
+
 class FakeEndpoint(object):
     def __init__(self, endpoint_name, region):
         self.endpoint_name = endpoint_name
@@ -61,13 +68,24 @@ class TestKeystoneClient(base.KingbirdTestCase):
     @mock.patch.object(keystone_v3, 'EndpointCache')
     def test_get_enabled_projects(self, mock_endpoint_cache):
         p1 = Project('proj1', '123')
-        p2 = Project('proj2', '456')
+        p2 = Project('proj2', '456', False)
         key_client = keystone_v3.KeystoneClient()
         mock_endpoint_cache().keystone_client.projects.list.return_value =\
             [p1, p2]
         project_list = key_client.get_enabled_projects()
         self.assertIn(p1.id, project_list)
-        self.assertIn(p2.id, project_list)
+        self.assertNotIn(p2.id, project_list)
+
+    @mock.patch.object(keystone_v3, 'EndpointCache')
+    def test_get_enabled_users(self, mock_endpoint_cache):
+        u1 = User('user1', '123')
+        u2 = User('user2', '456', False)
+        key_client = keystone_v3.KeystoneClient()
+        mock_endpoint_cache().keystone_client.users.list.return_value =\
+            [u1, u2]
+        users_list = key_client.get_enabled_users()
+        self.assertIn(u1.id, users_list)
+        self.assertNotIn(u2.id, users_list)
 
     @mock.patch.object(keystone_v3.endpoint_filter, 'EndpointFilterManager')
     @mock.patch.object(keystone_v3, 'EndpointCache')

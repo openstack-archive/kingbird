@@ -44,6 +44,14 @@ class KeystoneClient(base.DriverBase):
         except exceptions.InternalError:
             raise
 
+    def get_enabled_users(self):
+        try:
+            return [current_user.id for current_user in
+                    self.keystone_client.users.list() if
+                    current_user.enabled]
+        except exceptions.InternalError:
+            raise
+
     def is_service_enabled(self, service):
         try:
             for current_service in self.services_list:

@@ -66,7 +66,7 @@ def get_current_session(username, password, tenant_name):
 
 def get_openstack_drivers(key_client, region, project_name, user_name,
                           password):
-    # Create Project, User and asign role to new user
+    # Create Project, User and assign role to new user
     project = key_client.projects.create(project_name,
                                          CONF.auth.admin_domain_name)
     user = key_client.users.create(user_name, CONF.auth.admin_domain_name,

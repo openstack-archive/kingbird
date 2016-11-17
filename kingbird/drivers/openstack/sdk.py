@@ -90,7 +90,7 @@ class OpenStackDriver(object):
         try:
             return self.keystone_client.get_enabled_users()
         except Exception as exception:
-            LOG.error(_LE('Error Occured : %s'), exception.message)
+            LOG.error(_LE('Error Occurred : %s'), exception.message)
 
     def get_resource_usages(self, project_id):
         try:

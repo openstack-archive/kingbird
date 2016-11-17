@@ -9,7 +9,7 @@ deployments. In OPNFV Colorado release, Kingbird provides centralized quota
 management feature. Administrator can set quota per project based in Kingbird
 and sync the quota limit to multi-region OpenStack periodiclly or on-demand.
 The tenant can check the total quota limit and usage from Kingbird for all
-regions. Administrator can aslo manage the default quota by quota class
+regions. Administrator can also manage the default quota by quota class
 setting.
 
 Following quota items are supported to be managed in Kingbird:

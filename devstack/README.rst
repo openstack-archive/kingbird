@@ -11,8 +11,8 @@ local.conf.sample:
     will be launched
 
 plugin.sh: plugin to the devstack
-    devstack will automaticly search the devstack folder, and load, execute
+    devstack will automatically search the devstack folder, and load, execute
     the plugin.sh in different environment establishment phase
 
 settings: configuration for kingbird in the devstack
-    devstack will automaticly load the settings to be used in the plugin.sh
+    devstack will automatically load the settings to be used in the plugin.sh

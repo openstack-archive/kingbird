@@ -5,7 +5,7 @@ Kingbird Configuration Guide
 A brief introduction to configure Multisite Kingbird service. Only the
 configuration items for Kingbird will be described here. Logging,
 messaging, database, keystonemiddleware etc configuration which are
-generated from OpenStack OSLO libary, will not be described here, for
+generated from OpenStack OSLO library, will not be described here, for
 these configuration items are common to Nova, Cinder, Neutron. So please
 refer to corresponding description from Nova or Cinder or Neutron.
 

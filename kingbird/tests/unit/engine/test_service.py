@@ -19,6 +19,8 @@ from kingbird.tests import utils
 from oslo_config import cfg
 
 CONF = cfg.CONF
+FAKE_USER = utils.UUID1
+FAKE_JOB = utils.UUID2
 
 
 class TestEngineService(base.KingbirdTestCase):
@@ -30,6 +32,9 @@ class TestEngineService(base.KingbirdTestCase):
                                            tenant=self.tenant_id)
         self.service_obj = service.EngineService('kingbird',
                                                  'kingbird-engine')
+        self.payload = {}
+        self.user_id = FAKE_USER
+        self.job_id = FAKE_JOB
 
     def test_init(self):
         self.assertEqual(self.service_obj.host, 'localhost')
@@ -47,6 +52,11 @@ class TestEngineService(base.KingbirdTestCase):
     def test_init_qm(self, mock_quota_manager):
         self.service_obj.init_qm()
         self.assertIsNotNone(self.service_obj.qm)
+
+    @mock.patch.object(service, 'SyncManager')
+    def test_init_sm(self, mock_resource_manager):
+        self.service_obj.init_sm()
+        self.assertIsNotNone(self.service_obj.sm)
 
     @mock.patch.object(service.EngineService, 'service_registry_cleanup')
     @mock.patch.object(service, 'QuotaManager')
@@ -99,3 +109,13 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.start()
         self.service_obj.stop()
         mock_rpc.get_rpc_server().stop.assert_called_once_with()
+
+    @mock.patch.object(service, 'SyncManager')
+    def test_resource_sync_for_user(self, mock_sync_manager):
+        self.service_obj.init_tgm()
+        self.service_obj.init_sm()
+        self.service_obj.keypair_sync_for_user(
+            self.context, self.user_id,
+            self.job_id, self.payload,)
+        mock_sync_manager().keypair_sync_for_user.\
+            assert_called_once_with(self.user_id, self.job_id, self.payload)

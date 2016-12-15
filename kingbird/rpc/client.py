@@ -68,3 +68,11 @@ class EngineClient(object):
     def quota_sync_for_project(self, ctxt, project_id):
         return self.cast(ctxt, self.make_msg('quota_sync_for_project',
                                              project_id=project_id))
+
+    def resource_sync_for_user(self, ctxt, payload, user_id,
+                               resource_identifier):
+        return self.call(
+            ctxt,
+            self.make_msg('resource_sync_for_user',
+                          user_id=user_id, payload=payload,
+                          resource_identifier=resource_identifier))

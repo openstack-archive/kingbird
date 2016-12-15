@@ -17,6 +17,7 @@
 import pecan
 
 from kingbird.api.controllers import quota_manager
+from kingbird.api.controllers import resource_manager
 from kingbird.api.controllers.v1 import quota_class
 
 
@@ -61,6 +62,7 @@ class V1Controller(object):
         self.sub_controllers = {
             "os-quota-sets": quota_manager.QuotaManagerController,
             "os-quota-class-sets": quota_class.QuotaClassSetController,
+            "os-sync": resource_manager.SyncController,
         }
 
         for name, ctrl in self.sub_controllers.items():

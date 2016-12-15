@@ -30,6 +30,9 @@ class TestEngineService(base.KingbirdTestCase):
                                            tenant=self.tenant_id)
         self.service_obj = service.EngineService('kingbird',
                                                  'kingbird-engine')
+        self.payload = {}
+        self.resource_identifier = 'fake_id'
+        self.user_id = 'fake_user'
 
     def test_init(self):
         self.assertEqual(self.service_obj.host, 'localhost')
@@ -47,6 +50,11 @@ class TestEngineService(base.KingbirdTestCase):
     def test_init_qm(self, mock_quota_manager):
         self.service_obj.init_qm()
         self.assertIsNotNone(self.service_obj.qm)
+
+    @mock.patch.object(service, 'ResourceManager')
+    def test_init_rm(self, mock_resource_manager):
+        self.service_obj.init_rm()
+        self.assertIsNotNone(self.service_obj.rm)
 
     @mock.patch.object(service.EngineService, 'service_registry_cleanup')
     @mock.patch.object(service, 'QuotaManager')
@@ -99,3 +107,14 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.start()
         self.service_obj.stop()
         mock_rpc.get_rpc_server().stop.assert_called_once_with()
+
+    @mock.patch.object(service, 'ResourceManager')
+    def test_resource_sync_for_user(self, mock_resource_manager):
+        self.service_obj.init_tgm()
+        self.service_obj.init_rm()
+        self.service_obj.resource_sync_for_user(
+            self.context, self.payload, self.user_id,
+            self.resource_identifier)
+        mock_resource_manager().resource_sync_for_user.\
+            assert_called_once_with(self.payload, self.user_id,
+                                    self.resource_identifier)

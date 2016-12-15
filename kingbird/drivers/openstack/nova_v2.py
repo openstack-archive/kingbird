@@ -17,16 +17,17 @@ from oslo_log import log
 
 from kingbird.common import consts
 from kingbird.common import exceptions
+from kingbird.common.i18n import _LI, _LE
 from kingbird.drivers import base
 
 from novaclient import client
 
 LOG = log.getLogger(__name__)
-API_VERSION = '2.1'
+API_VERSION = '2.37'
 
 
 class NovaClient(base.DriverBase):
-    '''Nova V2.1 driver.'''
+    '''Nova V2.37 driver.'''
     def __init__(self, region, disabled_quotas, session):
         try:
             self.nova_client = client.Client(API_VERSION,
@@ -40,7 +41,7 @@ class NovaClient(base.DriverBase):
             raise
 
     def get_resource_usages(self, project_id):
-        """Collects resource usages for a given project
+        """Collect resource usages for a given project
 
         :params: project_id
         :return: dictionary of corresponding resources with its usage
@@ -69,7 +70,7 @@ class NovaClient(base.DriverBase):
             raise
 
     def update_quota_limits(self, project_id, **new_quota):
-        """Updates quota limits for a given project
+        """Update quota limits for a given project
 
         :params: project_id, dictionary with the quota limits to update
         :return: Nothing
@@ -97,3 +98,38 @@ class NovaClient(base.DriverBase):
             return self.nova_client.quotas.delete(project_id)
         except exceptions.InternalError:
             raise
+
+    def get_keypairs(self, user_id, resource_identifier):
+        """Display keypair of the specified User
+
+        :params: user_id and resource_identifier
+        :return: Keypair
+        """
+        try:
+            keypair = self.nova_client.keypairs.get(resource_identifier,
+                                                    user_id)
+            LOG.info(_LI("Source Keypair: %s"), keypair.name)
+            return keypair
+
+        except Exception as exception:
+            LOG.error(_LE('Exception Occurred: %s'), exception.message)
+            pass
+
+    def create_keypairs(self, force, keypair, user_id):
+        """Create keypair for the specified User
+
+        :params: user_id, keypair, force
+        :return: Creates a Keypair
+        """
+        if force:
+            try:
+                self.nova_client.keypairs.delete(keypair, user_id)
+                LOG.info(_LI("Deleted Keypair: %s"), keypair.name)
+            except Exception as exception:
+                LOG.error(_LE('Exception Occurred: %s'), exception.message)
+                pass
+            LOG.info(_LI("Created Keypair: %s"), keypair.name)
+        return self.nova_client.keypairs. \
+            create(keypair.name,
+                   user_id=user_id,
+                   public_key=keypair.public_key)

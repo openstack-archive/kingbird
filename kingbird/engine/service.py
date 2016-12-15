@@ -25,6 +25,7 @@ from kingbird.common.i18n import _, _LE, _LI
 from kingbird.common import messaging as rpc_messaging
 from kingbird.engine.quota_manager import QuotaManager
 from kingbird.engine import scheduler
+from kingbird.engine.sync_manager import SyncManager
 from kingbird.objects import service as service_obj
 from oslo_service import service
 from oslo_utils import timeutils
@@ -72,6 +73,7 @@ class EngineService(service.Service):
         self.target = None
         self._rpc_server = None
         self.qm = None
+        self.sm = None
 
     def init_tgm(self):
         self.TG = scheduler.ThreadGroupManager()
@@ -79,10 +81,14 @@ class EngineService(service.Service):
     def init_qm(self):
         self.qm = QuotaManager()
 
+    def init_sm(self):
+        self.sm = SyncManager()
+
     def start(self):
         self.engine_id = uuidutils.generate_uuid()
         self.init_tgm()
         self.init_qm()
+        self.init_sm()
         target = oslo_messaging.Target(version=self.rpc_api_version,
                                        server=self.host,
                                        topic=self.topic)
@@ -146,6 +152,11 @@ class EngineService(service.Service):
         LOG.info(_LI("On Demand Quota Sync Called for: %s"),
                  project_id)
         self.qm.quota_sync_for_project(project_id)
+
+    @request_context
+    def keypair_sync_for_user(self, ctxt, user_id, job_id, payload):
+        # Keypair Sync for a user, will be triggered by KB-API
+        self.sm.keypair_sync_for_user(user_id, job_id, payload)
 
     def _stop_rpc_server(self):
         # Stop RPC connection to prevent new requests

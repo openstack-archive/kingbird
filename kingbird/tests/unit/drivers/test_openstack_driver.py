@@ -18,6 +18,11 @@ from kingbird.drivers.openstack import sdk
 from kingbird.tests import base
 from kingbird.tests import utils
 
+FAKE_USER_ID = 'user123'
+FAKE_RESOURCE_ID = 'fake_id'
+DEFAULT_FORCE = False
+SOURCE_KEYPAIR = 'fake_key1'
+
 
 class FakeService(object):
 
@@ -28,6 +33,12 @@ class FakeService(object):
     def __init__(self, type_service, name):
         self.type = type_service
         self.name = name
+
+
+class FakeKeypair(object):
+    def __init__(self, name, public_key):
+        self.name = name
+        self.public_key = public_key
 
 
 class User(object):
@@ -292,3 +303,53 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         os_driver = sdk.OpenStackDriver()
         expected = os_driver._is_token_valid()
         self.assertEqual(expected, False)
+
+    @mock.patch.object(sdk.OpenStackDriver, 'os_clients_dict')
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_get_keypairs(self, mock_cinder_client,
+                          mock_network_client,
+                          mock_nova_client, mock_keystone_client,
+                          mock_os_client):
+        os_driver = sdk.OpenStackDriver()
+        os_driver.get_keypairs(FAKE_USER_ID, FAKE_RESOURCE_ID)
+        mock_nova_client().get_keypairs.\
+            assert_called_once_with(FAKE_USER_ID, FAKE_RESOURCE_ID)
+
+    @mock.patch.object(sdk.OpenStackDriver, 'os_clients_dict')
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_create_keypairs_with_force_false(self, mock_cinder_client,
+                                              mock_network_client,
+                                              mock_nova_client,
+                                              mock_keystone_client,
+                                              mock_os_client):
+        os_driver = sdk.OpenStackDriver()
+        fake_key = FakeKeypair('fake_name', 'fake-rsa')
+        os_driver.create_keypairs(False, fake_key,
+                                  FAKE_USER_ID)
+        mock_nova_client().create_keypairs.\
+            assert_called_once_with(False, fake_key,
+                                    FAKE_USER_ID)
+
+    @mock.patch.object(sdk.OpenStackDriver, 'os_clients_dict')
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    def test_create_keypairs_with_force_true(self, mock_cinder_client,
+                                             mock_network_client,
+                                             mock_nova_client,
+                                             mock_keystone_client,
+                                             mock_os_client):
+        os_driver = sdk.OpenStackDriver()
+        fake_key = FakeKeypair('fake_name', 'fake-rsa')
+        os_driver.create_keypairs(True, fake_key,
+                                  FAKE_USER_ID)
+        mock_nova_client().create_keypairs.\
+            assert_called_once_with(True, fake_key,
+                                    FAKE_USER_ID)

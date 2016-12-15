@@ -182,3 +182,9 @@ class OpenStackDriver(object):
             return False
         else:
             return True
+
+    def get_keypairs(self, user_id, resource_identifier):
+        return self.nova_client.get_keypairs(user_id, resource_identifier)
+
+    def create_keypairs(self, force, keypair, user_id):
+        return self.nova_client.create_keypairs(force, keypair, user_id)

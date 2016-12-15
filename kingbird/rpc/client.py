@@ -68,3 +68,9 @@ class EngineClient(object):
     def quota_sync_for_project(self, ctxt, project_id):
         return self.cast(ctxt, self.make_msg('quota_sync_for_project',
                                              project_id=project_id))
+
+    def keypair_sync_for_user(self, ctxt, job_id, payload, user_id):
+        return self.cast(
+            ctxt,
+            self.make_msg('keypair_sync_for_user',
+                          user_id=user_id, job_id=job_id, payload=payload))

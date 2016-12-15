@@ -182,3 +182,17 @@ class OpenStackDriver(object):
             return False
         else:
             return True
+
+    def get_keypairs(self, user_id, resource_identifier):
+        try:
+            return self.nova_client.get_keypairs(user_id, resource_identifier)
+        except Exception as exception:
+            LOG.info(_LE('Exception Occurred: %s'), exception.message)
+            pass
+
+    def create_keypairs(self, force, keypair, user_id):
+        try:
+            return self.nova_client.create_keypairs(force, keypair, user_id)
+        except Exception as exception:
+            LOG.info(_LE('Exception Occurred: %s'), exception.message)
+            raise False

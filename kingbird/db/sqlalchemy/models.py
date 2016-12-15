@@ -156,7 +156,7 @@ class SyncJob(BASE, KingbirdBase):
 
     id = Column('id', String(36), primary_key=True)
 
-    sync_status = Column(String(36), default=consts.SYNC_STATUS,
+    sync_status = Column(String(36), default=consts.JOB_PROGRESS,
                          nullable=False)
 
     job_relation = relationship('ResourceSync', backref='sync_job')
@@ -180,5 +180,5 @@ class ResourceSync(BASE, KingbirdBase):
 
     resource_type = Column('resource_type', String(36), nullable=False)
 
-    sync_status = Column(String(36), default=consts.SYNC_STATUS,
+    sync_status = Column(String(36), default=consts.JOB_PROGRESS,
                          nullable=False)

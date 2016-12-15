@@ -402,7 +402,7 @@ def sync_job_list(context, action=None):
     if action == 'active':
         rows = model_query(context, models.SyncJob). \
             filter_by(user_id=context.user, project_id=context.project,
-                      sync_status=consts.SYNC_STATUS). \
+                      sync_status=consts.JOB_PROGRESS). \
             all()
     else:
         rows = model_query(context, models.SyncJob). \

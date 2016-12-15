@@ -72,9 +72,10 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
     def test_create_sync_job(self):
         job = self.sync_job_create(self.ctx, job_id=UUID1)
         self.assertIsNotNone(job)
-        self.assertEqual(consts.SYNC_STATUS, job.sync_status)
+        self.assertEqual(consts.JOB_PROGRESS, job.sync_status)
         created_job = db_api.sync_job_list(self.ctx, "active")
-        self.assertEqual(consts.SYNC_STATUS, created_job[0].get('sync_status'))
+        self.assertEqual(consts.JOB_PROGRESS,
+                         created_job[0].get('sync_status'))
 
     def test_primary_key_sync_job(self):
         self.sync_job_create(self.ctx, job_id=UUID1)
@@ -98,7 +99,7 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         job = self.sync_job_create(self.ctx, job_id=UUID1)
         self.assertIsNotNone(job)
         query = db_api.sync_job_status(self.ctx, job_id=UUID1)
-        self.assertEqual(query, consts.SYNC_STATUS)
+        self.assertEqual(query, consts.JOB_PROGRESS)
 
     def test_update_invalid_job(self):
         job = self.sync_job_create(self.ctx, job_id=UUID1)
@@ -113,7 +114,7 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
             self.ctx, job=job, region='Fake_region',
             resource='fake_key', resource_type='keypair')
         self.assertIsNotNone(resource_sync_create)
-        self.assertEqual(consts.SYNC_STATUS, resource_sync_create.sync_status)
+        self.assertEqual(consts.JOB_PROGRESS, resource_sync_create.sync_status)
 
     def test_resource_sync_status(self):
         job = self.sync_job_create(self.ctx, job_id=UUID1)
@@ -122,7 +123,7 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
             resource='fake_key', resource_type='keypair')
         self.assertIsNotNone(resource_sync_create)
         status = db_api.resource_sync_status(self.ctx, job.id)
-        self.assertEqual(consts.SYNC_STATUS, status[0])
+        self.assertEqual(consts.JOB_PROGRESS, status[0])
 
     def test_resource_sync_update(self):
         job = self.sync_job_create(self.ctx, job_id=UUID1)
@@ -130,7 +131,7 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
             self.ctx, job=job, region='Fake_region',
             resource='fake_key', resource_type='keypair')
         self.assertIsNotNone(resource_sync_create)
-        self.assertEqual(consts.SYNC_STATUS, resource_sync_create.sync_status)
+        self.assertEqual(consts.JOB_PROGRESS, resource_sync_create.sync_status)
         db_api.resource_sync_update(
             self.ctx, job.id, 'Fake_region', 'fake_key', consts.JOB_SUCCESS)
         updated_job = db_api.resource_sync_list_by_job(self.ctx, job.id)

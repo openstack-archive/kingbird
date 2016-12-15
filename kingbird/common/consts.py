@@ -36,10 +36,14 @@ NEUTRON_QUOTA_FIELDS = ("network",
                         "security_group_rule",
                         )
 
-SYNC_STATUS = "IN_PROGRESS"
+JOB_PROGRESS = "IN_PROGRESS"
 
 RPC_API_VERSION = "1.0"
 
 TOPIC_KB_ENGINE = "kingbird-engine"
 
+KEYPAIR = "keypair"
+
 JOB_SUCCESS = "SUCCESS"
+
+JOB_FAILURE = "FAILURE"

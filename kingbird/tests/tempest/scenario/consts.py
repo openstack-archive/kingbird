@@ -25,3 +25,13 @@ DEFAULT_QUOTAS = {
         u'port': 50, u'security_groups': 10, u'network': 10
         }
 }
+
+KEYPAIR_RESOURCE_TYPE = "keypair"
+
+JOB_SUCCESS = "SUCCESS"
+
+JOB_PROGRESS = "IN_PROGRESS"
+
+JOB_ACTIVE = "active"
+
+JOB_FAILURE = "FAILURE"

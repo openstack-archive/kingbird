@@ -57,12 +57,10 @@ class RootController(object):
 class V1Controller(object):
 
     def __init__(self):
-
         self.sub_controllers = {
             "os-quota-sets": quota_manager.QuotaManagerController,
             "os-quota-class-sets": quota_class.QuotaClassSetController,
         }
-
         for name, ctrl in self.sub_controllers.items():
             setattr(self, name, ctrl)
 
@@ -75,7 +73,9 @@ class V1Controller(object):
             pecan.abort(404)
             return
 
-        return self.sub_controllers[resource](), remainder[1:]
+        # Pass the tenant_id for verification
+        remainder = (tenant_id,) + remainder[1:]
+        return self.sub_controllers[resource](), remainder
 
     @pecan.expose()
     def _lookup(self, tenant_id, *remainder):

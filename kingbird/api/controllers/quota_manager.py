@@ -76,6 +76,9 @@ class QuotaManagerController(object):
                 # Get default quota limits from conf file
                 result = self._get_defaults(context,
                                             CONF.kingbird_global_limit)
+            elif not context.is_admin and context.project != project_id \
+                and project_id != 'defaults':
+                pecan.abort(403, _('Admin required '))
             else:
                 if action and action != 'detail':
                     pecan.abort(404, _('Invalid request URL'))

@@ -153,9 +153,17 @@ class TestErrors(KBApiTest):
         self.assertEqual(response.status_int, 404)
 
     def test_bad_method(self):
-        response = self.app.patch('/v1.0/fake_tenant_id/bad_method',
+        fake_tenant = uuidutils.generate_uuid()
+        fake_url = '/v1.0/%s/bad_method' % fake_tenant
+        response = self.app.patch(fake_url,
                                   expect_errors=True)
         self.assertEqual(response.status_int, 404)
+
+    def test_bad_tenant_id(self):
+        fake_url = '/v1.0/dummy/bad_method'
+        response = self.app.patch(fake_url,
+                                  expect_errors=True)
+        self.assertEqual(response.status_int, 400)
 
 
 class TestRequestID(KBApiTest):

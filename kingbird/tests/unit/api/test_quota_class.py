@@ -47,10 +47,17 @@ class TestQuotaClassController(testroot.KBApiTest):
              result.resource: result.hard_limit}
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-class-sets/class1',
-            headers={'X_ROLE': 'admin'})
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'quota_class_set': {'id': 'class1', 'ram': 100}},
                          eval(response.text))
+
+    def test_get_invalid_req(self):
+        FAKE_URL = '/v1.0/dummy/os-quota-class-sets/default'
+        FAKE_HEADERS = {'X_ROLE': 'admin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.get, FAKE_URL,
+                                headers=FAKE_HEADERS)
 
     @mock.patch.object(quota_class, 'db_api')
     def test_put_admin(self, mock_db_api):
@@ -61,7 +68,7 @@ class TestQuotaClassController(testroot.KBApiTest):
         data = {"quota_class_set": {result.resource: result.hard_limit}}
         response = self.app.put_json(
             '/v1.0/fake_tenant_id/os-quota-class-sets/class1',
-            headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'},
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'},
             params=data)
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'quota_class_set': {'id': 'class1', 'cores': 10}},
@@ -73,16 +80,23 @@ class TestQuotaClassController(testroot.KBApiTest):
         mock_db_api.quota_destroy_all.return_value = result
         response = self.app.delete_json(
             '/v1.0/fake_tenant_id/os-quota-class-sets/class1',
-            headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'})
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
 
     def test_delete_all_non_admin(self):
         try:
             self.app.delete_json(
                 '/v1.0/fake_tenant_id/os-quota-class-sets/class1',
-                headers={'X-Tenant-Id': 'fake_tenant'})
+                headers={'X-Tenant-Id': 'fake_tenant_id'})
         except webtest.app.AppError as admin_exception:
             self.assertIn('Admin required', admin_exception.message)
+
+    def test_delete_invalid_req(self):
+        FAKE_URL = '/v1.0/dummy/os-quota-class-sets/default'
+        FAKE_HEADERS = {'X_ROLE': 'admin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.delete, FAKE_URL,
+                                headers=FAKE_HEADERS)
 
     def test_put_non_admin(self):
         result = Result('class1', 'cores', 10)
@@ -90,7 +104,14 @@ class TestQuotaClassController(testroot.KBApiTest):
         try:
             self.app.put_json(
                 '/v1.0/fake_tenant_id/os-quota-class-sets/class1',
-                headers={'X-Tenant-Id': 'fake_tenant'},
+                headers={'X-Tenant-Id': 'fake_tenant_id'},
                 params=data)
         except webtest.app.AppError as admin_exception:
             self.assertIn('Admin required', admin_exception.message)
+
+    def test_put_invalid_req(self):
+        FAKE_URL = '/v1.0/dummy/os-quota-class-sets/default'
+        FAKE_HEADERS = {'X_ROLE': 'admin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.put, FAKE_URL,
+                                headers=FAKE_HEADERS)

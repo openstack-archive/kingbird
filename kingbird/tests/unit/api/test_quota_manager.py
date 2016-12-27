@@ -49,7 +49,7 @@ class TestQuotaManager(testroot.KBApiTest):
              Res.resource: Res.hard_limit}
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-            headers={'X_ROLE': 'admin'})
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'quota_set': {'project_id': 'tenant_1', 'ram': 100}},
                          eval(response.text))
@@ -61,7 +61,7 @@ class TestQuotaManager(testroot.KBApiTest):
             {'class_name': 'default'}
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-sets/defaults',
-            headers={'X_ROLE': 'admin'})
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
         result = eval(response.text)
         for resource in result['quota_set']:
@@ -76,7 +76,7 @@ class TestQuotaManager(testroot.KBApiTest):
             expected_usage
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-sets/tenant_1/detail',
-            headers={'X_ROLE': 'admin'})
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual(eval(response.body), {"quota_set": expected_usage})
 
@@ -88,11 +88,11 @@ class TestQuotaManager(testroot.KBApiTest):
         data = {"quota_set": {Res.resource: Res.hard_limit}}
         response = self.app.put_json(
             '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-            headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'},
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'},
             params=data)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual({Res.project_id: {Res.resource: Res.hard_limit}},
-                         eval(response.text))
+        self.assertEqual({'quota_set': {Res.resource: Res.hard_limit},
+                          "tenant_1": {}}, eval(response.text))
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
@@ -102,7 +102,7 @@ class TestQuotaManager(testroot.KBApiTest):
         data = {"quota_set": [Res.resource]}
         response = self.app.delete_json(
             '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-            headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'},
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'},
             params=data)
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'Deleted quota limits': [Res.resource]},
@@ -115,7 +115,7 @@ class TestQuotaManager(testroot.KBApiTest):
         mock_db_api.quota_destroy_all.return_value = Res
         response = self.app.delete_json(
             '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-            headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'})
+            headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual('Deleted all quota limits for the given project',
                          eval(response.text))
@@ -124,7 +124,7 @@ class TestQuotaManager(testroot.KBApiTest):
     def test_quota_sync_admin(self):
         response = self.app.put_json(
             '/v1.0/fake_tenant_id/os-quota-sets/tenant_1/sync',
-            headers={'X-Tenant-Id': 'fake_tenant',
+            headers={'X-Tenant-Id': 'fake_tenant_id',
                      'X_ROLE': 'admin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual("triggered quota sync for tenant_1",
@@ -136,7 +136,7 @@ class TestQuotaManager(testroot.KBApiTest):
         data = {"quota_set": {Res.resource: Res.hard_limit}}
         try:
             self.app.put_json('/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-                              headers={'X-Tenant-Id': 'fake_tenant'},
+                              headers={'X-Tenant-Id': 'fake_tenant_id'},
                               params=data)
         except webtest.app.AppError as admin_exception:
             self.assertIn('Admin required', admin_exception.message)
@@ -145,7 +145,7 @@ class TestQuotaManager(testroot.KBApiTest):
     def test_delete_all_nonadmin(self):
         try:
             self.app.delete_json('/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-                                 headers={'X-Tenant-Id': 'fake_tenant'})
+                                 headers={'X-Tenant-Id': 'fake_tenant_id'})
         except webtest.app.AppError as admin_exception:
             self.assertIn('Admin required', admin_exception.message)
 
@@ -155,7 +155,7 @@ class TestQuotaManager(testroot.KBApiTest):
         data = {"quota_set": {Res.resource: Res.hard_limit}}
         try:
             self.app.delete_json('/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-                                 headers={'X-Tenant-Id': 'fake_tenant'},
+                                 headers={'X-Tenant-Id': 'fake_tenant_id'},
                                  params=data)
         except webtest.app.AppError as admin_exception:
             self.assertIn('Admin required', admin_exception.message)
@@ -165,7 +165,7 @@ class TestQuotaManager(testroot.KBApiTest):
         try:
             self.app.put_json(
                 '/v1.0/fake_tenant_id/os-quota-sets/tenant_1/sync',
-                headers={'X-Tenant-Id': 'fake_tenant'})
+                headers={'X-Tenant-Id': 'fake_tenant_id'})
         except webtest.app.AppError as admin_exception:
             self.assertIn('Admin required', admin_exception.message)
 
@@ -177,8 +177,8 @@ class TestQuotaManager(testroot.KBApiTest):
             {"project_id": Res.project_id,
              Res.resource: Res.hard_limit}
         response = self.app.get(
-            '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-            headers={'X_TENANT_ID': 'fake_tenant', 'X_USER_ID': 'nonadmin'})
+            '/v1.0/fake_tenant_id/os-quota-sets/fake_tenant_id',
+            headers={'X_TENANT_ID': 'fake_tenant_id', 'X_USER_ID': 'nonadmin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'quota_set': {'project_id': 'tenant_1', 'ram': 100}},
                          eval(response.text))
@@ -190,7 +190,7 @@ class TestQuotaManager(testroot.KBApiTest):
             {'class_name': 'default'}
         response = self.app.get(
             '/v1.0/fake_tenant_id/os-quota-sets/defaults',
-            headers={'X_TENANT_ID': 'fake_tenant', 'X_USER_ID': 'nonadmin'})
+            headers={'X_TENANT_ID': 'fake_tenant_id', 'X_USER_ID': 'nonadmin'})
         self.assertEqual(response.status_int, 200)
         result = eval(response.text)
         for resource in result['quota_set']:
@@ -203,7 +203,7 @@ class TestQuotaManager(testroot.KBApiTest):
         try:
             self.app.post_json(
                 '/v1.0/fake_tenant_id/os-quota-sets/tenant_1/sync',
-                headers={'X-Tenant-Id': 'fake_tenant',
+                headers={'X-Tenant-Id': 'fake_tenant_id',
                          'X_ROLE': 'admin'})
         except webtest.app.AppError as bad_method_exception:
             self.assertIn('Bad response: 404 Not Found',
@@ -218,7 +218,7 @@ class TestQuotaManager(testroot.KBApiTest):
         try:
             self.app.put_json(
                 '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-                headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'},
+                headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'},
                 params=data)
         except webtest.app.AppError as invalid_payload_exception:
             self.assertIn('400 Bad Request',
@@ -233,7 +233,7 @@ class TestQuotaManager(testroot.KBApiTest):
         try:
             self.app.put_json(
                 '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-                headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'},
+                headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'},
                 params=data)
         except webtest.app.AppError as invalid_input_exception:
             self.assertIn('400 Bad Request',
@@ -248,7 +248,7 @@ class TestQuotaManager(testroot.KBApiTest):
         try:
             self.app.delete_json(
                 '/v1.0/fake_tenant_id/os-quota-sets/tenant_1',
-                headers={'X-Tenant-Id': 'fake_tenant', 'X_ROLE': 'admin'},
+                headers={'X-Tenant-Id': 'fake_tenant_id', 'X_ROLE': 'admin'},
                 params=data)
         except webtest.app.AppError as invalid_quota_exception:
             self.assertIn('The resource could not be found',
@@ -260,8 +260,8 @@ class TestQuotaManager(testroot.KBApiTest):
         mock_rpc_client().get_total_usage_for_tenant.return_value = \
             expected_usage
         response = self.app.get(
-            '/v1.0/fake_tenant_id/os-quota-sets/tenant_1/detail',
-            headers={'X_TENANT_ID': 'fake_tenant', 'X_USER_ID': 'nonadmin'})
+            '/v1.0/fake_tenant_id/os-quota-sets/fake_tenant_id/detail',
+            headers={'X_TENANT_ID': 'fake_tenant_id', 'X_USER_ID': 'admin'})
         self.assertEqual(response.status_int, 200)
         self.assertEqual(eval(response.body), {"quota_set": expected_usage})
 
@@ -270,8 +270,79 @@ class TestQuotaManager(testroot.KBApiTest):
         try:
             self.app.put_json(
                 '/v1.0/fake_tenant_id/os-quota-sets/tenant_1/syncing',
-                headers={'X-Tenant-Id': 'fake_tenant',
+                headers={'X-Tenant-Id': 'fake_tenant_id',
                          'X_ROLE': 'admin'})
         except webtest.app.AppError as bad_method_exception:
             self.assertIn('Invalid action, only sync is allowed',
                           bad_method_exception.message)
+
+    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_all_another_tenant_no_admin(self, mock_db_api):
+        FAKE_URL = '/v1.0/fake_tenant_id/os-quota-sets/target_tenant_id'
+        FAKE_HEADERS = {'X_TENANT_ID': 'fake_tenant_id',
+                        'X_USER_ID': 'nonadmin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.get, FAKE_URL,
+                                headers=FAKE_HEADERS)
+
+    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_all_another_tenant_with_admin(self, mock_db_api):
+        Res = Result('tenant_1', 'ram', 100)
+        mock_db_api.quota_get_all_by_project.return_value = \
+            {"project_id": Res.project_id,
+             Res.resource: Res.hard_limit}
+        response = self.app.get(
+            '/v1.0/fake_tenant_id/os-quota-sets/target_tenant_id',
+            headers={'X_TENANT_ID': 'fake_tenant_id', 'X_ROLE': 'admin',
+                     'X_USER_ID': 'nonadmin'})
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual({'quota_set': {'project_id': 'tenant_1', 'ram': 100}},
+                         eval(response.text))
+
+    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_usages_another_tenant_no_admin(self, mock_db_api):
+        FAKE_URL = '/v1.0/fake_tenant_id/os-quota-sets/target_tenant_id/detail'
+        FAKE_HEADERS = {'X_TENANT_ID': 'fake_tenant_id',
+                        'X_USER_ID': 'nonadmin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.get, FAKE_URL,
+                                headers=FAKE_HEADERS)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    def test_get_usages_another_tenant_admin(self, mock_rpc_client):
+        expected_usage = {"ram": 10}
+        mock_rpc_client().get_total_usage_for_tenant.return_value = \
+            expected_usage
+        response = self.app.get(
+            '/v1.0/fake_tenant_id/os-quota-sets/target_tenant_id/detail',
+            headers={'X_TENANT_ID': 'fake_tenant_id', 'X_ROLE': 'admin',
+                     'X_USER_ID': 'admin'})
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(eval(response.body), {"quota_set": expected_usage})
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    def test_get_with_invalid_curl_req(self, mock_rpc_client):
+        FAKE_URL = '/v1.0/dummy/os-quota-sets/defaults'
+        FAKE_HEADERS = {'X_ROLE': 'admin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.get, FAKE_URL,
+                                headers=FAKE_HEADERS)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    def test_put_with_invalid_curl_req(self, mock_rpc_client):
+        FAKE_URL = '/v1.0/dummy/os-quota-sets/dummy2/sync'
+        FAKE_HEADERS = {'X_ROLE': 'admin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.put, FAKE_URL,
+                                headers=FAKE_HEADERS)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    def test_delete_with_invalid_curl_req(self, mock_rpc_client):
+        FAKE_URL = '/v1.0/dummy/os-quota-sets/dummy2'
+        FAKE_HEADERS = {'X_ROLE': 'admin'}
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.delete, FAKE_URL,
+                                headers=FAKE_HEADERS)

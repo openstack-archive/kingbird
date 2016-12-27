@@ -72,23 +72,27 @@ class QuotaManagerController(object):
         context = restcomm.extract_context_from_environ()
         result = collections.defaultdict(dict)
         try:
-            if project_id == 'defaults':
-                # Get default quota limits from conf file
-                result = self._get_defaults(context,
-                                            CONF.kingbird_global_limit)
-            else:
-                if action and action != 'detail':
-                    pecan.abort(404, _('Invalid request URL'))
-                elif action == 'detail':
-                    # Get the current quota usages for a project
-                    result = self.rpc_client.get_total_usage_for_tenant(
-                        context, project_id)
+            if context.is_admin or (context.project == project_id) \
+                    or (project_id == 'defaults'):
+                if project_id == 'defaults':
+                    # Get default quota limits from conf file
+                    result = self._get_defaults(context,
+                                                CONF.kingbird_global_limit)
                 else:
-                    # Get quota limits for all the resources for a project
-                    result = db_api.quota_get_all_by_project(
-                        context, project_id)
-            quota['quota_set'] = result
-            return quota
+                    if action and action != 'detail':
+                        pecan.abort(404, _('Invalid request URL'))
+                    elif action == 'detail':
+                        # Get the current quota usages for a project
+                        result = self.rpc_client.get_total_usage_for_tenant(
+                            context, project_id)
+                    else:
+                        # Get quota limits for all the resources for a project
+                        result = db_api.quota_get_all_by_project(
+                            context, project_id)
+                quota['quota_set'] = result
+                return quota
+            else:
+                pecan.abort(403, _('Admin required '))
         # Could be raised by get total usage call
         except exceptions.InternalError:
             pecan.abort(400, _('Error while requesting usage'))

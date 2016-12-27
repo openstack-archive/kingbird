@@ -17,6 +17,7 @@ import collections
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_log import versionutils
+from oslo_utils import uuidutils
 import pecan
 from pecan import expose
 from pecan import request
@@ -67,28 +68,40 @@ class QuotaManagerController(object):
         pass
 
     @index.when(method='GET', template='json')
-    def get(self, project_id, action=None):
-        quota = collections.defaultdict(dict)
+    def get(self, project_id, target_project_id=None, action=None):
         context = restcomm.extract_context_from_environ()
+        valid_project_id = uuidutils.is_uuid_like(project_id)
+        if not valid_project_id and project_id != 'admin':
+            pecan.abort(400, _('Invalid request URL'))
+        if project_id != context.project and not context.is_admin:
+            pecan.abort(400, _('Invalid request URL'))
+        if not uuidutils.is_uuid_like(target_project_id)\
+                and target_project_id != 'defaults':
+            pecan.abort(400, _('Invalid request URL'))
+        quota = collections.defaultdict(dict)
         result = collections.defaultdict(dict)
         try:
-            if project_id == 'defaults':
-                # Get default quota limits from conf file
-                result = self._get_defaults(context,
-                                            CONF.kingbird_global_limit)
-            else:
-                if action and action != 'detail':
-                    pecan.abort(404, _('Invalid request URL'))
-                elif action == 'detail':
-                    # Get the current quota usages for a project
-                    result = self.rpc_client.get_total_usage_for_tenant(
-                        context, project_id)
+            if context.is_admin or (project_id == target_project_id)\
+                    or (target_project_id == 'defaults'):
+                if target_project_id == 'defaults':
+                    # Get default quota limits from conf file
+                    result = self._get_defaults(context,
+                                                CONF.kingbird_global_limit)
                 else:
-                    # Get quota limits for all the resources for a project
-                    result = db_api.quota_get_all_by_project(
-                        context, project_id)
-            quota['quota_set'] = result
-            return quota
+                    if action and action != 'detail':
+                        pecan.abort(404, _('Invalid request URL'))
+                    elif action == 'detail':
+                        # Get the current quota usages for a project
+                        result = self.rpc_client.get_total_usage_for_tenant(
+                            context, target_project_id)
+                    else:
+                        # Get quota limits for all the resources for a project
+                        result = db_api.quota_get_all_by_project(
+                            context, target_project_id)
+                quota['quota_set'] = result
+                return quota
+            else:
+                pecan.abort(403, _('Admin required '))
         # Could be raised by get total usage call
         except exceptions.InternalError:
             pecan.abort(400, _('Error while requesting usage'))
@@ -96,14 +109,21 @@ class QuotaManagerController(object):
     # Tries to update quota limits for a project, if it fails then
     # it creates a new entry in DB for that project
     @index.when(method='PUT', template='json')
-    def put(self, project_id, action=None):
-        quota = collections.defaultdict(dict)
-        quota[project_id] = collections.defaultdict(dict)
+    def put(self, project_id, target_project_id, action=None):
         context = restcomm.extract_context_from_environ()
+        valid_project_id = uuidutils.is_uuid_like(project_id)
+        if not valid_project_id and project_id != 'admin':
+            pecan.abort(400, _('Invalid request URL'))
+        if project_id != context.project and not context.is_admin:
+            pecan.abort(400, _('Invalid request URL'))
+        if not uuidutils.is_uuid_like(target_project_id):
+            pecan.abort(400, _('Invalid request URL'))
+        quota = collections.defaultdict(dict)
+        quota[target_project_id] = collections.defaultdict(dict)
         if action and action != 'sync':
             pecan.abort(404, 'Invalid action, only sync is allowed')
         elif action == 'sync':
-            return self.sync(project_id, context)
+            return self.sync(target_project_id, context)
         if not context.is_admin:
             pecan.abort(403, _('Admin required'))
         if not request.body:
@@ -119,7 +139,7 @@ class QuotaManagerController(object):
                     # Update quota limit in DB
                     result = db_api.quota_update(
                         context,
-                        project_id=project_id,
+                        project_id=target_project_id,
                         resource=resource,
                         limit=limit)
                 except exceptions.ProjectQuotaNotFound:
@@ -127,17 +147,24 @@ class QuotaManagerController(object):
                     # then create the quota limit
                     result = db_api.quota_create(
                         context,
-                        project_id=project_id,
+                        project_id=target_project_id,
                         resource=resource,
                         limit=limit)
-                quota[project_id][result.resource] = result.hard_limit
+                quota[target_project_id][result.resource] = result.hard_limit
             return quota
         except exceptions.InvalidInputError:
             pecan.abort(400, _('Invalid input for quota limits'))
 
     @index.when(method='delete', template='json')
-    def delete(self, project_id):
+    def delete(self, project_id, target_project_id):
         context = restcomm.extract_context_from_environ()
+        valid_project_id = uuidutils.is_uuid_like(project_id)
+        if not valid_project_id and project_id != 'admin':
+            pecan.abort(400, _('Invalid request URL'))
+        if project_id != context.project and not context.is_admin:
+            pecan.abort(400, _('Invalid request URL'))
+        if not uuidutils.is_uuid_like(target_project_id):
+            pecan.abort(400, _('Invalid request URL'))
         if not context.is_admin:
             pecan.abort(403, _('Admin required'))
 
@@ -150,11 +177,11 @@ class QuotaManagerController(object):
                     pecan.abort(400, _('quota_set in body required'))
                 utils.validate_quota_limits(payload)
                 for resource in payload:
-                    db_api.quota_destroy(context, project_id, resource)
+                    db_api.quota_destroy(context, target_project_id, resource)
                 return {'Deleted quota limits': payload}
             else:
                 # Delete all quota limits for the project
-                db_api.quota_destroy_all(context, project_id)
+                db_api.quota_destroy_all(context, target_project_id)
                 return "Deleted all quota limits for the given project"
         except exceptions.ProjectQuotaNotFound:
             pecan.abort(404, _('Project quota not found'))

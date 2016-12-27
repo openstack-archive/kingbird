@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 import pecan
 from pecan import expose
 from pecan import request
@@ -40,7 +41,6 @@ class QuotaClassSetController(object):
 
     def _format_quota_set(self, quota_class, quota_set):
         """Convert the quota object to a result dict."""
-
         if quota_class:
             result = dict(id=str(quota_class))
         else:
@@ -58,9 +58,13 @@ class QuotaClassSetController(object):
         pass
 
     @index.when(method='GET', template='json')
-    def get(self, class_name):
+    def get(self, project_id, class_name):
         context = restcomm.extract_context_from_environ()
-
+        valid_project_id = uuidutils.is_uuid_like(project_id)
+        if not valid_project_id:
+            pecan.abort(400, _('Invalid request URL'))
+        if project_id != context.project and not context.is_admin:
+            pecan.abort(400, _('Invalid request URL'))
         LOG.info("Fetch quotas for [class_name=%s]" % class_name)
 
         values = db_api.quota_class_get_all_by_name(context, class_name)
@@ -68,10 +72,14 @@ class QuotaClassSetController(object):
         return self._format_quota_set(class_name, values)
 
     @index.when(method='PUT', template='json')
-    def put(self, class_name):
+    def put(self, project_id, class_name):
         """Update a class."""
         context = restcomm.extract_context_from_environ()
-
+        valid_project_id = uuidutils.is_uuid_like(project_id)
+        if not valid_project_id:
+            pecan.abort(400, _('Invalid request URL'))
+        if project_id != context.project and not context.is_admin:
+            pecan.abort(400, _('Invalid request URL'))
         LOG.info("Update quota class [class_name=%s]" % class_name)
 
         if not context.is_admin:
@@ -97,8 +105,13 @@ class QuotaClassSetController(object):
         return self._format_quota_set(class_name, values)
 
     @index.when(method='delete', template='json')
-    def delete(self, class_name):
+    def delete(self, project_id, class_name):
         context = restcomm.extract_context_from_environ()
+        valid_project_id = uuidutils.is_uuid_like(project_id)
+        if not valid_project_id:
+            pecan.abort(400, _('Invalid request URL'))
+        if project_id != context.project and not context.is_admin:
+            pecan.abort(400, _('Invalid request URL'))
         if not context.is_admin:
             pecan.abort(403, _('Admin required'))
 

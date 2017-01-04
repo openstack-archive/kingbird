@@ -13,8 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import json
-import requests
+from kingbirdclient.api.v1 import client as kb_client
 
 from keystoneclient.auth.identity import v3
 from keystoneclient import session
@@ -26,7 +25,7 @@ from tempest import config
 CONF = config.CONF
 NOVA_API_VERSION = "2.37"
 KEYPAIRS = ["kb_test_keypair1", "kb_test_keypair2"]
-resource_sync_url = "/os-sync/"
+KINGBIRD_URL = CONF.kingbird.endpoint_url + CONF.kingbird.api_version
 
 LOG = logging.getLogger(__name__)
 
@@ -71,12 +70,16 @@ def get_openstack_drivers(keystone_client, region, project_name,
     nova_client = nv_client.Client(NOVA_API_VERSION,
                                    session=sess,
                                    region_name=region)
+    kingbird_client = kb_client.Client(kingbird_url=KINGBIRD_URL,
+                                       auth_token=token,
+                                       project_id=project.id)
     resources = {"user_id": user.id, "project_id": project.id,
                  "session": sess, "token": token,
                  "nova_version": NOVA_API_VERSION,
                  "keypairs": KEYPAIRS,
                  "os_drivers": {'keystone': keystone_client,
-                                'nova': nova_client}}
+                                'nova': nova_client,
+                                'kingbird': kingbird_client}}
 
     return resources
 
@@ -85,40 +88,57 @@ def get_keystone_client(session):
     return ks_client.Client(session=session)
 
 
-def get_resource_sync_url_and_headers(token, project_id, api_url):
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': token,
-    }
-    url_string = CONF.kingbird.endpoint_url + CONF.kingbird.api_version + \
-        "/" + project_id + api_url
-
-    return headers, url_string
-
-
-def sync_resource(token, project_id, post_body):
-    body = json.dumps(post_body)
-    headers, url_string = get_resource_sync_url_and_headers(token, project_id,
-                                                            resource_sync_url)
-    response = requests.post(url_string, headers=headers, data=body)
-    return response
+def sync_resource(openstack_drivers, post_body):
+    kb = openstack_drivers['kingbird']
+    response = kb.sync_manager.sync_resources(**post_body)
+    result = dict()
+    for i in response:
+        result['id'] = i.id
+        result['status'] = i.status
+        result['created_at'] = i.created_at
+    res = dict()
+    res['job_status'] = result
+    return res
 
 
-def get_sync_job_list(token, project_id, action=None):
-    headers, url_string = get_resource_sync_url_and_headers(token, project_id,
-                                                            resource_sync_url)
-    if action:
-        url_string = url_string + action
-    response = requests.get(url_string, headers=headers)
-    return response
+def get_sync_job_list(openstack_drivers, action):
+    kb = openstack_drivers['kingbird']
+    response = kb.sync_manager.list_sync_jobs(action)
+    result = dict()
+    job_set = list()
+    res = dict()
+    for i in response:
+        result['id'] = i.id
+        result['sync_status'] = i.status
+        result['created_at'] = i.created_at
+        result['updated_at'] = i.updated_at
+        job_set.append(result.copy())
+    res['job_set'] = job_set
+    return res
 
 
-def delete_db_entries(token, project_id, job_id):
-    headers, url_string = get_resource_sync_url_and_headers(token, project_id,
-                                                            resource_sync_url)
-    url_string = url_string + job_id
-    response = requests.delete(url_string, headers=headers)
-    return response.status_code
+def get_sync_job_detail(openstack_drivers, job_id):
+    kb = openstack_drivers['kingbird']
+    response = kb.sync_manager.sync_job_detail(job_id)
+    result = dict()
+    job_set = list()
+    res = dict()
+    for i in response:
+        result['resource'] = i.resource_name
+        result['target_region'] = i.target_region
+        result['sync_status'] = i.status
+        result['created_at'] = i.created_at
+        result['updated_at'] = i.updated_at
+        result['source_region'] = i.source_region
+        result['resource_type'] = i.resource_type
+        job_set.append(result.copy())
+    res['job_set'] = job_set
+    return res
+
+
+def delete_db_entries(openstack_drivers, job_id):
+    kb = openstack_drivers['kingbird']
+    kb.sync_manager.delete_sync_job(job_id)
 
 
 def get_regions(key_client):

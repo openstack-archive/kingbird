@@ -50,8 +50,8 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
         super(BaseKingbirdTest, cls).setup_credentials()
         session = sync_client.get_session()
         cls.auth_token = session.get_token()
-        cls.key_client = sync_client.get_key_client(session)
-        cls.regions = sync_client.get_regions(cls.key_client)
+        cls.keystone_client = sync_client.get_keystone_client(session)
+        cls.regions = sync_client.get_regions(cls.keystone_client)
 
     @classmethod
     def setup_clients(cls):
@@ -69,7 +69,7 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
         user_name = data_utils.rand_name('kb-user')
         password = data_utils.rand_name('kb-password')
         cls.openstack_details = sync_client.get_openstack_drivers(
-            cls.key_client,
+            cls.keystone_client,
             cls.regions[0],
             project_name,
             user_name,
@@ -109,7 +109,8 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
 
     @classmethod
     def get_default_kingbird_quota(cls):
-        return_quotas = sync_client.get_default_kingbird_quota(cls.auth_token)
+        return_quotas = sync_client.\
+            get_default_kingbird_quota(cls.openstack_drivers)
         return return_quotas
 
     @classmethod

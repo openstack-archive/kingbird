@@ -94,9 +94,7 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
         self.create_custom_kingbird_quota(self.resource_ids["project_id"],
                                           new_quota)
         actual_value = self.get_default_kingbird_quota()
-        if 'id' in DEFAULT_QUOTAS['quota_set']:
-            del DEFAULT_QUOTAS['quota_set']['id']
-        self.assertEqual(eval(actual_value), DEFAULT_QUOTAS)
+        self.assertEqual(actual_value, DEFAULT_QUOTAS)
         self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
 
     def test_get_quota_usage_for_project(self):
@@ -131,9 +129,7 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
                                           new_quota)
         self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
         actual_value = self.get_default_kingbird_quota()
-        if 'id' in DEFAULT_QUOTAS['quota_set']:
-            del DEFAULT_QUOTAS['quota_set']['id']
-        self.assertEqual(eval(actual_value), DEFAULT_QUOTAS)
+        self.assertEqual(actual_value, DEFAULT_QUOTAS)
         self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
 
     def test_quota_sync_for_project(self):

@@ -22,6 +22,7 @@ from cinderclient import client as ci_client
 from keystoneclient.auth.identity import v3
 from keystoneclient import session
 from keystoneclient.v3 import client as ks_client
+from kingbirdclient.api.v1 import client as kb_client
 from neutronclient.neutron import client as nt_client
 from novaclient import client as nv_client
 from oslo_log import log as logging
@@ -41,6 +42,7 @@ SUBNET_RANGE = "192.168.199.0/24"
 quota_api_url = "/os-quota-sets/"
 quota_class_api_url = "/os-quota-class-sets/"
 
+KINGBIRD_URL = CONF.kingbird.endpoint_url + CONF.kingbird.api_version
 LOG = logging.getLogger(__name__)
 
 
@@ -64,18 +66,19 @@ def get_current_session(username, password, tenant_name):
     return sess
 
 
-def get_openstack_drivers(key_client, region, project_name, user_name,
+def get_openstack_drivers(keystone_client, region, project_name, user_name,
                           password):
     # Create Project, User and assign role to new user
-    project = key_client.projects.create(project_name,
-                                         CONF.auth.admin_domain_name)
-    user = key_client.users.create(user_name, CONF.auth.admin_domain_name,
-                                   project.id, password)
+    project = keystone_client.projects.create(project_name,
+                                              CONF.auth.admin_domain_name)
+    user = keystone_client.users.create(user_name, CONF.auth.admin_domain_name,
+                                        project.id, password)
     admin_role = [current_role.id for current_role in
-                  key_client.roles.list() if current_role.name == 'admin'][0]
-
-    key_client.roles.grant(admin_role, user=user, project=project)
+                  keystone_client.roles.list()
+                  if current_role.name == 'admin'][0]
+    keystone_client.roles.grant(admin_role, user=user, project=project)
     session = get_current_session(user_name, password, project_name)
+    token = keystone_client.session.get_token()
     nova_client = nv_client.Client(NOVA_API_VERSION,
                                    session=session,
                                    region_name=region)
@@ -83,9 +86,12 @@ def get_openstack_drivers(key_client, region, project_name, user_name,
                                       region_name=region)
     cinder_client = ci_client.Client(CINDER_API_VERSION, session=session,
                                      region_name=region)
+    kingbird_client = kb_client.Client(kingbird_url=KINGBIRD_URL,
+                                       auth_token=token)
     return {"user_id": user.id, "project_id": project.id, "session": session,
-            "os_drivers": [key_client, nova_client, neutron_client,
-                           cinder_client]}
+            "os_drivers": {'keystone': keystone_client, 'nova': nova_client,
+                           'neutron': neutron_client, 'cinder': cinder_client,
+                           'kingbird': kingbird_client}}
 
 
 def get_key_client(session):
@@ -93,7 +99,7 @@ def get_key_client(session):
 
 
 def create_instance(openstack_drivers, resource_ids, count=1):
-    nova_client = openstack_drivers[1]
+    nova_client = openstack_drivers['nova']
     server_ids = []
     image = nova_client.images.find(id=CONF.compute.image_ref)
     flavor = nova_client.flavors.find(id=resource_ids['flavor_id'])
@@ -148,11 +154,11 @@ def delete_custom_kingbird_quota(token, project_id, quota_to_delete=None):
     return response.text
 
 
-def get_default_kingbird_quota(token):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    url_string = url_string + "defaults"
-    response = requests.get(url_string, headers=headers)
-    return response.text
+def get_default_kingbird_quota(openstack_drivers):
+    kingbird_client = openstack_drivers['kingbird']
+    data = kingbird_client.quota_manager.list_defaults()
+    response = {items._data: items._values for items in data}
+    return response
 
 
 def quota_sync_for_project(token, project_id):
@@ -179,9 +185,9 @@ def create_custom_kingbird_quota_wrong_token(token,
     return response
 
 
-def get_regions(key_client):
+def get_regions(keystone_client):
     return [current_region.id for current_region in
-            key_client.regions.list()]
+            keystone_client.regions.list()]
 
 
 def delete_resource_with_timeout(service_client, resource_ids, service_type):
@@ -220,29 +226,29 @@ def delete_resource_with_timeout(service_client, resource_ids, service_type):
 
 def delete_instance(openstack_drivers, resource_ids):
     delete_resource_with_timeout(
-        openstack_drivers[1],
+        openstack_drivers['nova'],
         resource_ids['server_ids'], 'nova')
     resource_ids['server_ids'] = []
 
 
 def delete_volume(openstack_drivers, resource_ids):
     delete_resource_with_timeout(
-        openstack_drivers[3],
+        openstack_drivers['cinder'],
         resource_ids['volume_ids'], 'cinder')
     resource_ids['volume_ids'] = []
 
 
 def resource_cleanup(openstack_drivers, resource_ids):
-    key_client = openstack_drivers[0]
-    nova_client = openstack_drivers[1]
-    neutron_client = openstack_drivers[2]
+    keystone_client = openstack_drivers['keystone']
+    nova_client = openstack_drivers['nova']
+    neutron_client = openstack_drivers['neutron']
     delete_instance(openstack_drivers, resource_ids)
     delete_volume(openstack_drivers, resource_ids)
     nova_client.flavors.delete(resource_ids['flavor_id'])
     neutron_client.delete_subnet(resource_ids['subnet_id'])
     neutron_client.delete_network(resource_ids['network_id'])
-    key_client.projects.delete(resource_ids['project_id'])
-    key_client.users.delete(resource_ids['user_id'])
+    keystone_client.projects.delete(resource_ids['project_id'])
+    keystone_client.users.delete(resource_ids['user_id'])
 
 
 def get_usage_from_os_client(session, regions, project_id):
@@ -301,9 +307,9 @@ def get_actual_limits(session, regions, project_id):
 
 
 def create_resources(openstack_drivers):
-    nova_client = openstack_drivers[1]
-    neutron_client = openstack_drivers[2]
-    cinder_client = openstack_drivers[3]
+    nova_client = openstack_drivers['nova']
+    neutron_client = openstack_drivers['neutron']
+    cinder_client = openstack_drivers['cinder']
     volume = cinder_client.volumes.create(VOLUME_SIZE,
                                           name=VOLUME_NAME)
     flavor = nova_client.flavors.create(

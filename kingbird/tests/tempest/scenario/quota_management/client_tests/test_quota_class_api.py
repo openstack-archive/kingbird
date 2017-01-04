@@ -62,7 +62,7 @@ class KingbirdQuotaClassTestJSON(base.BaseKingbirdTest):
 
     def test_kb_quota_default_class_get_method(self):
         actual_value = self.get_quota_for_class(DEFAULT_CLASS)
-        expected_value = {"quota_class_set": base.DEFAULT_QUOTAS["quota_set"]}
+        expected_value = {"quota_class_set": base.DEFAULT_QUOTAS}
         expected_value["quota_class_set"].update({"id": DEFAULT_CLASS})
         self.assertEqual(eval(actual_value), expected_value)
 

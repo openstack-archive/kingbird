@@ -1,0 +1,8 @@
+Code-Review+2: Dimitri Mazmanov <dimitri.mazmanov@ericsson.com>
+Workflow+1: Dimitri Mazmanov <dimitri.mazmanov@ericsson.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 12 Jan 2017 11:58:51 +0000
+Reviewed-on: https://review.openstack.org/415966
+Project: openstack/kingbird
+Branch: refs/heads/master

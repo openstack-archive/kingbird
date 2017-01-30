@@ -148,3 +148,42 @@ def service_get(context, service_id):
 
 def service_get_all(context):
     return IMPL.service_get_all(context)
+
+
+def sync_job_create(context, job_id):
+    return IMPL.sync_job_create(context, job_id)
+
+
+def sync_job_list(context, action=None):
+    return IMPL.sync_job_list(context, action)
+
+
+def sync_job_status(context, job_id):
+    return IMPL.sync_job_status(context, job_id)
+
+
+def sync_job_update(context, job_id, status):
+    return IMPL.sync_job_status(context, job_id, status)
+
+
+def sync_job_delete(context, job_id):
+    return IMPL.sync_job_delete(context, job_id)
+
+
+def resource_sync_create(context, job, region, resource,
+                         resource_type):
+    return IMPL.resource_sync_create(context, job, region, resource,
+                                     resource_type)
+
+
+def resource_sync_update(context, job_id, region, resource, status):
+    return IMPL.resource_sync_update(context, job_id, region, resource,
+                                     status)
+
+
+def resource_sync_status(context, job_id):
+    return IMPL.resource_sync_status(context, job_id)
+
+
+def resource_sync_list_by_job(context, job_id):
+    return IMPL.resource_sync_list_by_job(context, job_id)

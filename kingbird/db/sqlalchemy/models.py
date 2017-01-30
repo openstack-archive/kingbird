@@ -21,6 +21,10 @@ from oslo_db.sqlalchemy import models
 from sqlalchemy.orm import session as orm_session
 from sqlalchemy import (Column, Integer, String, Boolean, schema)
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
+
+from kingbird.common import consts
 
 BASE = declarative_base()
 
@@ -35,6 +39,7 @@ class KingbirdBase(models.ModelBase,
                    models.SoftDeleteMixin,
                    models.TimestampMixin):
     """Base class for Kingbird Models."""
+
     __table_args__ = {'mysql_engine': 'InnoDB'}
 
     def expire(self, session=None, attrs=None):
@@ -142,3 +147,38 @@ class Service(BASE, KingbirdBase):
     disabled = Column(Boolean, default=False)
 
     disabled_reason = Column(String(255))
+
+
+class SyncJob(BASE, KingbirdBase):
+    """Kingbird Sync Job registry"""
+
+    __tablename__ = 'sync_job'
+
+    id = Column('id', String(36), primary_key=True)
+
+    sync_status = Column(String(36), default=consts.SYNC_STATUS,
+                         nullable=False)
+
+    job_relation = relationship('ResourceSync', backref='sync_job')
+
+    user_id = Column('user_id', String(36), nullable=False)
+
+    project_id = Column('project_id', String(36), nullable=False)
+
+
+class ResourceSync(BASE, KingbirdBase):
+    """ResourceSync_registry"""
+
+    __tablename__ = 'resource_sync'
+
+    job_id = Column('job_id', String(36),
+                    ForeignKey('sync_job.id'), primary_key=True)
+
+    region = Column('region', String(36), primary_key=True)
+
+    resource = Column('resource', String(36), primary_key=True)
+
+    resource_type = Column('resource_type', String(36), nullable=False)
+
+    sync_status = Column(String(36), default=consts.SYNC_STATUS,
+                         nullable=False)

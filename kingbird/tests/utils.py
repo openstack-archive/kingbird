@@ -85,7 +85,7 @@ def dummy_context(user='test_username', tenant='test_project_id',
     return context.RequestContext.from_dict({
         'auth_token': 'abcd1234',
         'user': user,
-        'tenant': tenant,
+        'project': tenant,
         'is_admin': True,
         'region_name': region_name
     })

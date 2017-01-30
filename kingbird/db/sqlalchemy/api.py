@@ -13,9 +13,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-'''
+"""
 Implementation of SQLAlchemy backend.
-'''
+"""
 
 import sys
 import threading
@@ -83,7 +83,7 @@ def _session(context):
 
 
 def is_admin_context(context):
-    """Indicates if the request context is an administrator."""
+    """Indicate if the request context is an administrator."""
     if not context:
         LOG.warning(_('Use of empty request context is deprecated'),
                     DeprecationWarning)
@@ -92,7 +92,7 @@ def is_admin_context(context):
 
 
 def is_user_context(context):
-    """Indicates if the request context is a normal user."""
+    """Indicate if the request context is a normal user."""
     if not context:
         return False
     if context.is_admin:
@@ -107,7 +107,6 @@ def require_admin_context(f):
 
     The first argument to the wrapped function must be the context.
     """
-
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]):
             raise exception.AdminRequired()
@@ -123,8 +122,8 @@ def require_context(f):
     :py:func:`authorize_project_context` and
     :py:func:`authorize_user_context`.
     The first argument to the wrapped function must be the context.
-    """
 
+    """
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
             raise exception.NotAuthorized()
@@ -382,3 +381,132 @@ def service_get(context, service_id):
 
 def service_get_all(context):
     return model_query(context, models.Service).all()
+
+
+##########################
+
+@require_context
+def sync_job_create(context, job_id):
+    with write_session() as session:
+        time_now = timeutils.utcnow()
+        sjc = models.SyncJob()
+        sjc.id = job_id
+        sjc.user_id = context.user
+        sjc.tenant_id = context.project
+        sjc.created_at = time_now
+        sjc.updated_at = time_now
+        session.add(sjc)
+        return sjc
+
+
+@require_context
+def sync_job_list_by_user(context, action):
+    if action == 'active':
+        rows = model_query(context, models.SyncJob). \
+            filter_by(user_id=context.user, sync_status='IN_PROGRESS'). \
+            all()
+    elif action == 'list':
+        rows = model_query(context, models.SyncJob). \
+            filter_by(user_id=context.user). \
+            all()
+    output = list()
+    for row in rows:
+        result = dict()
+        result['id'] = row.id
+        result['sync_status'] = row.sync_status
+        result['updated_at'] = row.updated_at
+        output.append(result)
+    return output
+
+
+@require_context
+def sync_job_status(context, job_id):
+    row = model_query(context, models.SyncJob).\
+        filter_by(id=job_id).first()
+    if not row:
+        raise exception.JobNotFound()
+    status = row.sync_status
+    return status
+
+
+@require_context
+def sync_job_update(context, job_id, msg):
+    with write_session() as session:
+        time_now = timeutils.utcnow()
+        sync_job_ref = session.query(models.SyncJob). \
+            filter_by(id=job_id).first()
+        if not sync_job_ref:
+            raise exception.JobNotFound()
+        sync_job_ref.sync_status = msg
+        sync_job_ref.updated_at = time_now
+        sync_job_ref.save(session)
+
+
+@require_context
+def sync_job_delete(context, job_id):
+    with write_session() as session:
+        child_jobs = model_query(context, models.ResourceSync). \
+            filter_by(job_id=job_id).all()
+        if not child_jobs:
+            raise exception.JobNotFound()
+        for child_job in child_jobs:
+            session.delete(child_job)
+        parent_jobs = model_query(context, models.SyncJob). \
+            filter_by(id=job_id, user_id=context.user). \
+            all()
+        if not parent_jobs:
+            raise exception.JobNotFound(job_id=job_id)
+        for job in parent_jobs:
+            session.delete(job)
+
+
+##########################
+@require_context
+def resource_sync_create(context, job, region, resource,
+                         resource_type):
+    with write_session() as session:
+        time_now = timeutils.utcnow()
+        rsc = models.ResourceSync()
+        rsc.sync_job = job
+        rsc.resource = resource
+        rsc.region = region
+        rsc.resource_type = resource_type
+        rsc.created_at = time_now
+        rsc.updated_at = time_now
+        session.add(rsc)
+        return rsc
+
+
+@require_context
+def resource_sync_update(context, job_id, region, resource, msg):
+    with write_session() as session:
+        time_now = timeutils.utcnow()
+        resource_sync_ref = session.query(models.ResourceSync).\
+            filter_by(job_id=job_id, region=region, resource=resource).\
+            first()
+        if not resource_sync_ref:
+            raise exception.JobNotFound()
+        resource_sync_ref.sync_status = msg
+        resource_sync_ref.updated_at = time_now
+        resource_sync_ref.save(session)
+        return resource_sync_ref
+
+
+@require_context
+def resource_sync_list_by_job(context, job_id):
+    rows = model_query(context, models.ResourceSync).\
+        filter_by(job_id=job_id).all()
+    output = list()
+    if not rows:
+        raise exception.JobNotFound()
+    for row in rows:
+        result = dict()
+        result['id'] = row.job_id
+        result['region'] = row.region
+        result['resource'] = row.resource
+        result['resource_type'] = row.resource_type
+        result['sync_status'] = row.sync_status
+        result['updated_at'] = row.updated_at.isoformat()
+        result['created_at'] = row.created_at.isoformat()
+        output.append(result)
+    return output

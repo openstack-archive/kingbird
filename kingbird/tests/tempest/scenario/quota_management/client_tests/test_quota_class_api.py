@@ -21,52 +21,77 @@ DEFAULT_CLASS = "default"
 
 class KingbirdQuotaClassTestJSON(base.BaseKingbirdTest):
 
+    @classmethod
+    def setup_clients(self):
+        super(KingbirdQuotaClassTestJSON, self).setup_clients()
+
+    def tearDown(self):
+        super(KingbirdQuotaClassTestJSON, self).tearDown()
+
+    @classmethod
+    def resource_cleanup(self):
+        super(KingbirdQuotaClassTestJSON, self).resource_cleanup()
+        self.delete_resources()
+
+    @classmethod
+    def resource_setup(self):
+        super(KingbirdQuotaClassTestJSON, self).resource_setup()
+        self.create_resources()
+
     def test_kb_quota_class_put_method(self):
         new_quota = {"quota_class_set": {"instances": 15, "cores": 10}}
-        actual_value = self.update_quota_for_class(self.class_name,
-                                                   new_quota)
+        actual_value = self.update_quota_for_class(
+            self.class_name, self.resource_ids["project_id"],
+            new_quota)
         new_quota["quota_class_set"].update({"id": self.class_name})
         self.assertEqual(new_quota, eval(actual_value))
-        self.delete_quota_for_class(self.class_name)
+        self.delete_quota_for_class(self.class_name,
+                                    self.resource_ids["project_id"])
 
     def test_kb_quota_class_get_method(self):
         new_quota = {"quota_class_set": {"instances": 15, "cores": 10}}
-        self.update_quota_for_class(self.class_name,
-                                    new_quota)
-        actual_value = self.get_quota_for_class(self.class_name)
+        self.update_quota_for_class(
+            self.class_name, self.resource_ids["project_id"], new_quota)
+        actual_value = self.get_quota_for_class(
+            self.class_name, self.resource_ids["project_id"])
         new_quota["quota_class_set"].update({'id': self.class_name})
         self.assertEqual(new_quota, eval(actual_value))
-        self.delete_quota_for_class(self.class_name)
+        self.delete_quota_for_class(self.class_name,
+                                    self.resource_ids["project_id"])
 
     def test_kb_quota_class_delete_method(self):
         new_quota = {"quota_class_set": {"instances": 15, "cores": 10}}
-        self.update_quota_for_class(self.class_name,
-                                    new_quota)
-        self.delete_quota_for_class(self.class_name)
+        self.update_quota_for_class(
+            self.class_name, self.resource_ids["project_id"], new_quota)
+        self.delete_quota_for_class(self.class_name,
+                                    self.resource_ids["project_id"])
         quota_after_delete = eval(self.get_quota_for_class(
-            self.class_name))
+            self.class_name, self.resource_ids["project_id"]))
         self.assertNotIn("cores", quota_after_delete["quota_class_set"])
         self.assertNotIn("instances", quota_after_delete["quota_class_set"])
 
     def test_kb_quota_class_wrong_input(self):
         new_quota = {"quota_class_unset": {"instances": 15, "cores": 10}}
-        actual_value = self.update_quota_for_class(self.class_name,
-                                                   new_quota)
+        actual_value = self.update_quota_for_class(
+            self.class_name, self.resource_ids["project_id"],  new_quota)
         self.assertIn("Missing quota_class_set in the body", actual_value)
 
     def test_kb_quota_class_wrong_quotas(self):
         new_quota = {"quota_class_set": {"instan": 15, "cor": 10}}
-        actual_value = self.update_quota_for_class(self.class_name,
-                                                   new_quota)
+        actual_value = self.update_quota_for_class(
+            self.class_name, self.resource_ids["project_id"],
+            new_quota)
         self.assertEmpty(actual_value)
 
     def test_kb_quota_default_class_get_method(self):
-        actual_value = self.get_quota_for_class(DEFAULT_CLASS)
+        actual_value = self.get_quota_for_class(
+            DEFAULT_CLASS, self.resource_ids["project_id"])
         expected_value = {"quota_class_set": base.DEFAULT_QUOTAS["quota_set"]}
         expected_value["quota_class_set"].update({"id": DEFAULT_CLASS})
         self.assertEqual(eval(actual_value), expected_value)
 
     def test_kb_quota_class_get_method_wrong_class_name(self):
-        actual_value = self.get_quota_for_class("no_class")
+        actual_value = self.get_quota_for_class(
+            "no_class", self.resource_ids["project_id"])
         expected_value = {"quota_class_set": {"id": "no_class"}}
         self.assertEqual(eval(actual_value), expected_value)

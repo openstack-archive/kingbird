@@ -65,17 +65,27 @@ def get_current_session(username, password, tenant_name):
 
 
 def get_openstack_drivers(key_client, region, project_name, user_name,
-                          password):
+                          password, target_project_name, target_user_name):
     # Create Project, User and assign role to new user
     project = key_client.projects.create(project_name,
                                          CONF.auth.admin_domain_name)
     user = key_client.users.create(user_name, CONF.auth.admin_domain_name,
                                    project.id, password)
+    target_project = key_client.projects.create(target_project_name,
+                                                CONF.auth.admin_domain_name)
+    target_user = key_client.users.create(target_user_name,
+                                          CONF.auth.admin_domain_name,
+                                          target_project.id, password)
     admin_role = [current_role.id for current_role in
                   key_client.roles.list() if current_role.name == 'admin'][0]
-
+    mem_role = [current_role.id for current_role in
+                key_client.roles.list()
+                if current_role.name == 'Member'][0]
     key_client.roles.grant(admin_role, user=user, project=project)
+    key_client.roles.grant(mem_role, user=target_user, project=target_project)
     session = get_current_session(user_name, password, project_name)
+    new_key_client = ks_client.Client(session=session)
+    token = new_key_client.session.get_token()
     nova_client = nv_client.Client(NOVA_API_VERSION,
                                    session=session,
                                    region_name=region)
@@ -84,6 +94,8 @@ def get_openstack_drivers(key_client, region, project_name, user_name,
     cinder_client = ci_client.Client(CINDER_API_VERSION, session=session,
                                      region_name=region)
     return {"user_id": user.id, "project_id": project.id, "session": session,
+            "token": token, "target_project_id": target_project.id,
+            "target_user_id": target_user.id,
             "os_drivers": [key_client, nova_client, neutron_client,
                            cinder_client]}
 
@@ -109,37 +121,40 @@ def create_instance(openstack_drivers, resource_ids, count=1):
         raise e
 
 
-def get_urlstring_and_headers(token, api_url):
-    admin_tenant_id = CONF.auth.admin_project_name
+def get_urlstring_and_headers(token, project_id, api_url):
     headers = {
         'Content-Type': 'application/json',
         'X-Auth-Token': token,
-        'X-ROLE': 'admin',
     }
     url_string = CONF.kingbird.endpoint_url + CONF.kingbird.api_version + \
-        "/" + admin_tenant_id + api_url
+        "/" + project_id + api_url
 
     return headers, url_string
 
 
-def create_custom_kingbird_quota(token, project_id, new_quota_values):
+def create_custom_kingbird_quota(token, project_id, target_project_id,
+                                 new_quota_values):
     body = json.dumps(new_quota_values)
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    url_string = url_string + project_id
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_api_url)
+    url_string = url_string + target_project_id
     response = requests.put(url_string, headers=headers, data=body)
     return response.text
 
 
-def get_custom_kingbird_quota(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    url_string = url_string + project_id
+def get_custom_kingbird_quota(token, project_id, target_project_id):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_api_url)
+    url_string = url_string + target_project_id
     response = requests.get(url_string, headers=headers)
     return response.text
 
 
-def delete_custom_kingbird_quota(token, project_id, quota_to_delete=None):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    url_string = url_string + project_id
+def delete_custom_kingbird_quota(token, project_id, target_project_id,
+                                 quota_to_delete=None):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_api_url)
+    url_string = url_string + target_project_id
     if quota_to_delete:
         body = json.dumps(quota_to_delete)
         response = requests.delete(url_string, headers=headers, data=body)
@@ -148,35 +163,28 @@ def delete_custom_kingbird_quota(token, project_id, quota_to_delete=None):
     return response.text
 
 
-def get_default_kingbird_quota(token):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
+def get_default_kingbird_quota(token, project_id):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_api_url)
     url_string = url_string + "defaults"
     response = requests.get(url_string, headers=headers)
     return response.text
 
 
-def quota_sync_for_project(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    url_string = url_string + project_id + "/sync"
+def quota_sync_for_project(token, project_id, target_project_id):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_api_url)
+    url_string = url_string + target_project_id + "/sync"
     response = requests.put(url_string, headers=headers)
     return response.text
 
 
-def get_quota_usage_for_project(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    url_string = url_string + project_id + "/detail"
+def get_quota_usage_for_project(token, project_id, target_project_id):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_api_url)
+    url_string = url_string + target_project_id + "/detail"
     response = requests.get(url_string, headers=headers)
     return response.text
-
-
-def create_custom_kingbird_quota_wrong_token(token,
-                                             project_id, new_quota_values):
-    headers, url_string = get_urlstring_and_headers(token, quota_api_url)
-    headers['X-Auth-Token'] = 'fake_token'
-    url_string = url_string + project_id
-    body = json.dumps(new_quota_values)
-    response = requests.put(url_string, headers=headers, data=body)
-    return response
 
 
 def get_regions(key_client):
@@ -242,7 +250,9 @@ def resource_cleanup(openstack_drivers, resource_ids):
     neutron_client.delete_subnet(resource_ids['subnet_id'])
     neutron_client.delete_network(resource_ids['network_id'])
     key_client.projects.delete(resource_ids['project_id'])
+    key_client.projects.delete(resource_ids['target_project_id'])
     key_client.users.delete(resource_ids['user_id'])
+    key_client.users.delete(resource_ids['target_user_id'])
 
 
 def get_usage_from_os_client(session, regions, project_id):
@@ -337,23 +347,26 @@ def set_default_quota(session, regions, project_id, **quota_to_set):
         nova_client.quotas.update(project_id, **quota_to_set)
 
 
-def update_quota_for_class(token, class_name, new_quota_values):
+def update_quota_for_class(token, class_name, project_id, new_quota_values):
     body = json.dumps(new_quota_values)
-    headers, url_string = get_urlstring_and_headers(token, quota_class_api_url)
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_class_api_url)
     url_string = url_string + class_name
     response = requests.put(url_string, headers=headers, data=body)
     return response.text
 
 
-def get_quota_for_class(token, class_name):
-    headers, url_string = get_urlstring_and_headers(token, quota_class_api_url)
+def get_quota_for_class(token, class_name, project_id):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_class_api_url)
     url_string = url_string + class_name
     response = requests.get(url_string, headers=headers)
     return response.text
 
 
-def delete_quota_for_class(token, class_name):
-    headers, url_string = get_urlstring_and_headers(token, quota_class_api_url)
+def delete_quota_for_class(token, class_name, project_id):
+    headers, url_string = get_urlstring_and_headers(token, project_id,
+                                                    quota_class_api_url)
     url_string = url_string + class_name
     response = requests.delete(url_string, headers=headers)
     return response.text

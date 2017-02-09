@@ -46,18 +46,34 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
         actual_value = self.create_custom_kingbird_quota(
             self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"],
             new_quota)
         expected_value = {
-            self.resource_ids["project_id"]: new_quota["quota_set"]
+            self.resource_ids["target_project_id"]: new_quota["quota_set"]
             }
         self.assertEqual(expected_value, eval(actual_value))
 
-    def test_kingbird_get_method(self):
+    def test_kingbird_get_another_tenant_quota(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
-        self.create_custom_kingbird_quota(self.resource_ids["project_id"],
-                                          new_quota)
+        self.create_custom_kingbird_quota(
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"],
+            new_quota)
         actual_value = self.get_custom_kingbird_quota(
-            self.resource_ids["project_id"])
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"])
+        new_quota["quota_set"].update(
+            {'project_id': self.resource_ids["target_project_id"]}
+            )
+        self.assertEqual(new_quota, eval(actual_value))
+
+    def test_kingbird_get_own_quota(self):
+        new_quota = {"quota_set": {"instances": 15, "cores": 10}}
+        self.create_custom_kingbird_quota(
+            self.resource_ids["project_id"], self.resource_ids["project_id"],
+            new_quota)
+        actual_value = self.get_custom_kingbird_quota(
+            self.resource_ids["project_id"], self.resource_ids["project_id"])
         new_quota["quota_set"].update(
             {'project_id': self.resource_ids["project_id"]}
             )
@@ -66,24 +82,34 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
     def test_kingbird_delete_method(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
         quota_to_delete = {"quota_set": ["cores"]}
-        self.create_custom_kingbird_quota(self.resource_ids["project_id"],
-                                          new_quota)
-        self.delete_custom_kingbird_quota(self.resource_ids["project_id"],
-                                          quota_to_delete)
+        self.create_custom_kingbird_quota(
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"],
+            new_quota)
+        self.delete_custom_kingbird_quota(
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"],
+            quota_to_delete)
         quota_after_delete = eval(self.get_custom_kingbird_quota(
-            self.resource_ids["project_id"]))
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"]))
         self.assertNotIn("cores", quota_after_delete["quota_set"])
 
     def test_kingbird_delete_all_method(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
-        self.create_custom_kingbird_quota(self.resource_ids["project_id"],
-                                          new_quota)
-        self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
+        self.create_custom_kingbird_quota(
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"],
+            new_quota)
+        self.delete_custom_kingbird_quota(
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"])
         actual_quota_after_delete = eval(self.get_custom_kingbird_quota(
-            self.resource_ids["project_id"]))
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"]))
         expected_quota_after_delete = {
             "quota_set": {
-                "project_id": self.resource_ids["project_id"]
+                "project_id": self.resource_ids["target_project_id"]
                 }
             }
         self.assertEqual(expected_quota_after_delete,
@@ -91,18 +117,21 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
 
     def test_kingbird_get_default_method_after_update(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
-        self.create_custom_kingbird_quota(self.resource_ids["project_id"],
-                                          new_quota)
-        actual_value = self.get_default_kingbird_quota()
+        self.create_custom_kingbird_quota(
+            self.resource_ids["project_id"], self.resource_ids["project_id"],
+            new_quota)
+        actual_value = self.get_default_kingbird_quota(
+            self.resource_ids["project_id"])
         if 'id' in DEFAULT_QUOTAS['quota_set']:
             del DEFAULT_QUOTAS['quota_set']['id']
         self.assertEqual(eval(actual_value), DEFAULT_QUOTAS)
-        self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
+        self.delete_custom_kingbird_quota(self.resource_ids["project_id"],
+                                          self.resource_ids["project_id"])
 
     def test_get_quota_usage_for_project(self):
         self.create_instance(count=1)
         actual_usage = self.get_quota_usage_for_project(
-            self.resource_ids["project_id"])
+            self.resource_ids["project_id"], self.resource_ids["project_id"])
         expected_usage = self.get_usage_manually(
             self.resource_ids["project_id"])
         self.assertEqual(eval(actual_usage)["quota_set"]['usage']["ram"],
@@ -122,25 +151,20 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
     def test_kingbird_put_method_wrong_token(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
         response = self.create_custom_kingbird_quota_wrong_token(
-            self.resource_ids["project_id"], new_quota)
-        self.assertEqual(response.status_code, 401)
-
-    def test_kingbird_get_default_method_after_delete(self):
-        new_quota = {"quota_set": {"instances": 15, "cores": 10}}
-        self.create_custom_kingbird_quota(self.resource_ids["project_id"],
-                                          new_quota)
-        self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
-        actual_value = self.get_default_kingbird_quota()
-        if 'id' in DEFAULT_QUOTAS['quota_set']:
-            del DEFAULT_QUOTAS['quota_set']['id']
-        self.assertEqual(eval(actual_value), DEFAULT_QUOTAS)
-        self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
+            self.resource_ids["project_id"],
+            self.resource_ids["target_project_id"],
+            new_quota)
+        result = eval(response).get('error').get('code')
+        self.assertEqual(result, 401)
 
     def test_quota_sync_for_project(self):
         # Delete custom quota if there are any for this project
-        self.delete_custom_kingbird_quota(self.resource_ids["project_id"])
+        self.delete_custom_kingbird_quota(
+            self.resource_ids["project_id"],
+            self.resource_ids["project_id"])
         self.create_instance()
         sync_status = self.quota_sync_for_project(
+            self.resource_ids["project_id"],
             self.resource_ids["project_id"])
         expected_status = u"triggered quota sync for " + \
             self.resource_ids["project_id"]
@@ -152,11 +176,28 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
         self.assertEqual(eval(sync_status), expected_status)
         self.delete_instance()
 
+    def test_kingbird_get_default_method_after_delete(self):
+        new_quota = {"quota_set": {"instances": 15, "cores": 10}}
+        self.create_custom_kingbird_quota(
+            self.resource_ids["project_id"], self.resource_ids["project_id"],
+            new_quota)
+        self.delete_custom_kingbird_quota(self.resource_ids["project_id"],
+                                          self.resource_ids["project_id"])
+        actual_value = self.get_default_kingbird_quota(
+            self.resource_ids["project_id"])
+        if 'id' in DEFAULT_QUOTAS['quota_set']:
+            del DEFAULT_QUOTAS['quota_set']['id']
+        self.assertEqual(eval(actual_value), DEFAULT_QUOTAS)
+        self.delete_custom_kingbird_quota(self.resource_ids["project_id"],
+                                          self.resource_ids["project_id"])
+
     def test_quota_exceed_after_sync(self):
         new_quota = {"quota_set": {"instances": 2}}
         self.create_custom_kingbird_quota(self.resource_ids["project_id"],
+                                          self.resource_ids["project_id"],
                                           new_quota)
-        self.quota_sync_for_project(self.resource_ids["project_id"])
+        self.quota_sync_for_project(self.resource_ids["project_id"],
+                                    self.resource_ids["project_id"])
         self.wait_sometime_for_sync()
         try:
             self.create_instance(count=3)

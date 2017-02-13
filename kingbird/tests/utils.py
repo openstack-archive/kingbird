@@ -13,6 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import eventlet
 import random
 import sqlalchemy
 import string
@@ -89,3 +90,9 @@ def dummy_context(user='test_username', tenant='test_project_id',
         'is_admin': True,
         'region_name': region_name
     })
+
+
+def wait_until_true(predicate, timeout=60, sleep=1, exception=None):
+    with eventlet.timeout.Timeout(timeout, exception):
+        while not predicate():
+            eventlet.sleep(sleep)

@@ -1,5 +1,5 @@
 ===================
-Kingbird User Guide
+Kingbird user guide
 ===================
 
 Quota management for OpenStack multi-region deployments
@@ -47,6 +47,8 @@ Following quota items are supported to be managed in Kingbird:
 - **backup_gigabytes**: Total amount of storage, in gigabytes, allowed for volume
   backups per project.
 
+Key pair is the only resource type supported in resource synchronization.
+
 Only restful APIs are provided for Kingbird in Colorado release, so curl or
 other http client can be used to call Kingbird API.
 
@@ -58,103 +60,180 @@ management and $kb_ip_addr for the kingbird service endpoint ip address.
 Note:
 To view all tenants (projects), run:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    openstack project list
+        openstack project list
 
 To get token, run:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    openstack token issue
+        openstack token issue
 
 To get Kingbird service endpoint, run:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    openstack endpoint list
+        openstack endpoint list
 
 Quota Management API
 --------------------
 
 1. Update global limit for a tenant
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "ROLE: dmin" \
-   -X PUT \
-   -d '{"quota_set":{"cores": 10,"ram": 51200, "metadata_items": 100,"key_pairs": 100, "network":20,"security_group": 20,"security_group_rule": 20}}' \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota update b8eea2ceda4c47f1906fda7e7152a322 --port 10 --security_groups 10
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X PUT \
+       -d '{"quota_set":{"cores": 10,"ram": 51200, "metadata_items": 100,"key_pairs": 100, "network":20,"security_group": 20,"security_group_rule": 20}}' \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
 
 2. Get global limit for a tenant
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "X_ROLE: admin" \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota show --tenant $tenant_id
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
 
 3. A tenant can also get the global limit by himself
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   http://$kb_ip_addr:8118/v1.0/$tenant_id/os-quota-sets/$tenant_id
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota show
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       http://$kb_ip_addr:8118/v1.0/$tenant_id/os-quota-sets/$tenant_id
 
 4. Get defaults limits
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "X_ROLE: admin" \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/defaults
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota defaults
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/defaults
 
 5. Get total usage for a tenant
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "X_ROLE: admin" \
-   -X GET \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id/detail
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota detail --tenant $tenant_id
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X GET \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id/detail
 
 6. A tenant can also get the total usage by himself
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -X GET \
-   http://$kb_ip_addr:8118/v1.0/$tenant_id/os-quota-sets/$tenant_id/detail
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota detail
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X GET \
+       http://$kb_ip_addr:8118/v1.0/$tenant_id/os-quota-sets/$tenant_id/detail
 
 7. On demand quota sync
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "X_ROLE: admin" \
-   -X PUT \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id/sync
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota sync $tenant_id
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X PUT \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id/sync
 
 
 8. Delete specific global limit for a tenant
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "X_ROLE: admin" \
-   -X DELETE \
-   -d '{"quota_set": [ "cores", "ram"]}' \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X DELETE \
+       -d '{"quota_set": [ "cores", "ram"]}' \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
 
 9. Delete all kingbird global limit for a tenant
 
-  curl \
-  -H "Content-Type: application/json" \
-  -H "X-Auth-Token: $kb_token" \
-  -H  "X_ROLE: admin" \
-  -X DELETE \
-  http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota delete $tenant_id
+
+    Use curl:
+
+    .. code-block:: bash
+
+      curl \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $kb_token" \
+      -X DELETE \
+      http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-sets/$tenant_id
 
 
 Quota Class API
@@ -162,27 +241,106 @@ Quota Class API
 
 1. Update default quota class
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "ROLE: dmin" \
-   -X PUT \
-   -d '{"quota_class_set":{"cores": 100, "network":50,"security_group": 50,"security_group_rule": 50}}' \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-class-sets/default
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota-class update --port 10 --security_groups 10 default
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X PUT \
+       -d '{"quota_class_set":{"cores": 100, "network":50,"security_group": 50,"security_group_rule": 50}}' \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-class-sets/default
 
 2. Get default quota class
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "X_ROLE: admin" \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-class-sets/default
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota-class show default
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-class-sets/default
 
 3. Delete default quota class
 
-   curl \
-   -H "Content-Type: application/json" \
-   -H "X-Auth-Token: $kb_token" \
-   -H  "ROLE: dmin" \
-   -X DELETE \
-   http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-class-sets/default
+    Use python-kingbirdclient:
+
+    .. code-block:: bash
+
+       kingbird quota-class delete default
+
+    Use curl:
+
+    .. code-block:: bash
+
+       curl \
+       -H "Content-Type: application/json" \
+       -H "X-Auth-Token: $kb_token" \
+       -X DELETE \
+       http://$kb_ip_addr:8118/v1.0/$admin_tenant_id/os-quota-class-sets/default
+
+
+Resource Synchronization API
+-----------------------------
+
+1. Create synchronization job
+
+    .. code-block:: bash
+
+      curl \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $kb_token" \
+      -X POST -d \
+      '{"resource_set":{"resources": ["<Keypair_name>"],"force":<True/False>,"resource_type": "keypair","source": <"Source_Region">,"target": [<"List_of_target_regions">]}}' \
+      http://$kb_ip_addr:8118/v1.0/<tenant-id>/os-sync
+
+2. Get synchronization job
+
+    .. code-block:: bash
+
+      curl \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $kb_token" \
+      http://$kb_ip_addr:8118/v1.0/<tenant-id>/os-sync/
+
+3. Get active synchronization job
+
+    .. code-block:: bash
+
+      curl \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $kb_token" \
+      http://$kb_ip_addr:8118/v1.0/<tenant-id>/os-sync/active
+
+4. Get detail information of a synchronization job
+
+    .. code-block:: bash
+
+      curl \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $kb_token" \
+      http://$kb_ip_addr:8118/v1.0/<tenant-id>/os-sync/<job-id>
+
+5. Delete a synchronization job
+
+    .. code-block:: bash
+
+      curl \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $kb_token" \
+      -X DELETE \
+       http://$kb_ip_addr:8118/v1.0/<tenant-id>/os-sync/<job-id>

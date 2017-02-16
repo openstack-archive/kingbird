@@ -219,16 +219,7 @@ bus configuration in Nova, Cinder, Neutron configuration file.
 .. code-block:: bash
 
     [DEFAULT]
-    rpc_backend = rabbit
-    control_exchange = openstack
-    transport_url = None
-
-    [oslo_messaging_rabbit]
-    rabbit_host = 127.0.0.1
-    rabbit_port = 5671
-    rabbit_userid = guest
-    rabbit_password = guest
-    rabbit_virtual_host = /
+    transport_url = rabbit://stackrabbit:password@127.0.0.1:5672/
 
 After these basic configuration items configured, now the database schema of
 "kingbird" should be created:
@@ -243,10 +234,9 @@ according to your cloud planning:
 .. code-block:: bash
 
     openstack service create --name=kingbird synchronization
-    openstack endpoint create --region=RegionOne \
-    --publicurl=http://127.0.0.1:8118/v1.0 \
-    --adminurl=http://127.0.0.1:8118/v1.0 \
-    --internalurl=http://127.0.0.1:8118/v1.0 kingbird
+    openstack endpoint create --region=RegionOne kingbird public http://127.0.0.1:8118/v1.0
+    openstack endpoint create --region=RegionOne kingbird admin http://127.0.0.1:8118/v1.0
+    openstack endpoint create --region=RegionOne kingbird internal http://127.0.0.1:8118/v1.0
 
 Now it's ready to run kingbird-api and kingbird-engine:
 

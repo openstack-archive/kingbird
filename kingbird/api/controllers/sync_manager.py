@@ -115,8 +115,8 @@ class ResourceSyncController(object):
                 for keypair in source_keys:
                     try:
                         db_api.resource_sync_create(context, result,
-                                                    region, keypair,
-                                                    consts.KEYPAIR)
+                                                    region, source_region,
+                                                    keypair, consts.KEYPAIR)
                     except exceptions.JobNotFound:
                         pecan.abort(404, _('Job not found'))
             return self._keypair_sync(job_id, user_id, payload, context,

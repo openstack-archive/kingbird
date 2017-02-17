@@ -174,7 +174,9 @@ class ResourceSync(BASE, KingbirdBase):
     job_id = Column('job_id', String(36),
                     ForeignKey('sync_job.id'), primary_key=True)
 
-    region = Column('region', String(36), primary_key=True)
+    source_region = Column('source_region', String(36), primary_key=True)
+
+    target_region = Column('target_region', String(36), primary_key=True)
 
     resource = Column('resource', String(36), primary_key=True)
 

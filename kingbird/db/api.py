@@ -170,10 +170,10 @@ def sync_job_delete(context, job_id):
     return IMPL.sync_job_delete(context, job_id)
 
 
-def resource_sync_create(context, job, region, resource,
+def resource_sync_create(context, job, region, source_region, resource,
                          resource_type):
-    return IMPL.resource_sync_create(context, job, region, resource,
-                                     resource_type)
+    return IMPL.resource_sync_create(context, job, region, source_region,
+                                     resource, resource_type)
 
 
 def resource_sync_update(context, job_id, region, resource, status):

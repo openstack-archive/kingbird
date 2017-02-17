@@ -413,7 +413,11 @@ def sync_job_list(context, action=None):
         result = dict()
         result['id'] = row.id
         result['sync_status'] = row.sync_status
-        result['updated_at'] = row.updated_at
+        result['created_at'] = row.created_at
+        if row.updated_at:
+            result['updated_at'] = row.updated_at
+        else:
+            result['updated_at'] = "None"
         output.append(result)
     return output
 
@@ -461,15 +465,16 @@ def sync_job_delete(context, job_id):
 
 ##########################
 @require_context
-def resource_sync_create(context, job, region, resource,
-                         resource_type):
+def resource_sync_create(context, job, region, source_region,
+                         resource, resource_type):
     if not job:
         raise exception.JobNotFound()
     with write_session() as session:
         rsc = models.ResourceSync()
         rsc.sync_job = job
         rsc.resource = resource
-        rsc.region = region
+        rsc.target_region = region
+        rsc.source_region = source_region
         rsc.resource_type = resource_type
         session.add(rsc)
         return rsc
@@ -479,7 +484,7 @@ def resource_sync_create(context, job, region, resource,
 def resource_sync_update(context, job_id, region, resource, status):
     with write_session() as session:
         resource_sync_ref = session.query(models.ResourceSync).\
-            filter_by(job_id=job_id, region=region, resource=resource).\
+            filter_by(job_id=job_id, target_region=region, resource=resource).\
             first()
         if not resource_sync_ref:
             raise exception.JobNotFound()
@@ -515,11 +520,15 @@ def resource_sync_list_by_job(context, job_id):
         raise exception.JobNotFound()
     for row in rows:
         result = dict()
-        result['region'] = row.region
+        result['target_region'] = row.target_region
+        result['source_region'] = row.source_region
         result['resource'] = row.resource
         result['resource_type'] = row.resource_type
         result['sync_status'] = row.sync_status
-        result['updated_at'] = row.updated_at.isoformat()
+        if row.updated_at:
+            result['updated_at'] = row.updated_at.isoformat()
+        else:
+            result['updated_at'] = "None"
         result['created_at'] = row.created_at.isoformat()
         output.append(result)
     return output

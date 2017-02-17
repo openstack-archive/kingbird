@@ -413,7 +413,11 @@ def sync_job_list(context, action=None):
         result = dict()
         result['id'] = row.id
         result['sync_status'] = row.sync_status
-        result['updated_at'] = row.updated_at
+        result['created_at'] = row.created_at
+        if row.updated_at:
+            result['updated_at'] = row.updated_at
+        else:
+            result['updated_at'] = "None"
         output.append(result)
     return output
 
@@ -519,7 +523,10 @@ def resource_sync_list_by_job(context, job_id):
         result['resource'] = row.resource
         result['resource_type'] = row.resource_type
         result['sync_status'] = row.sync_status
-        result['updated_at'] = row.updated_at.isoformat()
+        if row.updated_at:
+            result['updated_at'] = row.updated_at.isoformat()
+        else:
+            result['updated_at'] = "None"
         result['created_at'] = row.created_at.isoformat()
         output.append(result)
     return output

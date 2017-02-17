@@ -30,7 +30,6 @@ from kingbird.common import messaging
 
 _lazy.enable_lazy()
 config.register_options()
-LOG = logging.getLogger('kingbird.engine')
 
 
 def main():

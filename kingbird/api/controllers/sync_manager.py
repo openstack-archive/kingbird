@@ -16,7 +16,6 @@
 import restcomm
 
 from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_utils import uuidutils
 
 import collections
@@ -32,9 +31,6 @@ from kingbird.drivers.openstack import sdk
 from kingbird.rpc import client as rpc_client
 
 CONF = cfg.CONF
-
-
-LOG = logging.getLogger(__name__)
 
 
 class ResourceSyncController(object):

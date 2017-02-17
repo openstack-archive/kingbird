@@ -17,10 +17,6 @@ Base class for all drivers.
 import abc
 import six
 
-from oslo_log import log as logging
-
-LOG = logging.getLogger(__name__)
-
 
 class DriverBase(object):
 

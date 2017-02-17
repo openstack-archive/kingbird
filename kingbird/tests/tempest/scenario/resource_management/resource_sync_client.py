@@ -20,15 +20,12 @@ from keystoneclient.auth.identity import v3
 from keystoneclient import session
 from keystoneclient.v3 import client as ks_client
 from novaclient import client as nv_client
-from oslo_log import log as logging
 from tempest import config
 
 CONF = config.CONF
 NOVA_API_VERSION = "2.37"
 KEYPAIRS = ["kb_test_keypair1", "kb_test_keypair2"]
 resource_sync_url = "/os-sync/"
-
-LOG = logging.getLogger(__name__)
 
 
 def get_session():

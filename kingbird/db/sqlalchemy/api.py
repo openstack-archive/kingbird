@@ -277,21 +277,17 @@ def quota_class_update(context, class_name, resource, limit):
 
 
 @require_admin_context
-def quota_class_destroy(context, class_name, resource):
-    with write_session() as session:
-        quota_class_ref = _quota_class_get(context, class_name, resource)
-        session.delete(quota_class_ref)
-
-
-@require_admin_context
 def quota_class_destroy_all(context, class_name):
     with write_session() as session:
         quota_classes = session.query(models.QuotaClass). \
             filter_by(deleted=False). \
             filter_by(class_name=class_name). \
             all()
-        for quota_class_ref in quota_classes:
-            session.delete(quota_class_ref)
+        if quota_classes:
+            for quota_class_ref in quota_classes:
+                session.delete(quota_class_ref)
+        else:
+            raise exception.QuotaClassNotFound()
 
 
 def db_sync(engine, version=None):

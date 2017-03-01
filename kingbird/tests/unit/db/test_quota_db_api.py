@@ -180,19 +180,19 @@ class DBAPIQuotaTest(base.KingbirdTestCase):
                                                resource=resource)
         self.assertEqual(30, updated_class.hard_limit)
 
-    def test_quota_class_destroy(self):
+    def test_quota_class_delete_wrong_class(self):
         class_name = "test_class"
         resource = "cores"
+        fake_class_name = "fake_class"
         quota_class = self.create_quota_class(self.ctx, class_name=class_name,
                                               resource=resource, limit=20)
         self.assertIsNotNone(quota_class)
 
-        db_api.quota_class_destroy(self.ctx, class_name=class_name,
-                                   resource=resource)
-
+        db_api.quota_class_update(self.ctx, class_name=class_name,
+                                  resource=resource, limit=30)
         self.assertRaises(exceptions.QuotaClassNotFound,
-                          db_api.quota_class_get,
-                          self.ctx, class_name, resource)
+                          db_api.quota_class_destroy_all,
+                          self.ctx, fake_class_name)
 
     def test_quota_class_destroy_all(self):
         class_name = "test_class"

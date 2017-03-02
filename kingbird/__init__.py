@@ -17,3 +17,4 @@ import pbr.version
 
 __version__ = pbr.version.VersionInfo(
     'kingbird').version_string()
+#  This Change is a no-op

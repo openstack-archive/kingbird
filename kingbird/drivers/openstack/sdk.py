@@ -25,7 +25,7 @@ from kingbird.common import endpoint_cache
 from kingbird.common import exceptions
 from kingbird.common.i18n import _, _LE, _LI
 
-from kingbird.drivers.openstack.cinder_v2 import CinderClient
+from kingbird.drivers.openstack.cinder_v3 import CinderClient
 from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient

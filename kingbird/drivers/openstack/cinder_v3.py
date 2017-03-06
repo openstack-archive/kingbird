@@ -19,11 +19,11 @@ from kingbird.common import exceptions
 from kingbird.drivers import base
 
 LOG = log.getLogger(__name__)
-API_VERSION = '2'
+API_VERSION = '3'
 
 
 class CinderClient(base.DriverBase):
-    '''Cinder V2 driver.'''
+    """Cinder V3 driver."""
 
     def __init__(self, region, disabled_quotas, session):
         try:
@@ -35,32 +35,26 @@ class CinderClient(base.DriverBase):
             raise
 
     def get_resource_usages(self, project_id):
-        '''Calcualte resources usage and return the dict
+        """Calcualte resources usage and return the dict.
 
         :param: project_id
-        :return: resource usage dict
-        '''
+        :return: resource usage dict.
+        """
         if not self.no_volumes:
             try:
                 usages = defaultdict(dict)
-
-                opts = {'all_tenants': 1, 'project_id': project_id}
-
-                volumes = self.cinder.volumes.list(search_opts=opts)
-                snapshots = self.cinder.volume_snapshots.list(search_opts=opts)
-                backups = self.cinder.backups.list(search_opts=opts)
-
-                usages['gigabytes'] = sum([int(v.size) for v in volumes])
-                usages['volumes'] = len(volumes)
-                usages['snapshots'] = len(snapshots)
-                usages['backups'] = len(backups)
+                limits = self.cinder.limits.get(project_id).to_dict()
+                usages['gigabytes'] = limits['absolute']['totalGigabytesUsed']
+                usages['volumes'] = limits['absolute']['totalVolumesUsed']
+                usages['snapshots'] = limits['absolute']['totalSnapshotsUsed']
+                usages['backups'] = limits['absolute']['totalBackupsUsed']
                 return usages
 
             except exceptions.InternalError:
                 raise
 
     def update_quota_limits(self, project_id, **new_quota):
-        '''Update the limits'''
+        """Update the limits."""
         try:
             if not self.no_volumes:
                 return self.cinder.quotas.update(project_id, **new_quota)
@@ -68,7 +62,7 @@ class CinderClient(base.DriverBase):
             raise
 
     def delete_quota_limits(self, project_id):
-        '''Delete/Reset the limits'''
+        """Delete/Reset the limits."""
         try:
             if not self.no_volumes:
                 return self.cinder.quotas.delete(project_id)

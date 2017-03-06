@@ -13,7 +13,7 @@
 import cinderclient
 import mock
 
-from kingbird.drivers.openstack import cinder_v2
+from kingbird.drivers.openstack import cinder_v3
 from kingbird.tests import base
 from kingbird.tests import utils
 
@@ -33,15 +33,16 @@ class VolumeBackup(object):
     def __init__(self, volume_id):
         self.volume_id = volume_id
 
+FAKE_LIMITS = {'absolute':
+               {u'totalSnapshotsUsed': 15, u'maxTotalBackups': 10,
+                u'maxTotalVolumeGigabytes': 1000, u'maxTotalSnapshots': 10,
+                u'maxTotalBackupGigabytes': 1000,
+                u'totalBackupGigabytesUsed': 0, u'maxTotalVolumes': 10,
+                u'totalVolumesUsed': 25, u'totalBackupsUsed': 16,
+                u'totalGigabytesUsed': 14
+                }
+               }
 
-volumes = [Volume("9fc1c259-1d66-470f-8525-313696d1ad46", 20),
-           Volume("7f505069-ad68-48c3-a09f-16d7014ec707", 15)]
-
-snapshots = [VolumeSnapshot(volumes[0].id)]
-
-backups = [VolumeBackup(volumes[0].id),
-           VolumeBackup(volumes[0].id),
-           VolumeBackup(volumes[1].id)]
 DISABLED_QUOTAS = ["floating_ips", "fixed_ips", "security_groups"]
 
 
@@ -53,30 +54,27 @@ class TestCinderClient(base.KingbirdTestCase):
         self.project = 'fake_project'
 
     def test_init(self):
-        ci_client = cinder_v2.CinderClient('fake_region', DISABLED_QUOTAS,
+        ci_client = cinder_v3.CinderClient('fake_region', DISABLED_QUOTAS,
                                            self.session)
         self.assertIsNotNone(ci_client)
         self.assertIsInstance(ci_client.cinder,
-                              cinderclient.v2.client.Client)
+                              cinderclient.v3.client.Client)
 
-    @mock.patch.object(cinder_v2, 'client')
+    @mock.patch.object(cinder_v3, 'client')
     def test_get_resource_usages(self, mock_cinderclient):
-        mock_cinderclient.Client().volumes.list.return_value = volumes
-        mock_cinderclient.Client().volume_snapshots.list.return_value = \
-            snapshots
-        mock_cinderclient.Client().backups.list.return_value = \
-            backups
-        cinder = cinder_v2.CinderClient('fake_region', DISABLED_QUOTAS,
+        mock_cinderclient.Client().limits.get().to_dict.\
+            return_value = FAKE_LIMITS
+        cinder = cinder_v3.CinderClient('fake_region', DISABLED_QUOTAS,
                                         self.session)
         total_cinder_usage = cinder.get_resource_usages(self.project)
-        self.assertEqual(2, total_cinder_usage['volumes'])
-        self.assertEqual(1, total_cinder_usage['snapshots'])
-        self.assertEqual(35, total_cinder_usage['gigabytes'])
-        self.assertEqual(3, total_cinder_usage['backups'])
+        self.assertEqual(25, total_cinder_usage['volumes'])
+        self.assertEqual(15, total_cinder_usage['snapshots'])
+        self.assertEqual(14, total_cinder_usage['gigabytes'])
+        self.assertEqual(16, total_cinder_usage['backups'])
 
-    @mock.patch.object(cinder_v2, 'client')
+    @mock.patch.object(cinder_v3, 'client')
     def test_update_quota_limits(self, mock_cinderclient):
-        c_client = cinder_v2.CinderClient('fake_region', DISABLED_QUOTAS,
+        c_client = cinder_v3.CinderClient('fake_region', DISABLED_QUOTAS,
                                           self.session)
         new_quota = {'volumes': 4, 'snapshots': 3}
         c_client.update_quota_limits(self.project, **new_quota)
@@ -84,9 +82,9 @@ class TestCinderClient(base.KingbirdTestCase):
         mock_cinderclient.Client().quotas.update.assert_called_once_with(
             self.project, **new_quota)
 
-    @mock.patch.object(cinder_v2, 'client')
+    @mock.patch.object(cinder_v3, 'client')
     def test_delete_quota_limits(self, mock_cinderclient):
-        c_client = cinder_v2.CinderClient('fake_region', DISABLED_QUOTAS,
+        c_client = cinder_v3.CinderClient('fake_region', DISABLED_QUOTAS,
                                           self.session)
         new_quota = {'volumes': 4, 'snapshots': 3}
         c_client.update_quota_limits(self.project, **new_quota)

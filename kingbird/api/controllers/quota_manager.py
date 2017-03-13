@@ -23,7 +23,6 @@ from pecan import expose
 from pecan import request
 
 import restcomm
-import six
 
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
@@ -215,7 +214,7 @@ class QuotaManagerController(object):
         if CONF.use_default_quota_class:
             default_quotas = db_api.quota_class_get_default(context)
 
-        for resource, default in six.iteritems(config_defaults):
+        for resource, default in config_defaults.items():
             # get rid of the 'quota_' prefix
             resource_name = resource[6:]
             if default_quotas:

@@ -14,7 +14,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from kingbird.common.i18n import _, _LE, _LI
+from kingbird.common.i18n import _
 from kingbird.db import api as db_api
 from kingbird.engine import scheduler
 
@@ -43,7 +43,7 @@ def sync_lock_acquire(context, engine_id, task_type, forced=False):
     """
 
     # Step 1: try lock the projects- if it returns True then success
-    LOG.info(_LI('Trying to acquire lock with %(engId)s for Task: %(task)s'),
+    LOG.info(('Trying to acquire lock with %(engId)s for Task: %(task)s'),
              {'engId': engine_id,
               'task': task_type
               }
@@ -58,7 +58,7 @@ def sync_lock_acquire(context, engine_id, task_type, forced=False):
 
     while retries > 0:
         scheduler.sleep(retry_interval)
-        LOG.info(_LI('Retry acquire lock with %(engId)s for Task: %(task)s'),
+        LOG.info(('Retry acquire lock with %(engId)s for Task: %(task)s'),
                  {'engId': engine_id,
                   'task': task_type
                   }
@@ -78,8 +78,8 @@ def sync_lock_acquire(context, engine_id, task_type, forced=False):
 
     # Will reach here only when not able to acquire locks with retry
 
-    LOG.error(_LE('Not able to acquire lock  for %(task)s with retry'
-                  ' with engineId %(engId)s'),
+    LOG.error(('Not able to acquire lock  for %(task)s with retry'
+               ' with engineId %(engId)s'),
               {'engId': engine_id,
                'task': task_type
                }
@@ -90,7 +90,7 @@ def sync_lock_acquire(context, engine_id, task_type, forced=False):
 def sync_lock_release(context, engine_id, task_type):
     """Release the lock for the projects"""
 
-    LOG.info(_LI('Releasing acquired lock with %(engId)s for Task: %(task)s'),
+    LOG.info(('Releasing acquired lock with %(engId)s for Task: %(task)s'),
              {'engId': engine_id,
               'task': task_type
               }

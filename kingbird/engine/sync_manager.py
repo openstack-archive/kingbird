@@ -20,8 +20,6 @@ from oslo_log import log as logging
 from kingbird.common import consts
 from kingbird.common import context
 from kingbird.common import exceptions
-from kingbird.common.i18n import _LE
-from kingbird.common.i18n import _LI
 from kingbird.common import manager
 from kingbird.db.sqlalchemy import api as db_api
 from kingbird.drivers.openstack import sdk
@@ -53,7 +51,7 @@ class SyncManager(manager.Manager):
         os_client = sdk.OpenStackDriver(region)
         try:
             os_client.create_keypairs(force, source_keypair, user_id)
-            LOG.info(_LI('keypair %(keypair)s created in %(region)s')
+            LOG.info(('keypair %(keypair)s created in %(region)s')
                      % {'keypair': source_keypair.name, 'region': region})
             try:
                 db_api.resource_sync_update(self.context, job_id, region,
@@ -62,7 +60,7 @@ class SyncManager(manager.Manager):
             except exceptions.JobNotFound():
                 raise
         except Exception as exc:
-            LOG.error(_LE('Exception Occurred: %(msg)s in %(region)s')
+            LOG.error(('Exception Occurred: %(msg)s in %(region)s')
                       % {'msg': exc.message, 'region': region})
             try:
                 db_api.resource_sync_update(self.context, job_id, region,
@@ -73,7 +71,7 @@ class SyncManager(manager.Manager):
             pass
 
     def keypair_sync_for_user(self, user_id, job_id, payload):
-        LOG.info(_LI("Keypair sync Called for user: %s"),
+        LOG.info(("Keypair sync Called for user: %s"),
                  user_id)
         keypairs_thread = list()
         target_regions = payload['target']

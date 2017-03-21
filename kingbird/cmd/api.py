@@ -31,7 +31,6 @@ from kingbird.api import api_config
 from kingbird.api import app
 
 from kingbird.common import config
-from kingbird.common.i18n import _LI, _LW
 from kingbird.common import messaging
 
 CONF = cfg.CONF
@@ -50,10 +49,10 @@ def main():
     workers = CONF.api_workers
 
     if workers < 1:
-        LOG.warning(_LW("Wrong worker number, worker = %(workers)s"), workers)
+        LOG.warning("Wrong worker number, worker = %(workers)s", workers)
         workers = 1
 
-    LOG.info(_LI("Server on http://%(host)s:%(port)s with %(workers)s"),
+    LOG.info("Server on http://%(host)s:%(port)s with %(workers)s",
              {'host': host, 'port': port, 'workers': workers})
     messaging.setup()
     systemd.notify_once()
@@ -61,7 +60,7 @@ def main():
 
     app.serve(service, CONF, workers)
 
-    LOG.info(_LI("Configuration:"))
+    LOG.info("Configuration:")
     CONF.log_opt_values(LOG, std_logging.INFO)
 
     app.wait()

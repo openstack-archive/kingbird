@@ -20,11 +20,13 @@ from oslo_config import cfg
 from oslo_middleware import request_id
 from oslo_service import service
 
-from kingbird.common import exceptions as k_exc
+from kingbird.common import context as ctx
 from kingbird.common.i18n import _
 
 
 def setup_app(*args, **kwargs):
+
+    opts = cfg.CONF.pecan
     config = {
         'server': {
             'port': cfg.CONF.bind_port,
@@ -33,12 +35,15 @@ def setup_app(*args, **kwargs):
         'app': {
             'root': 'kingbird.api.controllers.root.RootController',
             'modules': ['kingbird.api'],
+            "debug": opts.debug,
+            "auth_enable": opts.auth_enable,
             'errors': {
                 400: '/error',
                 '__force_dict__': True
+                }
             }
         }
-    }
+
     pecan_config = pecan.configuration.conf_from_dict(config)
 
     # app_hooks = [], hook collection will be put here later
@@ -48,7 +53,7 @@ def setup_app(*args, **kwargs):
         debug=False,
         wrap_app=_wrap_app,
         force_canonical=False,
-        hooks=[],
+        hooks=lambda: [ctx.AuthHook()],
         guess_content_type_from_ext=True
     )
 
@@ -57,16 +62,17 @@ def setup_app(*args, **kwargs):
 
 def _wrap_app(app):
     app = request_id.RequestId(app)
+    if cfg.CONF.pecan.auth_enable and cfg.CONF.auth_strategy == 'keystone':
+        conf = dict(cfg.CONF.keystone_authtoken)
+        # Change auth decisions of requests to the app itself.
+        conf.update({'delay_auth_decision': True})
 
-    if cfg.CONF.auth_strategy == 'noauth':
-        pass
-    elif cfg.CONF.auth_strategy == 'keystone':
-        app = auth_token.AuthProtocol(app, {})
+        # NOTE: Policy enforcement works only if Keystone
+        # authentication is enabled. No support for other authentication
+        # types at this point.
+        return auth_token.AuthProtocol(app, conf)
     else:
-        raise k_exc.InvalidConfigurationOption(
-            opt_name='auth_strategy', opt_value=cfg.CONF.auth_strategy)
-
-    return app
+        return app
 
 
 _launcher = None

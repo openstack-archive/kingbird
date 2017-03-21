@@ -188,6 +188,14 @@ class TestKeystoneAuth(KBApiTest):
 
         self.app = self._make_app()
 
-    def test_auth_enforced(self):
+    def test_auth_not_enforced_for_root(self):
         response = self.app.get('/', expect_errors=True)
+        self.assertEqual(response.status_int, 200)
+
+    def test_auth_not_enforced_for_v1(self):
+        response = self.app.get('/v1.0', expect_errors=True)
+        self.assertEqual(response.status_int, 200)
+
+    def test_auth_enforced(self):
+        response = self.app.get('/v1.0/', expect_errors=True)
         self.assertEqual(response.status_int, 401)

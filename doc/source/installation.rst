@@ -259,14 +259,11 @@ are running:
 Post-installation activities
 ----------------------------
 
-Run the following commands to check whether kingbird-api is serving, please
-replace $token to the token you get from "openstack token issue":
+Run the following commands to check whether kingbird-api is serving.
 
 .. code-block:: bash
 
-    openstack token issue
-    curl  -H "Content-Type: application/json"  -H "X-Auth-Token: $token" \
-    http://127.0.0.1:8118/
+    curl http://127.0.0.1:8118/
 
 If the response looks like following: {"versions": [{"status": "CURRENT",
 "updated": "2016-03-07", "id": "v1.0", "links": [{"href":

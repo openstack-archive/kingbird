@@ -32,11 +32,12 @@ FAKE_RESOURCE_ID = 'fake_id'
 FAKE_RESOURCE_TYPE = 'keypair'
 FAKE_TENANT = utils.UUID1
 FAKE_JOB = utils.UUID2
-FAKE_URL = '/v1.0/' + FAKE_TENANT + '/os-sync/'
-WRONG_URL = '/v1.0/wrong/os-sync/'
+FAKE_URL = '/v1.0/' + FAKE_TENANT + '/os-sync'
+WRONG_URL = '/v1.0/wrong/os-sync'
 fake_user = utils.UUID3
 FAKE_STATUS = consts.JOB_PROGRESS
-FAKE_HEADERS = {'X-Tenant-Id': FAKE_TENANT, 'X_ROLE': 'admin'}
+FAKE_HEADERS = {'X-Tenant-Id': FAKE_TENANT, 'X_ROLE': 'admin',
+                'X-Identity-Status': 'Confirmed'}
 NON_ADMIN_HEADERS = {'X-Tenant-Id': FAKE_TENANT}
 
 

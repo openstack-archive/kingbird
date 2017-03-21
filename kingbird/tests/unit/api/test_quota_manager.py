@@ -17,15 +17,22 @@ import mock
 import webtest
 
 from oslo_config import cfg
-from oslo_utils import uuidutils
 
 from kingbird.api.controllers import quota_manager
 from kingbird.common import config
 from kingbird.rpc import client as rpc_client
 from kingbird.tests.unit.api import testroot
+from kingbird.tests import utils
+
 config.register_options()
 OPT_GROUP_NAME = 'keystone_authtoken'
 cfg.CONF.import_group(OPT_GROUP_NAME, "keystonemiddleware.auth_token")
+FAKE_TENANT = utils.UUID1
+TARGET_FAKE_TENANT = utils.UUID2
+ADMIN_HEADERS = {'X-Tenant-Id': FAKE_TENANT, 'X_ROLE': 'admin',
+                 'X-Identity-Status': 'Confirmed'}
+NON_ADMIN_HEADERS = {'X-Tenant-Id': TARGET_FAKE_TENANT,
+                     'X-Identity-Status': 'Confirmed'}
 
 
 class Result(object):
@@ -44,20 +51,18 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_all_admin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result(fake_tenant, 'ram', 100)
+        Res = Result(TARGET_FAKE_TENANT, 'ram', 100)
         mock_db_api.quota_get_all_by_project.return_value = \
             {"project_id": Res.project_id,
              Res.resource: Res.hard_limit}
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         response = self.app.get(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'quota_set':
-                         {'project_id': fake_tenant, 'ram': 100}},
+                         {'project_id': TARGET_FAKE_TENANT, 'ram': 100}},
                          eval(response.text))
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
@@ -65,12 +70,11 @@ class TestQuotaManager(testroot.KBApiTest):
     def test_get_default_admin(self, mock_db_api):
         mock_db_api.quota_class_get_default.return_value = \
             {'class_name': 'default'}
-        fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/defaults'\
-            % (fake_tenant)
+            % (FAKE_TENANT)
         response = self.app.get(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         result = eval(response.text)
         for resource in result['quota_set']:
@@ -83,29 +87,25 @@ class TestQuotaManager(testroot.KBApiTest):
         expected_usage = {"ram": 10}
         mock_rpc_client().get_total_usage_for_tenant.return_value = \
             expected_usage
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s/detail'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         response = self.app.get(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         self.assertEqual(eval(response.body), {"quota_set": expected_usage})
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_put_admin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result(target_fake_tenant, 'cores', 10)
+        Res = Result(TARGET_FAKE_TENANT, 'cores', 10)
         mock_db_api.quota_update.return_value = Res
         data = {"quota_set": {Res.resource: Res.hard_limit}}
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         response = self.app.put_json(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'},
+            headers=ADMIN_HEADERS,
             params=data)
         self.assertEqual(response.status_int, 200)
         self.assertEqual({Res.project_id: {Res.resource: Res.hard_limit}},
@@ -114,16 +114,14 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_delete_admin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result(target_fake_tenant, 'cores', 10)
+        Res = Result(TARGET_FAKE_TENANT, 'cores', 10)
         mock_db_api.quota_destroy.return_value = Res
         data = {"quota_set": [Res.resource]}
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         response = self.app.delete_json(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'},
+            headers=ADMIN_HEADERS,
             params=data)
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'Deleted quota limits': [Res.resource]},
@@ -132,101 +130,76 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_delete_all_admin(self, mock_db_api):
-        Res = Result('tenant_1', 'cores', 10)
+        Res = Result(TARGET_FAKE_TENANT, 'cores', 10)
         mock_db_api.quota_destroy_all.return_value = Res
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         response = self.app.delete_json(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         self.assertEqual('Deleted all quota limits for the given project',
                          eval(response.text))
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_quota_sync_admin(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s/sync'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         response = self.app.put_json(
             fake_url,
-            headers={'X-Tenant-Id': fake_tenant,
-                     'X_ROLE': 'admin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual("triggered quota sync for " + target_fake_tenant,
+        self.assertEqual("triggered quota sync for " + TARGET_FAKE_TENANT,
                          eval(response.text))
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_put_nonadmin(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result('tenant_1', 'cores', 10)
+        Res = Result(TARGET_FAKE_TENANT, 'cores', 10)
         data = {"quota_set": {Res.resource: Res.hard_limit}}
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
-        try:
-            self.app.put_json(fake_url,
-                              headers={'X-Tenant-Id': fake_tenant},
-                              params=data)
-        except webtest.app.AppError as admin_exception:
-            self.assertIn('Admin required', admin_exception.message)
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.put_json, fake_url,
+                                headers=NON_ADMIN_HEADERS,
+                                params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_delete_all_nonadmin(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
-        try:
-            self.app.delete_json(fake_url,
-                                 headers={'X-Tenant-Id': fake_tenant})
-        except webtest.app.AppError as admin_exception:
-            self.assertIn('Admin required', admin_exception.message)
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.delete_json, fake_url,
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_delete_nonadmin(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result(target_fake_tenant, 'cores', 10)
+        Res = Result(TARGET_FAKE_TENANT, 'cores', 10)
         data = {"quota_set": {Res.resource: Res.hard_limit}}
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
-        try:
-            self.app.delete_json(fake_url,
-                                 headers={'X-Tenant-Id': fake_tenant},
-                                 params=data)
-        except webtest.app.AppError as admin_exception:
-            self.assertIn('Admin required', admin_exception.message)
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.delete_json, fake_url,
+                                headers=NON_ADMIN_HEADERS,
+                                params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_quota_sync_nonadmin(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s/sync'\
-            % (fake_tenant, target_fake_tenant)
-        try:
-            self.app.put_json(
-                fake_url,
-                headers={'X-Tenant-Id': fake_tenant})
-        except webtest.app.AppError as admin_exception:
-            self.assertIn('Admin required', admin_exception.message)
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.put_json, fake_url,
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_default_nonadmin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/defaults'\
-            % (fake_tenant)
+            % (FAKE_TENANT)
         mock_db_api.quota_class_get_default.return_value = \
             {'class_name': 'default'}
         response = self.app.get(
             fake_url,
-            headers={'X_TENANT_ID': fake_tenant, 'X_USER_ID': 'nonadmin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         result = eval(response.text)
         for resource in result['quota_set']:
@@ -236,120 +209,77 @@ class TestQuotaManager(testroot.KBApiTest):
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_quota_sync_bad_request(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-ssdfets/%s/sync'\
-            % (fake_tenant, target_fake_tenant)
-        try:
-            self.app.post_json(
-                fake_url,
-                headers={'X-Tenant-Id': fake_tenant,
-                         'X_ROLE': 'admin'})
-        except webtest.app.AppError as bad_method_exception:
-            self.assertIn('Bad response: 404 Not Found',
-                          bad_method_exception.message)
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
+        self.assertRaisesRegexp(webtest.app.AppError, "404 *",
+                                self.app.post_json, fake_url,
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_put_invalid_payload(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result(fake_tenant, 'cores', 10)
+        Res = Result(FAKE_TENANT, 'cores', 10)
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
-
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         mock_db_api.quota_update.return_value = Res
         data = {'quota': {Res.resource: Res.hard_limit}}
-        try:
-            self.app.put_json(
-                fake_url,
-                headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'},
-                params=data)
-        except webtest.app.AppError as invalid_payload_exception:
-            self.assertIn('400 Bad Request',
-                          invalid_payload_exception.message)
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.put_json, fake_url,
+                                headers=ADMIN_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_put_invalid_input(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
-        Res = Result(fake_tenant, 'cores', -10)
+        Res = Result(FAKE_TENANT, 'cores', -10)
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         mock_db_api.quota_update.return_value = Res
         data = {"quota_set": {Res.resource: Res.hard_limit}}
-        try:
-            self.app.put_json(
-                fake_url,
-                headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'},
-                params=data)
-        except webtest.app.AppError as invalid_input_exception:
-            self.assertIn('400 Bad Request',
-                          invalid_input_exception.message)
+        self.assertRaisesRegexp(webtest.app.AppError, "400 *",
+                                self.app.put_json, fake_url,
+                                headers=ADMIN_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_delete_invalid_quota(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         Res = Result('tenant_1', 'invalid_quota', 10)
         mock_db_api.quota_destroy.return_value = Res
         data = {"quota_set": [Res.resource]}
-        try:
-            self.app.delete_json(
-                fake_url,
-                headers={'X-Tenant-Id': fake_tenant, 'X_ROLE': 'admin'},
-                params=data)
-        except webtest.app.AppError as invalid_quota_exception:
-            self.assertIn('The resource could not be found',
-                          invalid_quota_exception.message)
+        self.assertRaisesRegexp(webtest.app.AppError, "404 *",
+                                self.app.delete_json, fake_url,
+                                headers=ADMIN_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     def test_quota_sync_bad_action(self):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s/syncing'\
-            % (fake_tenant, target_fake_tenant)
-        try:
-            self.app.put_json(
-                fake_url,
-                headers={'X-Tenant-Id': fake_tenant,
-                         'X_ROLE': 'admin'})
-        except webtest.app.AppError as bad_method_exception:
-            self.assertIn('Invalid action, only sync is allowed',
-                          bad_method_exception.message)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
+        self.assertRaisesRegexp(webtest.app.AppError, "404 *",
+                                self.app.delete_json, fake_url,
+                                headers=ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_all_another_tenant_nonadmin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
-        FAKE_HEADERS = {'X_TENANT_ID': fake_tenant,
-                        'X_USER_ID': 'nonadmin'}
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
         self.assertRaisesRegexp(webtest.app.AppError, "403 *",
                                 self.app.get, fake_url,
-                                headers=FAKE_HEADERS)
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_all_another_tenant_with_admin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         Res = Result('tenant_1', 'ram', 100)
         mock_db_api.quota_get_all_by_project.return_value = \
             {"project_id": Res.project_id,
              Res.resource: Res.hard_limit}
         response = self.app.get(
             fake_url,
-            headers={'X_TENANT_ID': fake_tenant, 'X_ROLE': 'admin',
-                     'X_USER_ID': 'nonadmin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         self.assertEqual({'quota_set': {'project_id': 'tenant_1', 'ram': 100}},
                          eval(response.text))
@@ -357,76 +287,63 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_usages_another_tenant_no_admin(self, mock_db_api):
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s/detail'\
-            % (fake_tenant, target_fake_tenant)
-        FAKE_HEADERS = {'X_TENANT_ID': fake_tenant,
-                        'X_USER_ID': 'nonadmin'}
+            % (TARGET_FAKE_TENANT, FAKE_TENANT)
         self.assertRaisesRegexp(webtest.app.AppError, "403 *",
                                 self.app.get, fake_url,
-                                headers=FAKE_HEADERS)
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_get_usages_another_tenant_admin(self, mock_rpc_client):
         expected_usage = {"ram": 10}
-        fake_tenant = uuidutils.generate_uuid()
-        target_fake_tenant = uuidutils.generate_uuid()
         fake_url = '/v1.0/%s/os-quota-sets/%s/detail'\
-            % (fake_tenant, target_fake_tenant)
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
         mock_rpc_client().get_total_usage_for_tenant.return_value = \
             expected_usage
         response = self.app.get(
             fake_url,
-            headers={'X_TENANT_ID': fake_tenant, 'X_ROLE': 'admin',
-                     'X_USER_ID': 'admin'})
+            headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
         self.assertEqual(eval(response.body), {"quota_set": expected_usage})
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_get_invalid_curl_req_nonadmin(self, mock_rpc_client):
         FAKE_URL = '/v1.0/dummy/os-quota-sets/defaults'
-        FAKE_HEADERS = {'X_ROLE': 'nonadmin'}
         self.assertRaisesRegexp(webtest.app.AppError, "400 *",
                                 self.app.get, FAKE_URL,
-                                headers=FAKE_HEADERS)
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_get_invalid_curl_req_admin(self, mock_rpc_client):
         FAKE_URL = '/v1.0/dummy/os-quota-sets/defaults'
-        FAKE_HEADERS = {'X_ROLE': 'admin'}
         self.assertRaisesRegexp(webtest.app.AppError, "400 *",
                                 self.app.get, FAKE_URL,
-                                headers=FAKE_HEADERS)
+                                headers=ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_put_invalid_curl_req_nonadmin(self, mock_rpc_client):
         FAKE_URL = '/v1.0/dummy/os-quota-sets/dummy2/sync'
-        FAKE_HEADERS = {'X_ROLE': 'nonadmin'}
         self.assertRaisesRegexp(webtest.app.AppError, "400 *",
                                 self.app.put, FAKE_URL,
-                                headers=FAKE_HEADERS)
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_put_invalid_curl_req_admin(self, mock_rpc_client):
         FAKE_URL = '/v1.0/dummy/os-quota-sets/dummy2'
-        FAKE_HEADERS = {'X_ROLE': 'admin'}
         self.assertRaisesRegexp(webtest.app.AppError, "400 *",
                                 self.app.put, FAKE_URL,
-                                headers=FAKE_HEADERS)
+                                headers=ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_delete_invalid_curl_req_nonadmin(self, mock_rpc_client):
         FAKE_URL = '/v1.0/dummy/os-quota-sets/dummy2'
-        FAKE_HEADERS = {'X_ROLE': 'nonadmin'}
         self.assertRaisesRegexp(webtest.app.AppError, "400 *",
                                 self.app.delete, FAKE_URL,
-                                headers=FAKE_HEADERS)
+                                headers=NON_ADMIN_HEADERS)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     def test_delete_invalid_curl_req_admin(self, mock_rpc_client):
         FAKE_URL = '/v1.0/dummy/os-quota-sets/dummy2'
-        FAKE_HEADERS = {'X_ROLE': 'admin'}
         self.assertRaisesRegexp(webtest.app.AppError, "400 *",
                                 self.app.delete, FAKE_URL,
-                                headers=FAKE_HEADERS)
+                                headers=NON_ADMIN_HEADERS)

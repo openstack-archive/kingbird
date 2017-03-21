@@ -26,7 +26,7 @@ from kingbird.common import consts
 from kingbird.common import context
 from kingbird.common import endpoint_cache
 from kingbird.common import exceptions
-from kingbird.common.i18n import _, _LE, _LI
+from kingbird.common.i18n import _
 from kingbird.common import manager
 from kingbird.common import utils
 from kingbird.db import api as db_api
@@ -62,18 +62,18 @@ class QuotaManager(manager.Manager):
         self.endpoints = endpoint_cache.EndpointCache()
 
     def periodic_balance_all(self, engine_id):
-        LOG.info(_LI("periodically balance quota for all keystone tenants"))
+        LOG.info("periodically balance quota for all keystone tenants")
         lock = kingbird_lock.sync_lock_acquire(self.context, engine_id,
                                                TASK_TYPE)
         if not lock:
-            LOG.error(_LE("Not able to acquire lock for %(task_type)s, may"
+            LOG.error(("Not able to acquire lock for %(task_type)s, may"
                           " be Previous sync job has not finished yet, "
                           "Aborting this run at: %(time)s "),
                       {'task_type': TASK_TYPE,
                        'time': time.strftime("%c")}
                       )
             return
-        LOG.info(_LI("Successfully acquired lock"))
+        LOG.info("Successfully acquired lock")
         projects_thread_list = []
         # Iterate through project list and call sync project for each project
         # using threads
@@ -82,7 +82,7 @@ class QuotaManager(manager.Manager):
         # for one batch at a time.
         for current_batch_projects in utils.get_batch_projects(
                 cfg.CONF.batch.batch_size, project_list):
-            LOG.info(_LI("Syncing quota for current batch with projects: %s"),
+            LOG.info(("Syncing quota for current batch with projects: %s"),
                      current_batch_projects)
             for current_project in current_batch_projects:
                 if current_project:
@@ -100,7 +100,7 @@ class QuotaManager(manager.Manager):
     def read_quota_usage(self, project_id, region, usage_queue):
         # Writes usage dict to the Queue in the following format
         # {'region_name': (<nova_usages>, <neutron_usages>, <cinder_usages>)}
-        LOG.info(_LI("Reading quota usage for %(project_id)s in %(region)s"),
+        LOG.info(("Reading quota usage for %(project_id)s in %(region)s"),
                  {'project_id': project_id,
                   'region': region}
                  )
@@ -173,7 +173,7 @@ class QuotaManager(manager.Manager):
         # Global remaining limit = Kingbird global limit - Summation of usages
         #                          in all the regions
         # New quota limit = Global remaining limit + usage in that region
-        LOG.info(_LI("Quota sync Called for Project: %s"),
+        LOG.info(("Quota sync Called for Project: %s"),
                  project_id)
         regions_thread_list = []
         # Retrieve regions for the project
@@ -182,7 +182,7 @@ class QuotaManager(manager.Manager):
         regions_usage_dict = self.get_tenant_quota_usage_per_region(project_id)
         if not regions_usage_dict:
             # Skip syncing for the project if not able to read regions usage
-            LOG.error(_LE("Error reading regions usage for the Project: '%s'. "
+            LOG.error(("Error reading regions usage for the Project: '%s'. "
                       "Aborting, continue with next project."), project_id)
             return
         total_project_usages = dict(self.get_summation(regions_usage_dict))
@@ -235,7 +235,7 @@ class QuotaManager(manager.Manager):
 
     def get_total_usage_for_tenant(self, project_id):
         # Returns total quota usage for a tenant
-        LOG.info(_LI("Get total usage called for project: %s"),
+        LOG.info(("Get total usage called for project: %s"),
                  project_id)
         try:
             total_usage = dict(self.get_summation(

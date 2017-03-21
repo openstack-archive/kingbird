@@ -23,7 +23,7 @@ from oslo_utils import timeutils
 from kingbird.common import consts
 from kingbird.common import endpoint_cache
 from kingbird.common import exceptions
-from kingbird.common.i18n import _, _LE, _LI
+from kingbird.common.i18n import _
 
 from kingbird.drivers.openstack.cinder_v2 import CinderClient
 from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
@@ -52,7 +52,7 @@ class OpenStackDriver(object):
         self.disabled_quotas = self._get_disabled_quotas(region_name)
         if region_name in OpenStackDriver.os_clients_dict and \
                 self._is_token_valid():
-            LOG.info(_LI('Using cached OS client objects'))
+            LOG.info('Using cached OS client objects')
             self.nova_client = OpenStackDriver.os_clients_dict[
                 region_name]['nova']
             self.cinder_client = OpenStackDriver.os_clients_dict[
@@ -84,13 +84,13 @@ class OpenStackDriver(object):
         try:
             return self.keystone_client.get_enabled_projects()
         except Exception as exception:
-            LOG.error(_LE('Error Occurred: %s'), exception.message)
+            LOG.error(('Error Occurred: %s'), exception.message)
 
     def get_enabled_users(self):
         try:
             return self.keystone_client.get_enabled_users()
         except Exception as exception:
-            LOG.error(_LE('Error Occurred : %s'), exception.message)
+            LOG.error(('Error Occurred : %s'), exception.message)
 
     def get_resource_usages(self, project_id):
         try:
@@ -104,7 +104,7 @@ class OpenStackDriver(object):
             # Delete the cached objects for that region
             del OpenStackDriver.os_clients_dict[self.region_name]
         except Exception as exception:
-            LOG.error(_LE('Error Occurred: %s'), exception.message)
+            LOG.error(('Error Occurred: %s'), exception.message)
 
     def write_quota_limits(self, project_id, limits_to_write):
         try:
@@ -119,7 +119,7 @@ class OpenStackDriver(object):
             # Delete the cached objects for that region
             del OpenStackDriver.os_clients_dict[self.region_name]
         except Exception as exception:
-            LOG.error(_LE('Error Occurred: %s'), exception.message)
+            LOG.error(('Error Occurred: %s'), exception.message)
 
     def delete_quota_limits(self, project_id):
         try:
@@ -131,7 +131,7 @@ class OpenStackDriver(object):
             # Delete the cached objects for that region
             del OpenStackDriver.os_clients_dict[self.region_name]
         except Exception as exception:
-            LOG.error(_LE('Error Occurred: %s'), exception.message)
+            LOG.error(('Error Occurred: %s'), exception.message)
 
     def _get_disabled_quotas(self, region):
         disabled_quotas = []
@@ -157,7 +157,7 @@ class OpenStackDriver(object):
                 region_lists = endpoint_cache.EndpointCache().get_all_regions()
             return region_lists
         except Exception as exception:
-            LOG.error(_LE('Error Occurred: %s'), exception.message)
+            LOG.error(('Error Occurred: %s'), exception.message)
             raise
 
     def _get_filtered_regions(self, project_id):
@@ -168,7 +168,7 @@ class OpenStackDriver(object):
         try:
             token = keystone.tokens.validate(keystone.session.get_token())
         except Exception as exception:
-            LOG.info(_LE('Exception Occurred: %s'), exception.message)
+            LOG.info(('Exception Occurred: %s'), exception.message)
             # Reset the cached dictionary
             OpenStackDriver.os_clients_dict = collections.defaultdict(dict)
             return False
@@ -176,7 +176,7 @@ class OpenStackDriver(object):
         expiry_time = timeutils.normalize_time(timeutils.parse_isotime(
             token['expires_at']))
         if timeutils.is_soon(expiry_time, STALE_TOKEN_DURATION):
-            LOG.info(_LE('The cached keystone token will expire soon'))
+            LOG.info('The cached keystone token will expire soon')
             # Reset the cached dictionary
             OpenStackDriver.os_clients_dict = collections.defaultdict(dict)
             return False

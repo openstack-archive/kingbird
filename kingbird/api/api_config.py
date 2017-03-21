@@ -24,7 +24,7 @@ import sys
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from kingbird.common.i18n import _, _LI
+from kingbird.common.i18n import _
 
 
 # from kingbird import policy
@@ -76,8 +76,8 @@ def setup_logging():
     """Sets up the logging options for a log with supplied name."""
     product_name = "kingbird"
     logging.setup(cfg.CONF, product_name)
-    LOG.info(_LI("Logging enabled!"))
-    LOG.info(_LI("%(prog)s version %(version)s"),
+    LOG.info("Logging enabled!")
+    LOG.info("%(prog)s version %(version)s",
              {'prog': sys.argv[0],
               'version': version.version_info.release_string()})
     LOG.debug("command line: %s", " ".join(sys.argv))

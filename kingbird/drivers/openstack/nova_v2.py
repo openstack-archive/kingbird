@@ -17,7 +17,6 @@ from oslo_log import log
 
 from kingbird.common import consts
 from kingbird.common import exceptions
-from kingbird.common.i18n import _LI, _LE
 from kingbird.drivers import base
 
 from novaclient import client
@@ -107,11 +106,11 @@ class NovaClient(base.DriverBase):
         """
         try:
             keypair = self.nova_client.keypairs.get(res_id, user_id)
-            LOG.info(_LI("Source Keypair: %s"), keypair.name)
+            LOG.info("Source Keypair: %s", keypair.name)
             return keypair
 
         except Exception as exception:
-            LOG.error(_LE('Exception Occurred: %s'), exception.message)
+            LOG.error('Exception Occurred: %s', exception.message)
             pass
 
     def create_keypairs(self, force, keypair, user_id):
@@ -123,11 +122,11 @@ class NovaClient(base.DriverBase):
         if force:
             try:
                 self.nova_client.keypairs.delete(keypair, user_id)
-                LOG.info(_LI("Deleted Keypair: %s"), keypair.name)
+                LOG.info("Deleted Keypair: %s", keypair.name)
             except Exception as exception:
-                LOG.error(_LE('Exception Occurred: %s'), exception.message)
+                LOG.error('Exception Occurred: %s', exception.message)
                 pass
-            LOG.info(_LI("Created Keypair: %s"), keypair.name)
+            LOG.info("Created Keypair: %s", keypair.name)
         return self.nova_client.keypairs. \
             create(keypair.name,
                    user_id=user_id,

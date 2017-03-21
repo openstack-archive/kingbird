@@ -25,6 +25,33 @@ global_opts = [
                default=60,
                help='Seconds between running periodic reporting tasks.'),
 ]
+
+# Pecan_opts
+pecan_opts = [
+    cfg.StrOpt(
+        'root',
+        default='kingbird.api.controllers.root.RootController',
+        help='Pecan root controller'
+    ),
+    cfg.ListOpt(
+        'modules',
+        default=["kingbird.api"],
+        help='A list of modules where pecan will search for applications.'
+    ),
+    cfg.BoolOpt(
+        'debug',
+        default=False,
+        help='Enables the ability to display tracebacks in the browser and'
+             'interactively debug during development.'
+    ),
+    cfg.BoolOpt(
+        'auth_enable',
+        default=True,
+        help='Enables user authentication in pecan.'
+    )
+]
+
+
 # Global nova quotas for all projects
 nova_quotas = [
     cfg.IntOpt('quota_instances',
@@ -150,9 +177,12 @@ common_opts = [
 
 scheduler_opt_group = cfg.OptGroup('scheduler',
                                    title='Scheduler options for periodic job')
-# The group stores Kingbird global limit for all the projects
+# The group stores Kingbird global limit for all the projects.
 default_quota_group = cfg.OptGroup(name='kingbird_global_limit',
                                    title='Global quota limit for all projects')
+# The group stores the pecan configurations.
+pecan_group = cfg.OptGroup(name='pecan',
+                           title='Pecan options')
 
 cache_opt_group = cfg.OptGroup(name='cache',
                                title='OpenStack Credentials')
@@ -164,6 +194,7 @@ def list_opts():
     yield default_quota_group.name, cinder_quotas
     yield cache_opt_group.name, cache_opts
     yield scheduler_opt_group.name, scheduler_opts
+    yield pecan_group.name, pecan_opts
     yield None, global_opts
     yield None, common_opts
 

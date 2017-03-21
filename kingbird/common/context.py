@@ -10,11 +10,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import pecan
+from pecan import hooks
+
 from oslo_context import context as base_context
 from oslo_utils import encodeutils
 
 from kingbird.common import policy
 from kingbird.db import api as db_api
+
+ALLOWED_WITHOUT_AUTH = ['/', '/v1.0']
 
 
 class RequestContext(base_context.RequestContext):
@@ -122,3 +127,21 @@ def get_service_context(**args):
     in an OpenStack cloud.
     '''
     pass
+
+
+class AuthHook(hooks.PecanHook):
+    def before(self, state):
+        if state.request.path in ALLOWED_WITHOUT_AUTH:
+            return
+        req = state.request
+        identity_status = req.headers.get('X-Identity-Status')
+        service_identity_status = req.headers.get('X-Service-Identity-Status')
+        if (identity_status == 'Confirmed' or
+                service_identity_status == 'Confirmed'):
+            return
+        if req.headers.get('X-Auth-Token'):
+            msg = 'Auth token is invalid: %s' % req.headers['X-Auth-Token']
+        else:
+            msg = 'Authentication required'
+        msg = "Failed to validate access token: %s" % str(msg)
+        pecan.abort(status_code=401, detail=msg)

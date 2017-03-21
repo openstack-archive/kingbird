@@ -21,7 +21,7 @@ import oslo_messaging
 from kingbird.common import consts
 from kingbird.common import context
 from kingbird.common import exceptions
-from kingbird.common.i18n import _, _LE, _LI
+from kingbird.common.i18n import _
 from kingbird.common import messaging as rpc_messaging
 from kingbird.engine.quota_manager import QuotaManager
 from kingbird.engine import scheduler
@@ -116,7 +116,7 @@ class EngineService(service.Service):
                 service_obj.Service.create(ctx, self.engine_id, self.host,
                                            'kingbird-engine', self.topic)
         except Exception as ex:
-            LOG.error(_LE('Service %(service_id)s update failed: %(error)s'),
+            LOG.error(('Service %(service_id)s update failed: %(error)s'),
                       {'service_id': self.engine_id, 'error': ex})
 
     def service_registry_cleanup(self):
@@ -129,12 +129,12 @@ class EngineService(service.Service):
             if timeutils.is_older_than(svc['updated_at'], time_window):
                 # < time_line:
                 # hasn't been updated, assuming it's died.
-                LOG.info(_LI('Service %s was aborted'), svc['id'])
+                LOG.info(('Service %s was aborted'), svc['id'])
                 service_obj.Service.delete(ctx, svc['id'])
 
     def periodic_balance_all(self, engine_id):
         # Automated Quota Sync for all the keystone projects
-        LOG.info(_LI("Periodic quota sync job started at: %s"),
+        LOG.info(("Periodic quota sync job started at: %s"),
                  time.strftime("%c"))
         self.qm.periodic_balance_all(engine_id)
 
@@ -142,14 +142,14 @@ class EngineService(service.Service):
     def get_total_usage_for_tenant(self, context, project_id):
         # Returns a dictionary containing nova, neutron &
         # cinder usages for the project
-        LOG.info(_LI("Get total tenant usage called for: %s"),
+        LOG.info(("Get total tenant usage called for: %s"),
                  project_id)
         return self.qm.get_total_usage_for_tenant(project_id)
 
     @request_context
     def quota_sync_for_project(self, context, project_id):
         # On Demand Quota Sync for a project, will be triggered by KB-API
-        LOG.info(_LI("On Demand Quota Sync Called for: %s"),
+        LOG.info(("On Demand Quota Sync Called for: %s"),
                  project_id)
         self.qm.quota_sync_for_project(project_id)
 
@@ -164,9 +164,9 @@ class EngineService(service.Service):
         try:
             self._rpc_server.stop()
             self._rpc_server.wait()
-            LOG.info(_LI('Engine service stopped successfully'))
+            LOG.info('Engine service stopped successfully')
         except Exception as ex:
-            LOG.error(_LE('Failed to stop engine service: %s'),
+            LOG.error(('Failed to stop engine service: %s'),
                       six.text_type(ex))
 
     def stop(self):
@@ -174,5 +174,5 @@ class EngineService(service.Service):
 
         self.TG.stop()
         # Terminate the engine process
-        LOG.info(_LI("All threads were gone, terminating engine"))
+        LOG.info("All threads were gone, terminating engine")
         super(EngineService, self).stop()

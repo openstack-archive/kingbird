@@ -12,7 +12,6 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import six
 
 import oslo_messaging
 
@@ -23,7 +22,7 @@ class Mapping(object):
     def __init__(self, mapping):
         self.direct_mapping = mapping
         self.reverse_mapping = {}
-        for key, value in six.iteritems(mapping):
+        for key, value in mapping.items():
             self.reverse_mapping[value] = key
 
 _SINGLETON_MAPPING = Mapping({
@@ -38,7 +37,7 @@ class KingbirdSerializer(oslo_messaging.Serializer):
 
     def serialize_entity(self, context, entity):
         if isinstance(entity, dict):
-            for key, value in six.iteritems(entity):
+            for key, value in entity.items():
                 entity[key] = self.serialize_entity(context, value)
 
         elif isinstance(entity, list):
@@ -55,7 +54,7 @@ class KingbirdSerializer(oslo_messaging.Serializer):
 
     def deserialize_entity(self, context, entity):
         if isinstance(entity, dict):
-            for key, value in six.iteritems(entity):
+            for key, value in entity.items():
                 entity[key] = self.deserialize_entity(context, value)
 
         elif isinstance(entity, list):

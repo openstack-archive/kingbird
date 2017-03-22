@@ -13,7 +13,6 @@
 
 import datetime
 from oslo_config import cfg
-import six
 import sqlalchemy
 
 CLASS_NAME = 'default'
@@ -40,7 +39,7 @@ def upgrade(migrate_engine):
 
     # Set default quota limits
     qci = quota_classes.insert()
-    for resource, default in six.iteritems(CONF.kingbird_global_limit):
+    for resource, default in CONF.kingbird_global_limit.items():
         qci.execute({'created_at': CREATED_AT,
                      'class_name': CLASS_NAME,
                      'resource': resource[6:],

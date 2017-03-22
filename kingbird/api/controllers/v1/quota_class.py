@@ -18,8 +18,6 @@ import pecan
 from pecan import expose
 from pecan import request
 
-import six
-
 from kingbird.api.controllers import restcomm
 from kingbird.common import consts
 from kingbird.common import exceptions
@@ -94,7 +92,7 @@ class QuotaClassSetController(object):
 
         utils.validate_quota_limits(quota_class_set)
 
-        for key, value in six.iteritems(quota_class_set):
+        for key, value in quota_class_set.items():
             try:
                 db_api.quota_class_update(context, class_name, key, value)
             except exceptions.QuotaClassNotFound:

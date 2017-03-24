@@ -139,7 +139,7 @@ def create_custom_kingbird_quota(token, project_id, target_project_id,
                                                     quota_api_url)
     url_string = url_string + target_project_id
     response = requests.put(url_string, headers=headers, data=body)
-    return response.text
+    return response
 
 
 def get_custom_kingbird_quota(token, project_id, target_project_id):

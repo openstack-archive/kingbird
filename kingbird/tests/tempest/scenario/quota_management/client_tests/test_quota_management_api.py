@@ -44,10 +44,11 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
 
     def test_kingbird_put_method(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}
-        actual_value = self.create_custom_kingbird_quota(
+        response = self.create_custom_kingbird_quota(
             self.resource_ids["project_id"],
             self.resource_ids["target_project_id"],
             new_quota)
+        actual_value = response.json()
         expected_value = {
             self.resource_ids["target_project_id"]: new_quota["quota_set"]
             }
@@ -154,8 +155,7 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
             self.resource_ids["project_id"],
             self.resource_ids["target_project_id"],
             new_quota)
-        result = eval(response).get('error').get('code')
-        self.assertEqual(result, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_quota_sync_for_project(self):
         # Delete custom quota if there are any for this project

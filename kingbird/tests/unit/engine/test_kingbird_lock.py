@@ -11,9 +11,9 @@
 # under the License.
 
 import mock
-import uuid
 
 from oslo_config import cfg
+from oslo_utils import uuidutils
 
 from kingbird.common import config
 from kingbird.engine import kingbird_lock
@@ -21,7 +21,7 @@ from kingbird.tests import base
 from kingbird.tests import utils
 
 config.register_options()
-FAKE_ENGINE_ID = str(uuid.uuid4())
+FAKE_ENGINE_ID = uuidutils.generate_uuid()
 FAKE_TASK_TYPE = 'fake_sync'
 
 cfg.CONF.import_group("locks", "kingbird.engine.kingbird_lock")

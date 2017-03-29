@@ -17,10 +17,10 @@ import eventlet
 import random
 import sqlalchemy
 import string
-import uuid
 
 from oslo_config import cfg
 from oslo_db import options
+from oslo_utils import uuidutils
 
 from kingbird.common import context
 from kingbird.db import api as db_api
@@ -42,7 +42,7 @@ class UUIDStub(object):
         uuid.uuid4 = self.uuid4
 
 
-UUIDs = (UUID1, UUID2, UUID3) = sorted([str(uuid.uuid4())
+UUIDs = (UUID1, UUID2, UUID3) = sorted([uuidutils.generate_uuid()
                                         for x in range(3)])
 
 

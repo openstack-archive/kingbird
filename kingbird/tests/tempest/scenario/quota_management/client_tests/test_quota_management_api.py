@@ -52,7 +52,7 @@ class KingbirdQMTestJSON(base.BaseKingbirdTest):
         expected_value = {
             self.resource_ids["target_project_id"]: new_quota["quota_set"]
             }
-        self.assertEqual(expected_value, eval(actual_value))
+        self.assertEqual(expected_value, actual_value)
 
     def test_kingbird_get_another_tenant_quota(self):
         new_quota = {"quota_set": {"instances": 15, "cores": 10}}

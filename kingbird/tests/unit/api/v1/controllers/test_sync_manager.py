@@ -18,10 +18,10 @@ import webtest
 
 from oslo_utils import timeutils
 
-from kingbird.api.controllers import sync_manager
+from kingbird.api.controllers.v1 import sync_manager
 from kingbird.common import consts
 from kingbird.rpc import client as rpc_client
-from kingbird.tests.unit.api import testroot
+from kingbird.tests.unit.api import test_v1_root as v1_root
 from kingbird.tests import utils
 
 DEFAULT_FORCE = False
@@ -54,7 +54,7 @@ class SyncJob(object):
         self.created_at = created_at
 
 
-class TestResourceManager(testroot.KBApiTest):
+class TestResourceManager(v1_root.KBApiTest):
     def setUp(self):
         super(TestResourceManager, self).setUp()
         self.ctx = utils.dummy_context()

@@ -19,7 +19,7 @@ from oslo_config import cfg
 
 from kingbird.api.controllers.v1 import quota_class
 from kingbird.common import config
-from kingbird.tests.unit.api import testroot
+from kingbird.tests.unit.api import test_root_controller as testroot
 from kingbird.tests import utils
 
 config.register_options()

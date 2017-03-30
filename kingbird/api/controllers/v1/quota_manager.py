@@ -22,8 +22,7 @@ import pecan
 from pecan import expose
 from pecan import request
 
-import restcomm
-
+from kingbird.api.controllers import restcomm
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.common import utils

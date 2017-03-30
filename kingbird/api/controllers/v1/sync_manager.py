@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import restcomm
-
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
@@ -24,6 +22,7 @@ import pecan
 from pecan import expose
 from pecan import request
 
+from kingbird.api.controllers import restcomm
 from kingbird.common import consts
 from kingbird.common import exceptions
 from kingbird.common.i18n import _

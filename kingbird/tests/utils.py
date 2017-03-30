@@ -53,8 +53,7 @@ def random_name():
 
 def setup_dummy_db():
     options.cfg.set_defaults(options.database_opts, sqlite_synchronous=False)
-    options.set_defaults(cfg.CONF, connection="sqlite://",
-                         sqlite_db='kingbird.db')
+    options.set_defaults(cfg.CONF, connection="sqlite://")
     engine = get_engine()
     db_api.db_sync(engine)
     engine.connect()

@@ -18,7 +18,7 @@ import webtest
 
 from oslo_utils import timeutils
 
-from kingbird.api.controllers import sync_manager
+from kingbird.api.controllers.v1 import sync_manager
 from kingbird.common import consts
 from kingbird.rpc import client as rpc_client
 from kingbird.tests.unit.api import testroot

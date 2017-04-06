@@ -28,7 +28,7 @@ global_opts = [
 
 # Pecan_opts
 pecan_opts = [
-    cfg.StrOpt(
+    cfg.HostAddressOpt(
         'root',
         default='kingbird.api.controllers.root.RootController',
         help='Pecan root controller'
@@ -135,27 +135,27 @@ cinder_quotas = [
 
 # OpenStack credentials used for Endpoint Cache
 cache_opts = [
-    cfg.StrOpt('auth_uri',
-               help='Keystone authorization url'),
-    cfg.StrOpt('identity_uri',
-               help='Keystone service url'),
-    cfg.StrOpt('admin_username',
-               help='Username of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_password',
-               help='Password of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_tenant',
-               help='Tenant name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_user_domain_name',
-               default='Default',
-               help='User domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True'),
-    cfg.StrOpt('admin_project_domain_name',
-               default='Default',
-               help='Project domain name of admin account, needed when'
-                    ' auto_refresh_endpoint set to True')
+    cfg.HostAddressOpt('auth_uri',
+                       help='Keystone authorization url'),
+    cfg.HostAddressOpt('identity_uri',
+                       help='Keystone service url'),
+    cfg.HostAddressOpt('admin_username',
+                       help='Username of admin account, needed when'
+                            ' auto_refresh_endpoint set to True'),
+    cfg.HostAddressOpt('admin_password',
+                       help='Password of admin account, needed when'
+                            ' auto_refresh_endpoint set to True'),
+    cfg.HostAddressOpt('admin_tenant',
+                       help='Tenant name of admin account, needed when'
+                            ' auto_refresh_endpoint set to True'),
+    cfg.HostAddressOpt('admin_user_domain_name',
+                       default='Default',
+                       help='User domain name of admin account, needed '
+                            'when auto_refresh_endpoint set to True'),
+    cfg.HostAddressOpt('admin_project_domain_name',
+                       default='Default',
+                       help='Project domain name of admin account, needed '
+                            'when auto_refresh_endpoint set to True')
 ]
 
 scheduler_opts = [
@@ -170,9 +170,9 @@ scheduler_opts = [
 common_opts = [
     cfg.IntOpt('workers', default=1,
                help='number of workers'),
-    cfg.StrOpt('host',
-               default='localhost',
-               help='hostname of the machine')
+    cfg.HostAddressOpt('host',
+                       default='localhost',
+                       help='hostname of the machine')
 ]
 
 scheduler_opt_group = cfg.OptGroup('scheduler',

@@ -19,7 +19,7 @@ from oslo_utils import encodeutils
 from kingbird.common import policy
 from kingbird.db import api as db_api
 
-ALLOWED_WITHOUT_AUTH = ['/', '/v1.0']
+ALLOWED_WITHOUT_AUTH = ['/', '/v1.0', '/v2.0']
 
 
 class RequestContext(base_context.RequestContext):

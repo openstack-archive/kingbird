@@ -17,6 +17,7 @@
 import pecan
 
 from kingbird.api.controllers.v1 import root as v1_root
+from kingbird.api.controllers.v2 import root as v2_root
 
 
 class RootController(object):
@@ -25,6 +26,8 @@ class RootController(object):
     def _lookup(self, version, *remainder):
         if version == 'v1.0':
             return v1_root.Controller(), remainder
+        if version == 'v2.0':
+            return v2_root.Controller(), remainder
 
     @pecan.expose(generic=True, template='json')
     def index(self):

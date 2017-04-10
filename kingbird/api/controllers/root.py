@@ -23,7 +23,11 @@ class RootController(object):
 
     @pecan.expose('json')
     def _lookup(self, version, *remainder):
-        if version == 'v1.0':
+        version = str(version)
+        minor_version = version[-1]
+        major_version = version[1]
+        remainder = remainder + (minor_version,)
+        if major_version == '1':
             return v1_root.Controller(), remainder
 
     @pecan.expose(generic=True, template='json')

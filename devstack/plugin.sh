@@ -17,15 +17,13 @@ function create_kingbird_accounts {
     if [[ "$ENABLED_SERVICES" =~ "kb-api" ]]; then
         create_service_user "kingbird"
 
-        if [[ "$KEYSTONE_CATALOG_BACKEND" = 'sql' ]]; then
-            local kingbird_service=$(get_or_create_service "kingbird" \
-                "Kingbird" "OpenStack Kingbird Service")
-            get_or_create_endpoint $kingbird_service \
-                "$REGION_NAME" \
-                "$SERVICE_PROTOCOL://$KINGBIRD_API_HOST:$KINGBIRD_API_PORT/v1.0" \
-                "$SERVICE_PROTOCOL://$KINGBIRD_API_HOST:$KINGBIRD_API_PORT/v1.0" \
-                "$SERVICE_PROTOCOL://$KINGBIRD_API_HOST:$KINGBIRD_API_PORT/v1.0"
-        fi
+        local kingbird_service=$(get_or_create_service "kingbird" \
+            "Kingbird" "OpenStack Kingbird Service")
+        get_or_create_endpoint $kingbird_service \
+            "$REGION_NAME" \
+            "$SERVICE_PROTOCOL://$KINGBIRD_API_HOST:$KINGBIRD_API_PORT/v1.0" \
+            "$SERVICE_PROTOCOL://$KINGBIRD_API_HOST:$KINGBIRD_API_PORT/v1.0" \
+            "$SERVICE_PROTOCOL://$KINGBIRD_API_HOST:$KINGBIRD_API_PORT/v1.0"
     fi
 }
 

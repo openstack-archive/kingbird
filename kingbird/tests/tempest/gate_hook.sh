@@ -40,9 +40,10 @@ function _setup_kingbird_multinode {
     export DEVSTACK_LOCAL_CONFIG="enable_plugin kingbird https://git.openstack.org/openstack/kingbird"
     export DEVSTACK_LOCAL_CONFIG+=$'\n'"Q_ENABLE_KINGBIRD=True"
     export DEVSTACK_LOCAL_CONFIG+=$'\n'"enable_service kb-api"
-    export DEVSTACK_LOCAL_CONFIG+=$'\n'"enable_service kb-api"
+    export DEVSTACK_LOCAL_CONFIG+=$'\n'"enable_service kb-engine"
     export DEVSTACK_LOCAL_CONFIG+=$'\n'"REGION_NAME=RegionOne"
     export DEVSTACK_LOCAL_CONFIG+=$'\n'"HOST_IP=$PRIMARY_NODE_IP"
+    export DEVSTACK_LOCAL_CONFIG+=$'\n'"NEUTRON_CREATE_INITIAL_NETWORKS=False"
 
     export DEVSTACK_SUBNODE_CONFIG="REGION_NAME=RegionTwo"
     export DEVSTACK_SUBNODE_CONFIG+=$'\n'"HOST_IP=$SUBNODE_IP"
@@ -50,6 +51,7 @@ function _setup_kingbird_multinode {
     export DEVSTACK_SUBNODE_CONFIG+=$'\n'"KEYSTONE_SERVICE_HOST=$PRIMARY_NODE_IP"
     export DEVSTACK_SUBNODE_CONFIG+=$'\n'"KEYSTONE_AUTH_HOST=$PRIMARY_NODE_IP"
 
+    export DEVSTACK_SUBNODE_CONFIG+=$'\n'"NEUTRON_CREATE_INITIAL_NETWORKS=False"
     export DEVSTACK_SUBNODE_CONFIG+=$'\n'"SERVICE_HOST=$SUBNODE_IP"
     export DEVSTACK_SUBNODE_CONFIG+=$'\n'"RABBIT_HOST=$SUBNODE_IP"
     export DEVSTACK_SUBNODE_CONFIG+=$'\n'"QPID_HOST=$SUBNODE_IP"

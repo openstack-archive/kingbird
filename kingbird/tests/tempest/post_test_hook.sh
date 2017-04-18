@@ -79,6 +79,8 @@ cd $TEMPEST_DIR
 # ping kingbird api
 curl http://$PRIMARY_NODE_IP:8118
 
+echo "start Kingbird multi-region test..."
+
 # specify what kingbird test cases to be tested in TESTCASES environment
 # variables, then uncomment the follow line
 # ostestr --regex $TESTCASES

@@ -77,7 +77,15 @@ iniset $TEMPEST_CONF validation connect_method fixed
 cd $TEMPEST_DIR
 
 # ping kingbird api
-curl http://$PRIMARY_NODE_IP:8118
+
+if curl -s --head  --request GET http://$PRIMARY_NODE_IP:8118 | grep "200 OK" > /dev/null; then 
+   echo "kb-api is UP"
+else
+   echo "kb-api is DOWN"
+   exit 1
+fi
+
+echo "start Kingbird multi-region test..."
 
 # specify what kingbird test cases to be tested in TESTCASES environment
 # variables, then uncomment the follow line

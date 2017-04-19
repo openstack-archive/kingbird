@@ -48,6 +48,10 @@ class TestQuotaClassController(testroot.KBApiTest):
     @mock.patch.object(quota_class, 'db_api')
     def test_get_all_admin(self, mock_db_api):
         result = Result('class1', 'ram', 100)
+        default_result = Result('default', 'cores', 10)
+        mock_db_api.quota_class_get_default.return_value = \
+            {"class_name": default_result.class_name,
+             default_result.resource: default_result.hard_limit}
         mock_db_api.quota_class_get_all_by_name.return_value = \
             {"class_name": result.class_name,
              result.resource: result.hard_limit}
@@ -56,7 +60,8 @@ class TestQuotaClassController(testroot.KBApiTest):
             fake_url,
             headers=ADMIN_HEADERS)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual({'quota_class_set': {'id': 'class1', 'ram': 100}},
+        self.assertEqual({'quota_class_set': {'class_name': 'class1',
+                                              'ram': 100, 'cores': 10}},
                          eval(response.text))
 
     def test_get_invalid_req(self):
@@ -74,6 +79,10 @@ class TestQuotaClassController(testroot.KBApiTest):
     @mock.patch.object(quota_class, 'db_api')
     def test_put_admin(self, mock_db_api):
         result = Result('class1', 'cores', 10)
+        default_result = Result('default', 'ram', 100)
+        mock_db_api.quota_class_get_default.return_value = \
+            {"class_name": default_result.class_name,
+             default_result.resource: default_result.hard_limit}
         mock_db_api.quota_class_get_all_by_name.return_value = \
             {"class_name": result.class_name,
              result.resource: result.hard_limit}
@@ -84,7 +93,8 @@ class TestQuotaClassController(testroot.KBApiTest):
             headers=ADMIN_HEADERS,
             params=data)
         self.assertEqual(response.status_int, 200)
-        self.assertEqual({'quota_class_set': {'id': 'class1', 'cores': 10}},
+        self.assertEqual({'quota_class_set': {'class_name': 'class1',
+                                              'cores': 10, 'ram': 100}},
                          eval(response.text))
 
     @mock.patch.object(quota_class, 'db_api')

@@ -90,3 +90,10 @@ echo "start Kingbird multi-region test..."
 # specify what kingbird test cases to be tested in TESTCASES environment
 # variables, then uncomment the follow line
 # ostestr --regex $TESTCASES
+
+testr run scenario.quota_management.client_tests.test_quota_class_api
+
+testr run scenario.quota_management.client_tests.test_quota_management_api
+
+testr run scenario.resource_management.sync_tests.test_keypair_sync_api
+

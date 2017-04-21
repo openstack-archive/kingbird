@@ -70,6 +70,7 @@ iniset $TEMPEST_CONF volume-feature-enabled api_v1 false
 
 iniset $TEMPEST_CONF validation connect_method fixed
 
+export TEMPEST_CONF=$TEMPEST_DIR/etc/tempest.conf
 
 # Run the Tempest tests through ostestr command
 # preparation for the tests
@@ -90,3 +91,17 @@ echo "start Kingbird multi-region test..."
 # specify what kingbird test cases to be tested in TESTCASES environment
 # variables, then uncomment the follow line
 # ostestr --regex $TESTCASES
+
+testr init
+
+TESTCASES="(scenario.quota_management.client_tests.test_quota_class_api"
+TESTCASES="$TESTCASES|scenario.quota_management.client_tests.test_quota_management_api"
+TESTCASES="$TESTCASES|scenario.resource_management.sync_tests.test_keypair_sync_api"
+TESTCASES="$TESTCASES)"
+
+ostestr --regex $TESTCASES
+
+# testr run scenario.quota_management.client_tests.test_quota_class_api
+# testr run scenario.quota_management.client_tests.test_quota_management_api
+# testr run scenario.resource_management.sync_tests.test_keypair_sync_api
+

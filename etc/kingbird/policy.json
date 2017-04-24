@@ -1,8 +1,9 @@
 {
-    "context_is_admin":  "role:admin",
-    "admin_or_owner":  "is_admin:True or project_id:%(project_id)s",
+    "context_is_admin": "role:admin",
+    "admin_or_owner": "is_admin:True or project_id:%(project_id)s",
     "default": "rule:admin_or_owner",
 
-    "kingbird:create_quota": "rule:admin",
-    "kingbird:update_quota": "rule:admin"
+    "kingbird:update_quota": "rule:admin",
+    "kingbird:get_all_quota": "rule:admin_only",
+    "kingbird:delete_quota": "rule:admin_only"
 }

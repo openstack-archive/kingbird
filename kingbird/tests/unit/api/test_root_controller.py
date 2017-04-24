@@ -103,46 +103,6 @@ class TestRootController(KBApiTest):
         self._test_method_returns_405('head')
 
 
-class TestV1Controller(KBApiTest):
-
-    def test_get(self):
-        response = self.app.get('/v1.0')
-        self.assertEqual(response.status_int, 200)
-        json_body = jsonutils.loads(response.body)
-        version = json_body.get('version')
-        self.assertEqual('1.0', version)
-
-        links = json_body.get('links')
-        v1_link = links[0]
-        quota_class_link = links[1]
-        quota_manager_link = links[2]
-        sync_manager_link = links[3]
-        self.assertEqual('self', v1_link['rel'])
-        self.assertEqual('os-quota-sets', quota_manager_link['rel'])
-        self.assertEqual('os-quota-class-sets', quota_class_link['rel'])
-        self.assertEqual('os-sync', sync_manager_link['rel'])
-
-    def _test_method_returns_405(self, method):
-        api_method = getattr(self.app, method)
-        response = api_method('/v1.0', expect_errors=True)
-        self.assertEqual(response.status_int, 405)
-
-    def test_post(self):
-        self._test_method_returns_405('post')
-
-    def test_put(self):
-        self._test_method_returns_405('put')
-
-    def test_patch(self):
-        self._test_method_returns_405('patch')
-
-    def test_delete(self):
-        self._test_method_returns_405('delete')
-
-    def test_head(self):
-        self._test_method_returns_405('head')
-
-
 class TestErrors(KBApiTest):
 
     def setUp(self):
@@ -191,11 +151,3 @@ class TestKeystoneAuth(KBApiTest):
     def test_auth_not_enforced_for_root(self):
         response = self.app.get('/')
         self.assertEqual(response.status_int, 200)
-
-    def test_auth_not_enforced_for_v1(self):
-        response = self.app.get('/v1.0')
-        self.assertEqual(response.status_int, 200)
-
-    def test_auth_enforced(self):
-        response = self.app.get('/v1.0/', expect_errors=True)
-        self.assertEqual(response.status_int, 401)

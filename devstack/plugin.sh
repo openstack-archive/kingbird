@@ -51,8 +51,11 @@ function init_common_kingbird_conf {
     iniset $conf_file cache admin_username admin
     iniset $conf_file cache admin_password $ADMIN_PASSWORD
     iniset $conf_file cache admin_tenant admin
-    iniset $conf_file cache auth_url http://127.0.0.1:5000/v3
-    iniset $conf_file cache identity_url http://127.0.0.1:35357/v3
+    iniset $conf_file cache project_domain_name Default
+    iniset $conf_file cache user_domain_name Default
+    iniset $conf_file cache auth_url http://$HOST_IP/identity
+    iniset $conf_file cache identity_url http://$HOST_IP/identity_admin
+    iniset $conf_file cache auth_uri http://$HOST_IP/identity_admin/v3
 
     iniset $conf_file database connection `database_connection_url kingbird`
 }

@@ -33,6 +33,7 @@ class KeystoneClient(base.DriverBase):
             self.session = self.endpoint_cache.admin_session
             self.keystone_client = self.endpoint_cache.keystone_client
             self.services_list = self.keystone_client.services.list()
+            self.endpoints_list = self.keystone_client.endpoints.list()
         except exceptions.ServiceUnavailable:
             raise
 

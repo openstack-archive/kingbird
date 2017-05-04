@@ -26,6 +26,7 @@ def extract_context_from_environ():
                      'user_name': 'HTTP_X_USER_NAME',
                      'tenant_name': 'HTTP_X_PROJECT_NAME',
                      'domain': 'HTTP_X_DOMAIN_ID',
+                     'roles': 'HTTP_X_ROLE',
                      'user_domain': 'HTTP_X_USER_DOMAIN_ID',
                      'project_domain': 'HTTP_X_PROJECT_DOMAIN_ID',
                      'request_id': 'openstack.request_id'}

@@ -43,7 +43,7 @@ class RequestContext(base_context.RequestContext):
         super(RequestContext, self).__init__(
             auth_token=auth_token, user=user, tenant=project,
             domain=domain, user_domain=user_domain,
-            project_domain=project_domain,
+            project_domain=project_domain, roles=roles,
             read_only=read_only, show_deleted=show_deleted,
             request_id=request_id)
 

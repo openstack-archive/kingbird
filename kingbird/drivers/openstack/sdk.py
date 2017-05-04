@@ -26,6 +26,7 @@ from kingbird.common import exceptions
 from kingbird.common.i18n import _
 
 from kingbird.drivers.openstack.cinder_v2 import CinderClient
+from kingbird.drivers.openstack.glance_v2 import GlanceClient
 from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient

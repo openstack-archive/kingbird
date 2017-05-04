@@ -30,9 +30,21 @@ class FakeService(object):
 
     '''
 
-    def __init__(self, type_service, name):
+    def __init__(self, type_service, name, id):
         self.type = type_service
         self.name = name
+        self.id = id
+
+
+class FakeEndpoint(object):
+
+    """Fake Endpoints class used to test service enable testcase"""
+
+    def __init__(self, url, service_id, region, interface):
+        self.url = url
+        self.service_id = service_id
+        self.region = region
+        self.interface = interface
 
 
 class FakeKeypair(object):
@@ -353,3 +365,25 @@ class TestOpenStackDriver(base.KingbirdTestCase):
         mock_nova_client().create_keypairs.\
             assert_called_once_with(True, fake_key,
                                     FAKE_USER_ID)
+
+    @mock.patch.object(sdk, 'GlanceClient')
+    @mock.patch.object(sdk, 'KeystoneClient')
+    @mock.patch.object(sdk, 'NovaClient')
+    @mock.patch.object(sdk, 'NeutronClient')
+    @mock.patch.object(sdk, 'CinderClient')
+    @mock.patch.object(sdk.OpenStackDriver, '_is_token_valid')
+    def test_create_glance_client(self, mock_is_token_valid,
+                                  mock_cinder_client,
+                                  mock_network_client,
+                                  mock_nova_client,
+                                  mock_keystone_client,
+                                  mock_glance_client):
+        fake_service = FakeService('image', 'fake_type', 'fake_id')
+        fake_endpoint = FakeEndpoint('fake_url', fake_service.id,
+                                     'fake_region', 'public')
+        os_driver = sdk.OpenStackDriver()
+        os_driver.keystone_client.endpoints_list = [fake_endpoint]
+        os_driver.keystone_client.services_list = [fake_service]
+        mock_is_token_valid.return_value = True
+        os_driver.create_glance_client('fake_region', self.context)
+        self.assertIsNotNone(os_driver.create_glance_client)

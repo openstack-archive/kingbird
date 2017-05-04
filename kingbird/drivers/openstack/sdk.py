@@ -26,6 +26,7 @@ from kingbird.common import exceptions
 from kingbird.common.i18n import _
 
 from kingbird.drivers.openstack.cinder_v2 import CinderClient
+from kingbird.drivers.openstack.glance_v2 import GlanceClient
 from kingbird.drivers.openstack.keystone_v3 import KeystoneClient
 from kingbird.drivers.openstack.neutron_v2 import NeutronClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient
@@ -188,3 +189,15 @@ class OpenStackDriver(object):
 
     def create_keypairs(self, force, keypair, user_id):
         return self.nova_client.create_keypairs(force, keypair, user_id)
+
+    def create_glance_client(self, region_name, context):
+        glance_service_id = [service.id for service in
+                             self.keystone_client.services_list
+                             if service.type == 'image'][0]
+        glance_endpoint = [endpoint.url for endpoint in
+                           self.keystone_client.endpoints_list
+                           if endpoint.service_id == glance_service_id
+                           and endpoint.region == region_name and
+                           endpoint.interface == 'public'][0]
+        self.glance_client = GlanceClient(glance_endpoint, context)
+        return self.glance_client

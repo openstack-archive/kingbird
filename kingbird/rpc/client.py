@@ -74,3 +74,9 @@ class EngineClient(object):
             ctxt,
             self.make_msg('keypair_sync_for_user',
                           user_id=user_id, job_id=job_id, payload=payload))
+
+    def image_sync(self, ctxt, job_id, payload):
+        return self.cast(
+            ctxt,
+            self.make_msg('image_sync',
+                          ctxt=ctxt, job_id=job_id, payload=payload))

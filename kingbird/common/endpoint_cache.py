@@ -15,9 +15,10 @@
 
 import collections
 
-from keystoneclient.auth.identity import v3 as auth_identity
+from keystoneauth1.identity import v3 as auth_identity
+from keystoneauth1 import loading
+from keystoneauth1 import session
 from keystoneclient.auth import token_endpoint
-from keystoneclient import session
 from keystoneclient.v3 import client as keystone_client
 from oslo_config import cfg
 
@@ -88,7 +89,7 @@ class EndpointCache(object):
                     service] = endpoint_map[region][service]
 
     def get_endpoint(self, region, service):
-        """Get service endpoint url
+        """Get service endpoint url.
 
         :param region: region the service belongs to
         :param service: service type
@@ -97,15 +98,29 @@ class EndpointCache(object):
         return self._get_endpoint(region, service, True)
 
     def update_endpoints(self):
-        """Update endpoint cache from Keystone
+        """Update endpoint cache from Keystone.
 
         :return: None
         """
         self._update_endpoints()
 
     def get_all_regions(self):
-        """Get region list
+        """Get region list.
 
         return: List of regions
         """
         return self.endpoint_map.keys()
+
+    def get_session_from_token(self, token, project_id):
+        """Get session based on token to communicate with openstack services.
+
+        :param token: token with which the request is triggered.
+        :param project_id: UUID of the project.
+
+        :return: session object.
+        """
+        loader = loading.get_plugin_loader('token')
+        auth = loader.load_from_options(auth_url=cfg.CONF.cache.auth_uri,
+                                        token=token, project_id=project_id)
+        sess = session.Session(auth=auth)
+        return sess

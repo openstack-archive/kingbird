@@ -1,4 +1,4 @@
-# Copyright 2017 Ericsson AB
+# Copyright 2017 Ericsson AB.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,43 +18,42 @@ import threading
 from oslo_log import log as logging
 
 from kingbird.common import consts
-from kingbird.common import context
+from kingbird.common.endpoint_cache import EndpointCache
 from kingbird.common import exceptions
-from kingbird.common import manager
 from kingbird.db.sqlalchemy import api as db_api
-from kingbird.drivers.openstack import sdk
+from kingbird.drivers.openstack.nova_v2 import NovaClient
 
 LOG = logging.getLogger(__name__)
 
 
-class SyncManager(manager.Manager):
+class SyncManager(object):
     """Manages tasks related to resource management"""
 
     def __init__(self, *args, **kwargs):
-        super(SyncManager, self).__init__(service_name="sync_manager",
-                                          *args, **kwargs)
-        self.context = context.get_admin_context()
+        super(SyncManager, self).__init__()
 
     def _create_keypairs_in_region(self, job_id, force, target_regions,
-                                   source_keypair, user_id):
+                                   source_keypair, session, context):
         regions_thread = list()
         for region in target_regions:
             thread = threading.Thread(target=self._create_keypairs,
                                       args=(job_id, force, region,
-                                            source_keypair, user_id,))
+                                            source_keypair, session,
+                                            context))
             regions_thread.append(thread)
             thread.start()
             for region_thread in regions_thread:
                 region_thread.join()
 
-    def _create_keypairs(self, job_id, force, region, source_keypair, user_id):
-        os_client = sdk.OpenStackDriver(region)
+    def _create_keypairs(self, job_id, force, region, source_keypair,
+                         session, context):
+        target_nova_client = NovaClient(region, session)
         try:
-            os_client.create_keypairs(force, source_keypair, user_id)
+            target_nova_client.create_keypairs(force, source_keypair)
             LOG.info('keypair %(keypair)s created in %(region)s'
                      % {'keypair': source_keypair.name, 'region': region})
             try:
-                db_api.resource_sync_update(self.context, job_id, region,
+                db_api.resource_sync_update(context, job_id, region,
                                             source_keypair.name,
                                             consts.JOB_SUCCESS)
             except exceptions.JobNotFound():
@@ -63,27 +62,29 @@ class SyncManager(manager.Manager):
             LOG.error('Exception Occurred: %(msg)s in %(region)s'
                       % {'msg': exc.message, 'region': region})
             try:
-                db_api.resource_sync_update(self.context, job_id, region,
+                db_api.resource_sync_update(context, job_id, region,
                                             source_keypair.name,
                                             consts.JOB_FAILURE)
             except exceptions.JobNotFound():
                 raise
             pass
 
-    def keypair_sync_for_user(self, user_id, job_id, payload):
-        LOG.info("Keypair sync Called for user: %s",
-                 user_id)
+    def keypair_sync_for_user(self, context, job_id, payload):
         keypairs_thread = list()
         target_regions = payload['target']
         force = eval(str(payload.get('force', False)))
         resource_ids = payload.get('resources')
-        source_os_client = sdk.OpenStackDriver(payload['source'])
+        source_region = payload['source']
+        session = EndpointCache().get_session_from_token(
+            context.auth_token, context.project)
+        # Create Source Region object
+        source_nova_client = NovaClient(source_region, session)
         for keypair in resource_ids:
-            source_keypair = source_os_client.get_keypairs(user_id,
-                                                           keypair)
+            source_keypair = source_nova_client.get_keypairs(keypair)
             thread = threading.Thread(target=self._create_keypairs_in_region,
                                       args=(job_id, force, target_regions,
-                                            source_keypair, user_id,))
+                                            source_keypair, session,
+                                            context,))
             keypairs_thread.append(thread)
             thread.start()
             for keypair_thread in keypairs_thread:
@@ -92,13 +93,13 @@ class SyncManager(manager.Manager):
         # Update the  parent_db after the sync
         try:
             resource_sync_details = db_api.\
-                resource_sync_status(self.context, job_id)
+                resource_sync_status(context, job_id)
         except exceptions.JobNotFound:
             raise
         result = consts.JOB_SUCCESS
         if consts.JOB_FAILURE in resource_sync_details:
             result = consts.JOB_FAILURE
         try:
-            db_api.sync_job_update(self.context, job_id, result)
+            db_api.sync_job_update(context, job_id, result)
         except exceptions.JobNotFound:
             raise

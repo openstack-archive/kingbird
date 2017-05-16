@@ -154,9 +154,9 @@ class EngineService(service.Service):
         self.qm.quota_sync_for_project(project_id)
 
     @request_context
-    def keypair_sync_for_user(self, ctxt, user_id, job_id, payload):
+    def keypair_sync_for_user(self, ctxt, job_id, payload):
         # Keypair Sync for a user, will be triggered by KB-API
-        self.sm.keypair_sync_for_user(user_id, job_id, payload)
+        self.sm.keypair_sync_for_user(ctxt, job_id, payload)
 
     def _stop_rpc_server(self):
         # Stop RPC connection to prevent new requests

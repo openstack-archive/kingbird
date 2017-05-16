@@ -26,6 +26,9 @@ from kingbird.tests import utils
 
 DEFAULT_FORCE = False
 SOURCE_KEYPAIR = 'fake_key1'
+SOURCE_IMAGE_NAME = 'fake_image'
+SOURCE_IMAGE_ID = utils.UUID4
+WRONG_SOURCE_IMAGE_ID = utils.UUID5
 FAKE_TARGET_REGION = ['fake_target_region']
 FAKE_SOURCE_REGION = 'fake_source_region'
 FAKE_RESOURCE_ID = 'fake_id'
@@ -47,6 +50,12 @@ class FakeKeypair(object):
         self.public_key = public_key
 
 
+class FakeImage(object):
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+
 class SyncJob(object):
     def __init__(self, id, sync_status, created_at):
         self.id = id
@@ -60,9 +69,11 @@ class TestResourceManager(testroot.KBApiTest):
         self.ctx = utils.dummy_context()
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    @mock.patch.object(sync_manager, 'sdk')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_post_keypair_sync(self, mock_db_api, mock_sdk, mock_rpc_client):
+    def test_post_keypair_sync(self, mock_db_api, mock_endpoint_cache,
+                               mock_nova, mock_rpc_client):
         time_now = timeutils.utcnow()
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "resource_type": "keypair",
@@ -71,13 +82,15 @@ class TestResourceManager(testroot.KBApiTest):
                                  "target": [FAKE_TARGET_REGION]}}
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
         sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
-        mock_sdk.OpenStackDriver().get_keypairs.return_value = fake_key
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_keypairs.return_value = fake_key
         mock_db_api.sync_job_create.return_value = sync_job_result
         response = self.app.post_json(FAKE_URL,
                                       headers=FAKE_HEADERS,
                                       params=data)
         self.assertEqual(1,
-                         mock_sdk.OpenStackDriver().get_keypairs.call_count)
+                         mock_nova().get_keypairs.call_count)
         self.assertEqual(1,
                          mock_db_api.resource_sync_create.call_count)
         self.assertEqual(1,
@@ -85,7 +98,32 @@ class TestResourceManager(testroot.KBApiTest):
         self.assertEqual(response.status_int, 200)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    def test_post_keypair_sync_wrong_url(self, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'GlanceClient')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_image_sync(self, mock_db_api, mock_glance, mock_rpc_client):
+        time_now = timeutils.utcnow()
+        data = {"resource_set": {"resources": [SOURCE_IMAGE_ID],
+                                 "resource_type": "image",
+                                 "force": "True",
+                                 "source": FAKE_SOURCE_REGION,
+                                 "target": [FAKE_TARGET_REGION]}}
+        fake_image = FakeImage(SOURCE_IMAGE_ID, SOURCE_IMAGE_NAME)
+        sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
+        mock_glance().get_image.return_value = fake_image
+        mock_db_api.sync_job_create.return_value = sync_job_result
+        response = self.app.post_json(FAKE_URL,
+                                      headers=FAKE_HEADERS,
+                                      params=data)
+        self.assertEqual(1,
+                         mock_glance().get_image.call_count)
+        self.assertEqual(1,
+                         mock_db_api.resource_sync_create.call_count)
+        self.assertEqual(1,
+                         mock_db_api.sync_job_create.call_count)
+        self.assertEqual(response.status_int, 200)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    def test_post_resource_sync_wrong_url(self, mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "force": "True",
                                  "source": FAKE_SOURCE_REGION,
@@ -129,7 +167,7 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    def test_post_no_keys_in_body(self, mock_rpc_client):
+    def test_post_no_resources_in_body(self, mock_rpc_client):
         data = {"resource_set": {"force": "True",
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
@@ -148,14 +186,33 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    @mock.patch.object(sync_manager, 'sdk')
-    def test_post_no_keypairs_in_region(self, mock_sdk, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    def test_post_no_keypairs_in_region(self, mock_nova, mock_endpoint_cache,
+                                        mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "resource_type": "keypair",
                                  "force": "True",
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
-        mock_sdk.OpenStackDriver().get_keypairs.return_value = None
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_keypairs.return_value = None
+        self.assertRaisesRegexp(webtest.app.AppError, "404 *",
+                                self.app.post_json, FAKE_URL,
+                                headers=FAKE_HEADERS, params=data)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'GlanceClient')
+    def test_post_no_images_in_source_region(self, mock_glance,
+                                             mock_rpc_client):
+        data = {"resource_set": {"resources": [SOURCE_IMAGE_ID],
+                                 "resource_type": "image",
+                                 "force": "True",
+                                 "source": FAKE_SOURCE_REGION,
+                                 "target": [FAKE_TARGET_REGION]}}
+        wrong_image = FakeImage(WRONG_SOURCE_IMAGE_ID, SOURCE_IMAGE_NAME)
+        mock_glance().get_image.return_value = wrong_image
         self.assertRaisesRegexp(webtest.app.AppError, "404 *",
                                 self.app.post_json, FAKE_URL,
                                 headers=FAKE_HEADERS, params=data)

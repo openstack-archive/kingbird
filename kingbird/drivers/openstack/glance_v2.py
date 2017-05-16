@@ -68,11 +68,18 @@ class GlanceClient(object):
             'X-Identity-Status': status,
         }
 
-    def get_image(self, resource_identifier):
+    def check_image(self, resource_identifier):
         """Get the image details for the specified resource_identifier.
 
         :param resource_identifier: resource_id for which the details
             have to be retrieved.
 
         """
-        return self.glance_client.images.get(resource_identifier)
+        try:
+            image = self.glance_client.images.get(resource_identifier)
+            LOG.info("Source image: %s", image.name)
+            return image.id
+        except exceptions.ResourceNotFound():
+            LOG.error('Exception Occurred: Source Image %s not available.',
+                      resource_identifier)
+            pass

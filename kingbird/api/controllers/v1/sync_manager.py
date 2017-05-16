@@ -27,6 +27,7 @@ from kingbird.common.endpoint_cache import EndpointCache
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.db.sqlalchemy import api as db_api
+from kingbird.drivers.openstack.glance_v2 import GlanceClient
 from kingbird.drivers.openstack.nova_v2 import NovaClient
 from kingbird.rpc import client as rpc_client
 
@@ -52,6 +53,25 @@ class ResourceSyncController(object):
     def index(self):
         # Route the request to specific methods with parameters
         pass
+
+    def _entries_to_database(self, context, target_regions, source_region,
+                             resources, resource_type, job_id):
+        """Manage the entries to database for both Keypair and image."""
+        # Insert into the parent table
+        try:
+            result = db_api.sync_job_create(context, job_id=job_id)
+        except exceptions.JobNotFound:
+            pecan.abort(404, _('Job not found'))
+            # Insert into the child table
+        for region in target_regions:
+            for resource in resources:
+                try:
+                    db_api.resource_sync_create(context, result,
+                                                region, source_region,
+                                                resource, resource_type)
+                except exceptions.JobNotFound:
+                    pecan.abort(404, _('Job not found'))
+        return result
 
     @index.when(method='GET', template='json')
     def get(self, project, action=None):
@@ -103,6 +123,7 @@ class ResourceSyncController(object):
         source_resources = payload.get('resources')
         if not source_resources:
             pecan.abort(400, _('Source resources required'))
+        job_id = uuidutils.generate_uuid()
         if resource_type == consts.KEYPAIR:
             session = EndpointCache().get_session_from_token(
                 context.auth_token, context.project)
@@ -114,22 +135,25 @@ class ResourceSyncController(object):
                     get_keypairs(source_keypair)
                 if not source_keypair:
                     pecan.abort(404)
-            job_id = uuidutils.generate_uuid()
-            # Insert into the parent table
-            try:
-                result = db_api.sync_job_create(context, job_id=job_id)
-            except exceptions.JobNotFound:
-                pecan.abort(404, _('Job not found'))
-            # Insert into the child table
-            for region in target_regions:
-                for keypair in source_resources:
-                    try:
-                        db_api.resource_sync_create(context, result,
-                                                    region, source_region,
-                                                    keypair, consts.KEYPAIR)
-                    except exceptions.JobNotFound:
-                        pecan.abort(404, _('Job not found'))
+            result = self._entries_to_database(context, target_regions,
+                                               source_region,
+                                               source_resources,
+                                               resource_type, job_id)
             return self._keypair_sync(job_id, payload, context, result)
+
+        elif resource_type == consts.IMAGE:
+            # Create Source Region glance_object
+            glance_driver = GlanceClient(source_region, context)
+            # Check for images in Source Region
+            for image in source_resources:
+                source_image = glance_driver.get_image(image)
+                if image != source_image.id:
+                    pecan.abort(404)
+            result = self._entries_to_database(context, target_regions,
+                                               source_region,
+                                               source_resources,
+                                               resource_type, job_id)
+            return self._image_sync(job_id, payload, context, result)
         else:
             pecan.abort(400, _('Bad resource_type'))
 
@@ -171,5 +195,18 @@ class ResourceSyncController(object):
         """
         self.rpc_client.keypair_sync_for_user(context, job_id, payload)
 
+        return {'job_status': {'id': result.id, 'status': result.sync_status,
+                               'created_at': result.created_at}}
+
+    def _image_sync(self, job_id, payload, context, result):
+        """Make an rpc call to engine.
+
+        :param job_id: ID of the job to update values in database based on
+            the job_id.
+        :param payload: payload object.
+        :param context: context of the request.
+        :param result: Result object to return an output.
+        """
+        self.rpc_client.image_sync(context, job_id, payload)
         return {'job_status': {'id': result.id, 'status': result.sync_status,
                                'created_at': result.created_at}}

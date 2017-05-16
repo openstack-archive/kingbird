@@ -42,8 +42,8 @@ class UUIDStub(object):
         uuid.uuid4 = self.uuid4
 
 
-UUIDs = (UUID1, UUID2, UUID3) = sorted([str(uuid.uuid4())
-                                        for x in range(3)])
+UUIDs = (UUID1, UUID2, UUID3, UUID4, UUID5) = sorted([str(uuid.uuid4())
+                                                     for x in range(5)])
 
 
 def random_name():

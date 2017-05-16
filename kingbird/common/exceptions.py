@@ -31,6 +31,7 @@ class KingbirdException(Exception):
     a 'message' property. That message will get printf'd
     with the keyword arguments provided to the constructor.
     """
+
     message = _("An unknown exception occurred.")
 
     def __init__(self, **kwargs):
@@ -111,3 +112,7 @@ class InternalError(KingbirdException):
 
 class InvalidInputError(KingbirdException):
     message = _("An invalid value was provided")
+
+
+class ResourceNotFound(NotFound):
+    message = _("Resource not available")

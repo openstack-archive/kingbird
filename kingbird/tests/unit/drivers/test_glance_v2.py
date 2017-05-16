@@ -1,14 +1,17 @@
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
+# Copyright (c) 2017 Ericsson AB.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
 #
 #         http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 from mock import patch
 
@@ -55,13 +58,14 @@ class TestGlanceClient(base.KingbirdTestCase):
 
     @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
     @patch('kingbird.drivers.openstack.glance_v2.Client')
-    def test_get_image(self, mock_glance_client, mock_keystone_client):
-        """Mock get_image method of glance."""
+    def test_check_image(self, mock_glance_client, mock_keystone_client):
+        """Test get_image method of glance."""
         fake_service = FakeService('image', 'fake_type', 'fake_id')
         fake_endpoint = FakeEndpoint('fake_url', fake_service.id,
                                      'fake_region', 'public')
         mock_keystone_client().services_list = [fake_service]
         mock_keystone_client().endpoints_list = [fake_endpoint]
-        GlanceClient('fake_region', self.ctx).get_image('fake_resource')
+        glance_client = GlanceClient('fake_region', self.ctx)
+        glance_client.check_image('fake_resource')
         mock_glance_client().images.get.\
             assert_called_once_with('fake_resource')

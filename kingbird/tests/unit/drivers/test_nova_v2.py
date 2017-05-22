@@ -70,8 +70,8 @@ class TestNovaClient(base.KingbirdTestCase):
         self.user = 'fake_user'
 
     def test_init(self):
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
         self.assertIsNotNone(nv_client)
         expected_quotas = list(set(consts.NOVA_QUOTA_FIELDS) -
                                set(DISABLED_QUOTAS))
@@ -84,8 +84,8 @@ class TestNovaClient(base.KingbirdTestCase):
         mock_novaclient.Client().keypairs.list.return_value = FAKE_KEYPAIRS
         mock_novaclient.Client().limits.get().to_dict.return_value = \
             FAKE_LIMITS
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
         total_nova_usage = nv_client.get_resource_usages(self.project)
         self.assertEqual(total_nova_usage['ram'], 512 * 2)
         self.assertEqual(total_nova_usage['cores'], 2)
@@ -94,8 +94,8 @@ class TestNovaClient(base.KingbirdTestCase):
 
     @mock.patch.object(nova_v2, 'client')
     def test_update_quota_limits(self, mock_novaclient):
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
         new_quota = {'ram': 100, 'cores': 50}
         nv_client.update_quota_limits(self.project, **new_quota)
         mock_novaclient.Client().quotas.update.assert_called_once_with(
@@ -103,8 +103,8 @@ class TestNovaClient(base.KingbirdTestCase):
 
     @mock.patch.object(nova_v2, 'client')
     def test_delete_quota_limits(self, mock_novaclient):
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
 
         new_quota = {'ram': 100, 'cores': 50}
         nv_client.update_quota_limits(self.project, **new_quota)
@@ -116,33 +116,33 @@ class TestNovaClient(base.KingbirdTestCase):
 
     @mock.patch.object(nova_v2, 'client')
     def test_get_keypairs(self, mock_novaclient):
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
-        nv_client.get_keypairs(self.user, FAKE_RESOURCE_ID)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
+        nv_client.get_keypairs(FAKE_RESOURCE_ID)
         mock_novaclient.Client().keypairs.get.return_value = 'key1'
         mock_novaclient.Client().keypairs.get.\
-            assert_called_once_with(FAKE_RESOURCE_ID, self.user)
+            assert_called_once_with(FAKE_RESOURCE_ID)
 
     @mock.patch.object(nova_v2, 'client')
     def test_create_keypairs_with_force_false(self, mock_novaclient):
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        nv_client.create_keypairs(DEFAULT_FORCE, fake_key, self.user)
+        nv_client.create_keypairs(DEFAULT_FORCE, fake_key)
         self.assertEqual(0,
                          mock_novaclient.Client().keypairs.delete.call_count)
         mock_novaclient.Client().keypairs.create.\
-            assert_called_once_with(fake_key.name, user_id=self.user,
+            assert_called_once_with(fake_key.name,
                                     public_key=fake_key.public_key)
 
     @mock.patch.object(nova_v2, 'client')
     def test_create_keypairs_with_force_true(self, mock_novaclient):
-        nv_client = nova_v2.NovaClient('fake_region', DISABLED_QUOTAS,
-                                       self.session)
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        nv_client.create_keypairs(True, fake_key, self.user)
+        nv_client.create_keypairs(True, fake_key)
         mock_novaclient.Client().keypairs.delete.\
-            assert_called_once_with(fake_key, self.user)
+            assert_called_once_with(fake_key)
         mock_novaclient.Client().keypairs.create.\
-            assert_called_once_with(fake_key.name, user_id=self.user,
+            assert_called_once_with(fake_key.name,
                                     public_key=fake_key.public_key)

@@ -37,58 +37,54 @@ class TestSyncManager(base.KingbirdTestCase):
         super(TestSyncManager, self).setUp()
         self.ctxt = utils.dummy_context()
 
-    @mock.patch.object(sync_manager, 'context')
-    def test_init(self, mock_context):
-        mock_context.get_admin_context.return_value = self.ctxt
-        sm = sync_manager.SyncManager()
-        self.assertIsNotNone(sm)
-        self.assertEqual('sync_manager', sm.service_name)
-        self.assertEqual('localhost', sm.host)
-        self.assertEqual(self.ctxt, sm.context)
-
-    @mock.patch.object(sync_manager, 'sdk')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager.SyncManager, '_create_keypairs')
     @mock.patch.object(sync_manager, 'db_api')
     def test_keypair_sync_force_false(self, mock_db_api, mock_create_keypair,
-                                      mock_sdk):
-        payload = {}
+                                      mock_endpoint_cache, mock_nova):
+        payload = dict()
         payload['target'] = [FAKE_TARGET_REGION]
         payload['force'] = DEFAULT_FORCE
         payload['source'] = FAKE_SOURCE_REGION
         payload['resources'] = [SOURCE_KEYPAIR]
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        mock_sdk.OpenStackDriver().get_keypairs.return_value = fake_key
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_keypairs.return_value = fake_key
         sm = sync_manager.SyncManager()
-        sm.keypair_sync_for_user(FAKE_USER_ID, FAKE_JOB_ID, payload)
+        sm.keypair_sync_for_user(self.ctxt, FAKE_JOB_ID, payload)
         mock_create_keypair.assert_called_once_with(
             FAKE_JOB_ID, payload['force'], payload['target'][0], fake_key,
-            FAKE_USER_ID)
+            'fake_session', self.ctxt)
 
-    @mock.patch.object(sync_manager, 'sdk')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager.SyncManager, '_create_keypairs')
     @mock.patch.object(sync_manager, 'db_api')
     def test_keypair_sync_force_true(self, mock_db_api, mock_create_keypair,
-                                     mock_sdk):
-
+                                     mock_endpoint_cache, mock_nova):
         payload = dict()
         payload['target'] = [FAKE_TARGET_REGION]
         payload['force'] = True
         payload['source'] = FAKE_SOURCE_REGION
         payload['resources'] = [SOURCE_KEYPAIR]
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        mock_sdk.OpenStackDriver().get_keypairs.return_value = fake_key
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_keypairs.return_value = fake_key
         sm = sync_manager.SyncManager()
-        sm.keypair_sync_for_user(FAKE_USER_ID, FAKE_JOB_ID, payload)
+        sm.keypair_sync_for_user(self.ctxt, FAKE_JOB_ID, payload)
         mock_create_keypair.assert_called_once_with(
-            FAKE_JOB_ID, payload['force'], FAKE_TARGET_REGION, fake_key,
-            FAKE_USER_ID)
+            FAKE_JOB_ID, payload['force'], payload['target'][0], fake_key,
+            'fake_session', self.ctxt)
 
-    @mock.patch.object(sync_manager, 'sdk')
+    @mock.patch.object(sync_manager, 'NovaClient')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_create_keypair(self, mock_db_api, mock_sdk):
+    def test_create_keypair(self, mock_db_api, mock_nova):
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
         sm = sync_manager.SyncManager()
         sm._create_keypairs(FAKE_JOB_ID, DEFAULT_FORCE, FAKE_TARGET_REGION,
-                            fake_key, FAKE_USER_ID)
-        mock_sdk.OpenStackDriver().create_keypairs.\
-            assert_called_once_with(DEFAULT_FORCE, fake_key, FAKE_USER_ID)
+                            fake_key, 'fake_session', self.ctxt)
+        mock_nova().create_keypairs.\
+            assert_called_once_with(DEFAULT_FORCE, fake_key)

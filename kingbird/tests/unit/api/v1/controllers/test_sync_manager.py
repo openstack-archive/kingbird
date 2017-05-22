@@ -60,9 +60,11 @@ class TestResourceManager(testroot.KBApiTest):
         self.ctx = utils.dummy_context()
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    @mock.patch.object(sync_manager, 'sdk')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_post_keypair_sync(self, mock_db_api, mock_sdk, mock_rpc_client):
+    def test_post_keypair_sync(self, mock_db_api, mock_endpoint_cache,
+                               mock_nova, mock_rpc_client):
         time_now = timeutils.utcnow()
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "resource_type": "keypair",
@@ -71,13 +73,15 @@ class TestResourceManager(testroot.KBApiTest):
                                  "target": [FAKE_TARGET_REGION]}}
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
         sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
-        mock_sdk.OpenStackDriver().get_keypairs.return_value = fake_key
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_keypairs.return_value = fake_key
         mock_db_api.sync_job_create.return_value = sync_job_result
         response = self.app.post_json(FAKE_URL,
                                       headers=FAKE_HEADERS,
                                       params=data)
         self.assertEqual(1,
-                         mock_sdk.OpenStackDriver().get_keypairs.call_count)
+                         mock_nova().get_keypairs.call_count)
         self.assertEqual(1,
                          mock_db_api.resource_sync_create.call_count)
         self.assertEqual(1,
@@ -148,14 +152,18 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    @mock.patch.object(sync_manager, 'sdk')
-    def test_post_no_keypairs_in_region(self, mock_sdk, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    def test_post_no_keypairs_in_region(self, mock_nova, mock_endpoint_cache,
+                                        mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "resource_type": "keypair",
                                  "force": "True",
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
-        mock_sdk.OpenStackDriver().get_keypairs.return_value = None
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_keypairs.return_value = None
         self.assertRaisesRegexp(webtest.app.AppError, "404 *",
                                 self.app.post_json, FAKE_URL,
                                 headers=FAKE_HEADERS, params=data)

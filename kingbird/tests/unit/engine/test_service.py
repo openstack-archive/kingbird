@@ -115,7 +115,6 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_tgm()
         self.service_obj.init_sm()
         self.service_obj.keypair_sync_for_user(
-            self.context, self.user_id,
-            self.job_id, self.payload,)
+            self.context, self.job_id, self.payload,)
         mock_sync_manager().keypair_sync_for_user.\
-            assert_called_once_with(self.user_id, self.job_id, self.payload)
+            assert_called_once_with(self.context, self.job_id, self.payload)

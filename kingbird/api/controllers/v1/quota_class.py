@@ -37,10 +37,11 @@ class QuotaClassSetController(object):
             consts.NEUTRON_QUOTA_FIELDS +
             consts.NOVA_QUOTA_FIELDS)
 
-    def _format_quota_set(self, quota_class, quota_set):
+    def _format_quota_set(self, context, quota_class, quota_set):
         """Convert the quota object to a result dict."""
+        result = db_api.quota_class_get_default(context)
         if quota_class:
-            result = dict(id=str(quota_class))
+            result['class_name'] = str(quota_class)
         else:
             result = {}
 
@@ -67,7 +68,7 @@ class QuotaClassSetController(object):
 
         values = db_api.quota_class_get_all_by_name(context, class_name)
 
-        return self._format_quota_set(class_name, values)
+        return self._format_quota_set(context, class_name, values)
 
     @index.when(method='PUT', template='json')
     def put(self, project_id, class_name):
@@ -100,7 +101,7 @@ class QuotaClassSetController(object):
 
         values = db_api.quota_class_get_all_by_name(context, class_name)
 
-        return self._format_quota_set(class_name, values)
+        return self._format_quota_set(context, class_name, values)
 
     @index.when(method='delete', template='json')
     def delete(self, project_id, class_name):

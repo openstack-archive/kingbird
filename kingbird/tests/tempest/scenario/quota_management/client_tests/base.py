@@ -1,4 +1,4 @@
-# Copyright 2016 Ericsson AB
+# Copyright 2016 Ericsson AB.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -50,8 +50,8 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
         super(BaseKingbirdTest, cls).setup_credentials()
         session = sync_client.get_session()
         cls.auth_token = session.get_token()
-        cls.key_client = sync_client.get_key_client(session)
-        cls.regions = sync_client.get_regions(cls.key_client)
+        cls.keystone_client = sync_client.get_keystone_client(session)
+        cls.regions = sync_client.get_regions(cls.keystone_client)
 
     @classmethod
     def setup_clients(cls):
@@ -71,11 +71,12 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
         target_project_name = data_utils.rand_name('kb-target-project')
         target_user_name = data_utils.rand_name('kb-target-user')
         cls.openstack_details = sync_client.get_openstack_drivers(
-            cls.key_client, cls.regions[0], project_name, user_name,
+            cls.keystone_client, cls.regions[0], project_name, user_name,
             password, target_project_name, target_user_name)
         cls.openstack_drivers = cls.openstack_details['os_drivers']
         cls.session = cls.openstack_details['session']
         cls.token = cls.openstack_details['token']
+        cls.target_token = cls.openstack_details['target_token']
         cls.resource_ids = sync_client.create_resources(cls.openstack_drivers)
         cls.resource_ids.update(cls.openstack_details)
         cls.resource_ids["server_ids"] = []
@@ -90,49 +91,51 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
         sync_client.resource_cleanup(cls.openstack_drivers, cls.resource_ids)
 
     @classmethod
-    def create_custom_kingbird_quota(cls, project_id, target_project_id,
-                                     new_quota_values):
+    def create_custom_kingbird_quota(cls, project_id, new_quota_values):
         new_values = sync_client.create_custom_kingbird_quota(
-            cls.token, project_id, target_project_id, new_quota_values)
+            cls.openstack_drivers, project_id, new_quota_values)
         return new_values
 
     @classmethod
-    def get_custom_kingbird_quota(cls, project_id, target_project_id):
-        return_quotas = sync_client.get_custom_kingbird_quota(
-            cls.token, project_id, target_project_id)
+    def get_kingbird_quota_another_tenant(cls, target_project_id):
+        new_values = sync_client.get_kingbird_quota_another_tenant(
+            cls.openstack_drivers, target_project_id)
+        return new_values
+
+    @classmethod
+    def get_own_kingbird_quota(cls, target_project_id):
+        return_quotas = sync_client.get_own_kingbird_quota(
+            cls.target_token, target_project_id)
         return return_quotas
 
     @classmethod
-    def delete_custom_kingbird_quota(cls, project_id, target_project_id,
-                                     quota_to_delete=None):
-        deleted_quotas = sync_client.delete_custom_kingbird_quota(
-            cls.token, project_id, target_project_id, quota_to_delete)
-        return deleted_quotas
+    def delete_custom_kingbird_quota(cls, target_project_id):
+        sync_client.delete_custom_kingbird_quota(
+            cls.openstack_drivers, target_project_id)
 
     @classmethod
     def get_default_kingbird_quota(cls, project_id):
-        return_quotas = sync_client.get_default_kingbird_quota(cls.token,
-                                                               project_id)
+        return_quotas = sync_client.get_default_kingbird_quota(
+            cls.target_token, project_id)
         return return_quotas
 
     @classmethod
-    def quota_sync_for_project(cls, project_id, target_project_id):
+    def quota_sync_for_project(cls, project_id):
         sync_status = sync_client.quota_sync_for_project(
-            cls.token, project_id, target_project_id)
+            cls.openstack_drivers, project_id)
         return sync_status
 
     @classmethod
-    def get_quota_usage_for_project(cls, project_id, target_project_id):
+    def get_quota_usage_for_project(cls, project_id):
         quota_usage = sync_client.get_quota_usage_for_project(
-            cls.token, project_id, target_project_id)
+            cls.openstack_drivers, project_id)
         return quota_usage
 
     @classmethod
-    def create_custom_kingbird_quota_wrong_token(cls, project_id,
-                                                 target_project_id,
+    def create_custom_kingbird_quota_wrong_token(cls, target_project_id,
                                                  new_quota_values):
-        new_values = sync_client.create_custom_kingbird_quota(
-            'fake_token', project_id, target_project_id, new_quota_values)
+        new_values = sync_client.kingbird_create_quota_wrong_token(
+            cls.openstack_drivers, target_project_id, new_quota_values)
         return new_values
 
     @classmethod
@@ -211,20 +214,19 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
             cls.session, cls.regions, project_id, **quota_to_set)
 
     @classmethod
-    def update_quota_for_class(cls, class_name, project_id,
-                               new_quota_values):
+    def update_quota_for_class(cls, class_name, new_quota_values):
         new_values = sync_client.update_quota_for_class(
-            cls.token, class_name, project_id, new_quota_values)
+            cls.openstack_drivers, class_name, new_quota_values)
         return new_values
 
     @classmethod
-    def get_quota_for_class(cls, class_name, project_id):
+    def get_quota_for_class(cls, class_name):
         return_quotas = sync_client.get_quota_for_class(
-            cls.token, class_name, project_id)
+            cls.openstack_drivers, class_name)
         return return_quotas
 
     @classmethod
-    def delete_quota_for_class(cls, class_name, project_id):
+    def delete_quota_for_class(cls, class_name):
         deleted_quotas = sync_client.delete_quota_for_class(
-            cls.token, class_name, project_id)
+            cls.openstack_drivers, class_name)
         return deleted_quotas

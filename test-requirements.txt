@@ -20,3 +20,4 @@ os-testr>=0.8.0 # Apache-2.0
 tempest-lib>=0.14.0 # Apache-2.0
 ddt>=1.0.1 # MIT
 pylint==1.7.1 # GPLv2
+python-kingbirdclient>=0.1.0 #Apache-2.0

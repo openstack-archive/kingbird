@@ -1,4 +1,4 @@
-# Copyright 2017 Ericsson AB
+# Copyright 2017 Ericsson AB.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -80,19 +80,24 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
                                                cls.resource_ids)
 
     @classmethod
-    def sync_keypair(cls, project_id, post_body):
-        response = resource_sync_client.sync_resource(cls.token, project_id,
-                                                      post_body)
+    def sync_keypair(cls, post_body):
+        response = resource_sync_client.sync_resource(
+            cls.openstack_drivers, post_body)
         return response
 
     @classmethod
-    def get_sync_list(cls, project_id, action=None):
+    def get_sync_list(cls, action=None):
         response = resource_sync_client.get_sync_job_list(
-            cls.token, project_id, action)
+            cls.openstack_drivers, action)
         return response
 
     @classmethod
-    def delete_db_entries(cls, project_id, job_id):
-        response = resource_sync_client.delete_db_entries(
-            cls.token, project_id, job_id)
+    def get_sync_detail(cls, job_id):
+        response = resource_sync_client.get_sync_job_detail(
+            cls.openstack_drivers, job_id)
         return response
+
+    @classmethod
+    def delete_db_entries(cls, job_id):
+        resource_sync_client.delete_db_entries(
+            cls.openstack_drivers, job_id)

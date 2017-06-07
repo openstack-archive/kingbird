@@ -14,14 +14,13 @@
 #    limitations under the License.
 
 import collections
-import json
-import requests
 import time
 
 from cinderclient import client as ci_client
 from keystoneclient.auth.identity import v3
 from keystoneclient import session
 from keystoneclient.v3 import client as ks_client
+from kingbirdclient.api.v1 import client as kb_client
 from neutronclient.neutron import client as nt_client
 from novaclient import client as nv_client
 from oslo_log import log as logging
@@ -38,8 +37,7 @@ NETWORK_NAME = "kb_test_network"
 SUBNET_NAME = "kb_test_subnet"
 SERVER_NAME = "kb_test_server"
 SUBNET_RANGE = "192.168.199.0/24"
-quota_api_url = "/os-quota-sets/"
-quota_class_api_url = "/os-quota-class-sets/"
+KINGBIRD_URL = CONF.kingbird.endpoint_url + CONF.kingbird.api_version
 
 LOG = logging.getLogger(__name__)
 
@@ -64,28 +62,35 @@ def get_current_session(username, password, tenant_name):
     return sess
 
 
-def get_openstack_drivers(key_client, region, project_name, user_name,
+def get_openstack_drivers(keystone_client, region, project_name, user_name,
                           password, target_project_name, target_user_name):
+    resources = dict()
     # Create Project, User and assign role to new user
-    project = key_client.projects.create(project_name,
-                                         CONF.auth.admin_domain_name)
-    user = key_client.users.create(user_name, CONF.auth.admin_domain_name,
-                                   project.id, password)
-    target_project = key_client.projects.create(target_project_name,
-                                                CONF.auth.admin_domain_name)
-    target_user = key_client.users.create(target_user_name,
-                                          CONF.auth.admin_domain_name,
-                                          target_project.id, password)
+    project = keystone_client.projects.create(project_name,
+                                              CONF.auth.admin_domain_name)
+    user = keystone_client.users.create(user_name, CONF.auth.admin_domain_name,
+                                        project.id, password)
+    target_project = keystone_client.projects.create(
+        target_project_name, CONF.auth.admin_domain_name)
+    target_user = keystone_client.users.create(target_user_name,
+                                               CONF.auth.admin_domain_name,
+                                               target_project.id, password)
     admin_role = [current_role.id for current_role in
-                  key_client.roles.list() if current_role.name == 'admin'][0]
+                  keystone_client.roles.list()
+                  if current_role.name == 'admin'][0]
     mem_role = [current_role.id for current_role in
-                key_client.roles.list()
+                keystone_client.roles.list()
                 if current_role.name == 'Member'][0]
-    key_client.roles.grant(admin_role, user=user, project=project)
-    key_client.roles.grant(mem_role, user=target_user, project=target_project)
+    keystone_client.roles.grant(admin_role, user=user, project=project)
+    keystone_client.roles.grant(mem_role, user=target_user,
+                                project=target_project)
     session = get_current_session(user_name, password, project_name)
-    new_key_client = ks_client.Client(session=session)
-    token = new_key_client.session.get_token()
+    target_session = get_current_session(target_user_name, password,
+                                         target_project_name)
+    target_keystone_client = ks_client.Client(session=target_session)
+    target_token = target_keystone_client.session.get_token()
+    new_keystone_client = ks_client.Client(session=session)
+    token = new_keystone_client.session.get_token()
     nova_client = nv_client.Client(NOVA_API_VERSION,
                                    session=session,
                                    region_name=region)
@@ -93,19 +98,32 @@ def get_openstack_drivers(key_client, region, project_name, user_name,
                                       region_name=region)
     cinder_client = ci_client.Client(CINDER_API_VERSION, session=session,
                                      region_name=region)
-    return {"user_id": user.id, "project_id": project.id, "session": session,
-            "token": token, "target_project_id": target_project.id,
-            "target_user_id": target_user.id,
-            "os_drivers": [key_client, nova_client, neutron_client,
-                           cinder_client]}
+    kingbird_client = kb_client.Client(kingbird_url=KINGBIRD_URL,
+                                       auth_token=token,
+                                       project_id=project.id)
+    dummy_kingbird_client = kb_client.Client(kingbird_url=KINGBIRD_URL,
+                                             auth_token='fake_token',
+                                             project_id=project.id)
+    resources = {"user_id": user.id, "project_id": project.id,
+                 "session": session, "token": token,
+                 "target_token": target_token,
+                 "target_project_id": target_project.id,
+                 "target_user_id": target_user.id,
+                 "os_drivers": {'keystone': keystone_client,
+                                'nova': nova_client,
+                                'neutron': neutron_client,
+                                'cinder': cinder_client,
+                                'kingbird': kingbird_client,
+                                'dummy_kb': dummy_kingbird_client}}
+    return resources
 
 
-def get_key_client(session):
+def get_keystone_client(session):
     return ks_client.Client(session=session)
 
 
 def create_instance(openstack_drivers, resource_ids, count=1):
-    nova_client = openstack_drivers[1]
+    nova_client = openstack_drivers['nova']
     server_ids = []
     image = nova_client.images.find(id=CONF.compute.image_ref)
     flavor = nova_client.flavors.find(id=resource_ids['flavor_id'])
@@ -121,75 +139,71 @@ def create_instance(openstack_drivers, resource_ids, count=1):
         raise e
 
 
-def get_urlstring_and_headers(token, project_id, api_url):
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': token,
-    }
-    url_string = CONF.kingbird.endpoint_url + CONF.kingbird.api_version + \
-        "/" + project_id + api_url
-
-    return headers, url_string
+def create_custom_kingbird_quota(openstack_drivers, project_id, new_quota):
+    kingbird_client = openstack_drivers['kingbird']
+    kwargs = new_quota
+    response = kingbird_client.quota_manager.\
+        update_global_limits(project_id, **kwargs)
+    result = {i._data: i._Limit for i in response}
+    return result
 
 
-def create_custom_kingbird_quota(token, project_id, target_project_id,
-                                 new_quota_values):
-    body = json.dumps(new_quota_values)
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_api_url)
-    url_string = url_string + target_project_id
-    response = requests.put(url_string, headers=headers, data=body)
-    return response
+def get_kingbird_quota_another_tenant(openstack_drivers, project_id):
+    kingbird_client = openstack_drivers['kingbird']
+    response = kingbird_client.quota_manager.\
+        global_limits(project_id)
+    result = {i._data: i._Limit for i in response}
+    return result
 
 
-def get_custom_kingbird_quota(token, project_id, target_project_id):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_api_url)
-    url_string = url_string + target_project_id
-    response = requests.get(url_string, headers=headers)
-    return response.text
+def get_own_kingbird_quota(token, project_id):
+    kingbird_client = kb_client.Client(kingbird_url=KINGBIRD_URL,
+                                       auth_token=token,
+                                       project_id=project_id)
+    response = kingbird_client.quota_manager.\
+        global_limits(project_id)
+    result = {i._data: i._Limit for i in response}
+    return result
 
 
-def delete_custom_kingbird_quota(token, project_id, target_project_id,
-                                 quota_to_delete=None):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_api_url)
-    url_string = url_string + target_project_id
-    if quota_to_delete:
-        body = json.dumps(quota_to_delete)
-        response = requests.delete(url_string, headers=headers, data=body)
-    else:
-        response = requests.delete(url_string, headers=headers)
-    return response.text
+def delete_custom_kingbird_quota(openstack_drivers, target_project_id):
+    kingbird_client = openstack_drivers['kingbird']
+    kingbird_client.quota_manager.delete_quota(target_project_id)
 
 
 def get_default_kingbird_quota(token, project_id):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_api_url)
-    url_string = url_string + "defaults"
-    response = requests.get(url_string, headers=headers)
-    return response.text
+    kingbird_client = kb_client.Client(kingbird_url=KINGBIRD_URL,
+                                       auth_token=token,
+                                       project_id=project_id)
+    response = kingbird_client.quota_manager.\
+        list_defaults()
+    result = {i._data: i._Limit for i in response}
+    return result
 
 
-def quota_sync_for_project(token, project_id, target_project_id):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_api_url)
-    url_string = url_string + target_project_id + "/sync"
-    response = requests.put(url_string, headers=headers)
-    return response.text
+def kingbird_create_quota_wrong_token(openstack_drivers,
+                                      project_id, new_quota):
+    kingbird_client = openstack_drivers['dummy_kb']
+    kwargs = new_quota
+    kingbird_client.quota_manager.\
+        update_global_limits(project_id, **kwargs)
 
 
-def get_quota_usage_for_project(token, project_id, target_project_id):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_api_url)
-    url_string = url_string + target_project_id + "/detail"
-    response = requests.get(url_string, headers=headers)
-    return response.text
+def quota_sync_for_project(openstack_drivers, project_id):
+    kingbird_client = openstack_drivers['kingbird']
+    kingbird_client.quota_manager.sync_quota(project_id)
 
 
-def get_regions(key_client):
+def get_quota_usage_for_project(openstack_drivers, project_id):
+    kingbird_client = openstack_drivers['kingbird']
+    data = kingbird_client.quota_manager.quota_detail(project_id)
+    response = {items._data: [items._Limit, items._Usage] for items in data}
+    return response
+
+
+def get_regions(keystone_client):
     return [current_region.id for current_region in
-            key_client.regions.list()]
+            keystone_client.regions.list()]
 
 
 def delete_resource_with_timeout(service_client, resource_ids, service_type):
@@ -228,31 +242,31 @@ def delete_resource_with_timeout(service_client, resource_ids, service_type):
 
 def delete_instance(openstack_drivers, resource_ids):
     delete_resource_with_timeout(
-        openstack_drivers[1],
+        openstack_drivers['nova'],
         resource_ids['server_ids'], 'nova')
     resource_ids['server_ids'] = []
 
 
 def delete_volume(openstack_drivers, resource_ids):
     delete_resource_with_timeout(
-        openstack_drivers[3],
+        openstack_drivers['cinder'],
         resource_ids['volume_ids'], 'cinder')
     resource_ids['volume_ids'] = []
 
 
 def resource_cleanup(openstack_drivers, resource_ids):
-    key_client = openstack_drivers[0]
-    nova_client = openstack_drivers[1]
-    neutron_client = openstack_drivers[2]
+    keystone_client = openstack_drivers['keystone']
+    nova_client = openstack_drivers['nova']
+    neutron_client = openstack_drivers['neutron']
     delete_instance(openstack_drivers, resource_ids)
     delete_volume(openstack_drivers, resource_ids)
     nova_client.flavors.delete(resource_ids['flavor_id'])
     neutron_client.delete_subnet(resource_ids['subnet_id'])
     neutron_client.delete_network(resource_ids['network_id'])
-    key_client.projects.delete(resource_ids['project_id'])
-    key_client.projects.delete(resource_ids['target_project_id'])
-    key_client.users.delete(resource_ids['user_id'])
-    key_client.users.delete(resource_ids['target_user_id'])
+    keystone_client.projects.delete(resource_ids['project_id'])
+    keystone_client.projects.delete(resource_ids['target_project_id'])
+    keystone_client.users.delete(resource_ids['user_id'])
+    keystone_client.users.delete(resource_ids['target_user_id'])
 
 
 def get_usage_from_os_client(session, regions, project_id):
@@ -311,9 +325,9 @@ def get_actual_limits(session, regions, project_id):
 
 
 def create_resources(openstack_drivers):
-    nova_client = openstack_drivers[1]
-    neutron_client = openstack_drivers[2]
-    cinder_client = openstack_drivers[3]
+    nova_client = openstack_drivers['nova']
+    neutron_client = openstack_drivers['neutron']
+    cinder_client = openstack_drivers['cinder']
     volume = cinder_client.volumes.create(VOLUME_SIZE,
                                           name=VOLUME_NAME)
     flavor = nova_client.flavors.create(
@@ -347,26 +361,24 @@ def set_default_quota(session, regions, project_id, **quota_to_set):
         nova_client.quotas.update(project_id, **quota_to_set)
 
 
-def update_quota_for_class(token, class_name, project_id, new_quota_values):
-    body = json.dumps(new_quota_values)
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_class_api_url)
-    url_string = url_string + class_name
-    response = requests.put(url_string, headers=headers, data=body)
-    return response.text
+def update_quota_for_class(openstack_drivers, class_name, new_quota_values):
+    kingbird_client = openstack_drivers['kingbird']
+    kwargs = new_quota_values
+    response = kingbird_client.quota_class_manager.\
+        quota_class_update(class_name, **kwargs)
+    result = {i._data: i._Limit for i in response}
+    return result
 
 
-def get_quota_for_class(token, class_name, project_id):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_class_api_url)
-    url_string = url_string + class_name
-    response = requests.get(url_string, headers=headers)
-    return response.text
+def get_quota_for_class(openstack_drivers, class_name):
+    kingbird_client = openstack_drivers['kingbird']
+    response = kingbird_client.quota_class_manager.\
+        list_quota_class(class_name)
+    result = {i._data: i._Limit for i in response}
+    return result
 
 
-def delete_quota_for_class(token, class_name, project_id):
-    headers, url_string = get_urlstring_and_headers(token, project_id,
-                                                    quota_class_api_url)
-    url_string = url_string + class_name
-    response = requests.delete(url_string, headers=headers)
-    return response.text
+def delete_quota_for_class(openstack_drivers, class_name):
+    kingbird_client = openstack_drivers['kingbird']
+    kingbird_client.quota_class_manager.\
+        delete_quota_class(class_name)

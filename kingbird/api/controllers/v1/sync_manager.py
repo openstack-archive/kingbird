@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 
@@ -24,13 +23,12 @@ from pecan import request
 
 from kingbird.api.controllers import restcomm
 from kingbird.common import consts
+from kingbird.common.endpoint_cache import EndpointCache
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.db.sqlalchemy import api as db_api
-from kingbird.drivers.openstack import sdk
+from kingbird.drivers.openstack.nova_v2 import NovaClient
 from kingbird.rpc import client as rpc_client
-
-CONF = cfg.CONF
 
 
 LOG = logging.getLogger(__name__)
@@ -57,6 +55,13 @@ class ResourceSyncController(object):
 
     @index.when(method='GET', template='json')
     def get(self, project, action=None):
+        """Get details about Sync Job.
+
+        :param project: It's UUID of the project.
+        :param action: Optional. If provided, it can be
+            'active' to get the list of active jobs.
+            'job-id' to get the details of a job.
+        """
         context = restcomm.extract_context_from_environ()
         if not uuidutils.is_uuid_like(project) or project != context.project:
             pecan.abort(400, _('Invalid request URL'))
@@ -75,32 +80,38 @@ class ResourceSyncController(object):
 
     @index.when(method='POST', template='json')
     def post(self, project):
+        """Sync resources present in one region to another region.
+
+        :param project: It's UUID of the project.
+        """
         context = restcomm.extract_context_from_environ()
         if not uuidutils.is_uuid_like(project) or project != context.project:
             pecan.abort(400, _('Invalid request URL'))
-        if not request.body:
-            pecan.abort(400, _('Body required'))
         payload = eval(request.body)
+        if not payload:
+            pecan.abort(400, _('Body required'))
         payload = payload.get('resource_set')
         if not payload:
             pecan.abort(400, _('resource_set required'))
+        resource_type = payload.get('resource_type')
         target_regions = payload.get('target')
         if not target_regions or not isinstance(target_regions, list):
             pecan.abort(400, _('Target regions required'))
         source_region = payload.get('source')
         if not source_region or not isinstance(source_region, str):
             pecan.abort(400, _('Source region required'))
-        if payload.get('resource_type') == consts.KEYPAIR:
-            user_id = context.user
-            source_keys = payload.get('resources')
-            if not source_keys:
-                pecan.abort(400, _('Source keypairs required'))
+        source_resources = payload.get('resources')
+        if not source_resources:
+            pecan.abort(400, _('Source resources required'))
+        if resource_type == consts.KEYPAIR:
+            session = EndpointCache().get_session_from_token(
+                context.auth_token, context.project)
             # Create Source Region object
-            source_os_client = sdk.OpenStackDriver(source_region)
+            source_nova_client = NovaClient(source_region, session)
             # Check for keypairs in Source Region
-            for source_keypair in source_keys:
-                source_keypair = source_os_client.get_keypairs(user_id,
-                                                               source_keypair)
+            for source_keypair in source_resources:
+                source_keypair = source_nova_client.\
+                    get_keypairs(source_keypair)
                 if not source_keypair:
                     pecan.abort(404)
             job_id = uuidutils.generate_uuid()
@@ -111,20 +122,25 @@ class ResourceSyncController(object):
                 pecan.abort(404, _('Job not found'))
             # Insert into the child table
             for region in target_regions:
-                for keypair in source_keys:
+                for keypair in source_resources:
                     try:
                         db_api.resource_sync_create(context, result,
                                                     region, source_region,
                                                     keypair, consts.KEYPAIR)
                     except exceptions.JobNotFound:
                         pecan.abort(404, _('Job not found'))
-            return self._keypair_sync(job_id, user_id, payload, context,
-                                      result)
+            return self._keypair_sync(job_id, payload, context, result)
         else:
             pecan.abort(400, _('Bad resource_type'))
 
     @index.when(method='delete', template='json')
     def delete(self, project, job_id):
+        """Delete the database entries of a given job_id.
+
+        :param project: It's UUID of the project.
+        :param job_id: ID of the job for which the database entries
+            have to be deleted.
+        """
         context = restcomm.extract_context_from_environ()
         if not uuidutils.is_uuid_like(project) or project != context.project:
             pecan.abort(400, _('Invalid request URL'))
@@ -144,9 +160,16 @@ class ResourceSyncController(object):
         else:
             pecan.abort(400, _('Bad request'))
 
-    def _keypair_sync(self, job_id, user_id, payload, context, result):
-        self.rpc_client.keypair_sync_for_user(context, job_id, payload,
-                                              user_id)
+    def _keypair_sync(self, job_id, payload, context, result):
+        """Make an rpc call to kb-engine.
+
+        :param job_id: ID of the job to update values in database based on
+            the job_id.
+        :param payload: payload object.
+        :param context: context of the request.
+        :param result: Result object to return an output.
+        """
+        self.rpc_client.keypair_sync_for_user(context, job_id, payload)
 
         return {'job_status': {'id': result.id, 'status': result.sync_status,
                                'created_at': result.created_at}}

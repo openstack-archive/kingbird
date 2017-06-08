@@ -26,21 +26,23 @@ API_VERSION = '2.37'
 
 
 class NovaClient(base.DriverBase):
-    '''Nova V2.37 driver.'''
-    def __init__(self, region, disabled_quotas, session):
+    """Nova V2.37 driver."""
+
+    def __init__(self, region, session, disabled_quotas=None):
         try:
             self.nova_client = client.Client(API_VERSION,
                                              session=session,
                                              region_name=region)
-            self.enabled_quotas = list(set(consts.NOVA_QUOTA_FIELDS) -
-                                       set(disabled_quotas))
-            self.no_neutron = True if 'floatingips' in self.enabled_quotas \
-                or 'fixedips' in self.enabled_quotas else False
+            if disabled_quotas:
+                self.enabled_quotas = list(set(consts.NOVA_QUOTA_FIELDS) -
+                                           set(disabled_quotas))
+                self.no_neutron = True if 'floatingips' in self.enabled_quotas \
+                    or 'fixedips' in self.enabled_quotas else False
         except exceptions.ServiceUnavailable:
             raise
 
     def get_resource_usages(self, project_id):
-        """Collect resource usages for a given project
+        """Collect resource usages for a given project.
 
         :params: project_id
         :return: dictionary of corresponding resources with its usage
@@ -69,7 +71,7 @@ class NovaClient(base.DriverBase):
             raise
 
     def update_quota_limits(self, project_id, **new_quota):
-        """Update quota limits for a given project
+        """Update quota limits for a given project.
 
         :params: project_id, dictionary with the quota limits to update
         :return: Nothing
@@ -88,7 +90,7 @@ class NovaClient(base.DriverBase):
             raise
 
     def delete_quota_limits(self, project_id):
-        """Delete/Reset quota limits for a given project
+        """Delete/Reset quota limits for a given project.
 
         :params: project_id
         :return: Nothing
@@ -98,14 +100,14 @@ class NovaClient(base.DriverBase):
         except exceptions.InternalError:
             raise
 
-    def get_keypairs(self, user_id, res_id):
-        """Display keypair of the specified User
+    def get_keypairs(self, res_id):
+        """Display keypair of the specified User.
 
-        :params: user_id and resource_identifier
+        :params: resource_identifier
         :return: Keypair
         """
         try:
-            keypair = self.nova_client.keypairs.get(res_id, user_id)
+            keypair = self.nova_client.keypairs.get(res_id)
             LOG.info("Source Keypair: %s", keypair.name)
             return keypair
 
@@ -113,15 +115,15 @@ class NovaClient(base.DriverBase):
             LOG.error('Exception Occurred: %s', exception.message)
             pass
 
-    def create_keypairs(self, force, keypair, user_id):
-        """Create keypair for the specified User
+    def create_keypairs(self, force, keypair):
+        """Create keypair for the specified User.
 
-        :params: user_id, keypair, force
+        :params: keypair, force
         :return: Creates a Keypair
         """
         if force:
             try:
-                self.nova_client.keypairs.delete(keypair, user_id)
+                self.nova_client.keypairs.delete(keypair)
                 LOG.info("Deleted Keypair: %s", keypair.name)
             except Exception as exception:
                 LOG.error('Exception Occurred: %s', exception.message)
@@ -129,5 +131,4 @@ class NovaClient(base.DriverBase):
             LOG.info("Created Keypair: %s", keypair.name)
         return self.nova_client.keypairs. \
             create(keypair.name,
-                   user_id=user_id,
                    public_key=keypair.public_key)

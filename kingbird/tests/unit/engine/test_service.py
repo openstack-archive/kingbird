@@ -53,10 +53,15 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_qm()
         self.assertIsNotNone(self.service_obj.qm)
 
-    @mock.patch.object(service, 'SyncManager')
-    def test_init_sm(self, mock_resource_manager):
-        self.service_obj.init_sm()
-        self.assertIsNotNone(self.service_obj.sm)
+    @mock.patch.object(service, 'KeypairSyncManager')
+    def test_init_ksm(self, mock_keypair_sync_manager):
+        self.service_obj.init_ksm()
+        self.assertIsNotNone(self.service_obj.ksm)
+
+    @mock.patch.object(service, 'ImageSyncManager')
+    def test_init_ism(self, mock_image_sync_manager):
+        self.service_obj.init_ism()
+        self.assertIsNotNone(self.service_obj.ism)
 
     @mock.patch.object(service.EngineService, 'service_registry_cleanup')
     @mock.patch.object(service, 'QuotaManager')
@@ -110,11 +115,19 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.stop()
         mock_rpc.get_rpc_server().stop.assert_called_once_with()
 
-    @mock.patch.object(service, 'SyncManager')
-    def test_resource_sync_for_user(self, mock_sync_manager):
+    @mock.patch.object(service, 'KeypairSyncManager')
+    def test_keypair_sync_for_user(self, mock_keypair_sync_manager):
         self.service_obj.init_tgm()
-        self.service_obj.init_sm()
+        self.service_obj.init_ksm()
         self.service_obj.keypair_sync_for_user(
-            self.context, self.job_id, self.payload,)
-        mock_sync_manager().keypair_sync_for_user.\
+            self.context, self.job_id, self.payload)
+        mock_keypair_sync_manager().resource_sync.\
+            assert_called_once_with(self.context, self.job_id, self.payload)
+
+    @mock.patch.object(service, 'ImageSyncManager')
+    def test_image_sync(self, mock_image_sync_manager):
+        self.service_obj.init_tgm()
+        self.service_obj.init_ism()
+        self.service_obj.image_sync(self.context, self.job_id, self.payload)
+        mock_image_sync_manager().resource_sync.\
             assert_called_once_with(self.context, self.job_id, self.payload)

@@ -16,8 +16,12 @@
 from mock import patch
 
 from kingbird.drivers.openstack.glance_v2 import GlanceClient
+from kingbird.drivers.openstack.glance_v2 import GlanceUpload
 from kingbird.tests import base
 from kingbird.tests import utils
+
+FAKE_ITERATOR = iter([1, 2, 3])
+FAKE_ID = utils.UUID4
 
 
 class FakeService(object):
@@ -26,6 +30,20 @@ class FakeService(object):
     def __init__(self, type_service, name, id):
         self.type = type_service
         self.name = name
+        self.id = id
+
+
+class FakeImage(object):
+    """Fake service class used to test service enable testcase."""
+
+    def __init__(self, min_ram, protected, min_disk, name, container_format,
+                 disk_format, id):
+        self.min_ram = min_ram
+        self.protected = protected
+        self.min_disk = min_disk
+        self.name = name
+        self.container_format = container_format
+        self.disk_format = disk_format
         self.id = id
 
 
@@ -44,28 +62,86 @@ class TestGlanceClient(base.KingbirdTestCase):
         super(TestGlanceClient, self).setUp()
         self.ctx = utils.dummy_context()
 
-    @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
-    @patch('kingbird.drivers.openstack.glance_v2.Client')
-    def test_init(self, mock_glance_client, mock_keystone_client):
-        """Mock init method of glance."""
+    def common_init(self, mock_glance_client, mock_keystone_client):
+        """Keep commonly used variables."""
         fake_service = FakeService('image', 'fake_type', 'fake_id')
         fake_endpoint = FakeEndpoint('fake_url', fake_service.id,
                                      'fake_region', 'public')
         mock_keystone_client().services_list = [fake_service]
         mock_keystone_client().endpoints_list = [fake_endpoint]
-        GlanceClient('fake_region', self.ctx)
+        return GlanceClient('fake_region', self.ctx)
+
+    @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
+    @patch('kingbird.drivers.openstack.glance_v2.Client')
+    def test_init(self, mock_glance_client, mock_keystone_client):
+        """Test init method of glance."""
+        self.common_init(mock_glance_client, mock_keystone_client)
         self.assertEqual(1, mock_glance_client.call_count)
+
+    @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
+    @patch('kingbird.drivers.openstack.glance_v2.Client')
+    def test_get_image(self, mock_glance_client, mock_keystone_client):
+        """Test get_image method of glance."""
+        Glance_client = self.common_init(mock_glance_client,
+                                         mock_keystone_client)
+        Glance_client.get_image('fake_resource')
+        mock_glance_client().images.get.\
+            assert_called_once_with('fake_resource')
 
     @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
     @patch('kingbird.drivers.openstack.glance_v2.Client')
     def test_check_image(self, mock_glance_client, mock_keystone_client):
         """Test get_image method of glance."""
-        fake_service = FakeService('image', 'fake_type', 'fake_id')
-        fake_endpoint = FakeEndpoint('fake_url', fake_service.id,
-                                     'fake_region', 'public')
-        mock_keystone_client().services_list = [fake_service]
-        mock_keystone_client().endpoints_list = [fake_endpoint]
-        glance_client = GlanceClient('fake_region', self.ctx)
-        glance_client.check_image('fake_resource')
+        Glance_client = self.common_init(mock_glance_client,
+                                         mock_keystone_client)
+        Glance_client.check_image('fake_resource')
         mock_glance_client().images.get.\
             assert_called_once_with('fake_resource')
+
+    @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
+    @patch('kingbird.drivers.openstack.glance_v2.Client')
+    def test_get_image_data(self, mock_glance_client, mock_keystone_client):
+        """Test get_image_data method of glance."""
+        Glance_client = self.common_init(mock_glance_client,
+                                         mock_keystone_client)
+        Glance_client.get_image_data('fake_resource')
+        mock_glance_client().images.data.\
+            assert_called_once_with('fake_resource')
+
+    @patch('kingbird.drivers.openstack.glance_v2.KeystoneClient')
+    @patch('kingbird.drivers.openstack.glance_v2.Client')
+    def test_get_image_create(self, mock_glance_client, mock_keystone_client):
+        """Test create_image method of glance."""
+        Glance_client = self.common_init(mock_glance_client,
+                                         mock_keystone_client)
+        fake_image = FakeImage(0, 'False', 0, 'fake_image', 'bare', 'qcow2',
+                               FAKE_ID)
+        fake_kwargs = {
+            "min_ram": fake_image.min_ram,
+            "protected": fake_image.protected,
+            "min_disk": fake_image.min_disk,
+            "name": fake_image.name,
+            "container_format": fake_image.container_format,
+            "disk_format": fake_image.disk_format
+            }
+        Glance_client.create_image(fake_image)
+        mock_glance_client().images.create.\
+            assert_called_once_with(**fake_kwargs)
+
+
+class TestGlanceUpload(base.KingbirdTestCase):
+
+    def test_init(self):
+        """Test init method of GlanceUpload."""
+        glance_upload = GlanceUpload(FAKE_ITERATOR)
+        self.assertEqual(glance_upload.received, FAKE_ITERATOR)
+
+    def test_read(self):
+        """Test read methos of GlanceUpload.
+
+        We send 65536 even though we don't use it.
+        Because the read method in GlanceUpload is the replacement
+        of read method in glance.
+        """
+        glance_upload = GlanceUpload(FAKE_ITERATOR).read(65536)
+        self.assertEqual(glance_upload, 1)

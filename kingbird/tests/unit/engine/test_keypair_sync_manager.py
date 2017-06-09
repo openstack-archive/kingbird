@@ -13,7 +13,7 @@
 # under the License.
 import mock
 
-from kingbird.engine import sync_manager
+from kingbird.engine import keypair_sync_manager
 from kingbird.tests import base
 from kingbird.tests import utils
 
@@ -32,16 +32,17 @@ class FakeKeypair(object):
         self.public_key = public_key
 
 
-class TestSyncManager(base.KingbirdTestCase):
+class TestKeypairSyncManager(base.KingbirdTestCase):
     def setUp(self):
-        super(TestSyncManager, self).setUp()
+        super(TestKeypairSyncManager, self).setUp()
         self.ctxt = utils.dummy_context()
 
-    @mock.patch.object(sync_manager, 'NovaClient')
-    @mock.patch.object(sync_manager, 'EndpointCache')
-    @mock.patch.object(sync_manager.SyncManager, '_create_keypairs')
-    @mock.patch.object(sync_manager, 'db_api')
-    def test_keypair_sync_force_false(self, mock_db_api, mock_create_keypair,
+    @mock.patch.object(keypair_sync_manager, 'NovaClient')
+    @mock.patch.object(keypair_sync_manager, 'EndpointCache')
+    @mock.patch.object(keypair_sync_manager.KeypairSyncManager,
+                       'create_resources')
+    @mock.patch.object(keypair_sync_manager, 'db_api')
+    def test_keypair_sync_force_false(self, mock_db_api, mock_create_resource,
                                       mock_endpoint_cache, mock_nova):
         payload = dict()
         payload['target'] = [FAKE_TARGET_REGION]
@@ -52,17 +53,18 @@ class TestSyncManager(base.KingbirdTestCase):
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_keypairs.return_value = fake_key
-        sm = sync_manager.SyncManager()
-        sm.keypair_sync_for_user(self.ctxt, FAKE_JOB_ID, payload)
-        mock_create_keypair.assert_called_once_with(
+        ksm = keypair_sync_manager.KeypairSyncManager()
+        ksm.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        mock_create_resource.assert_called_once_with(
             FAKE_JOB_ID, payload['force'], payload['target'][0], fake_key,
             'fake_session', self.ctxt)
 
-    @mock.patch.object(sync_manager, 'NovaClient')
-    @mock.patch.object(sync_manager, 'EndpointCache')
-    @mock.patch.object(sync_manager.SyncManager, '_create_keypairs')
-    @mock.patch.object(sync_manager, 'db_api')
-    def test_keypair_sync_force_true(self, mock_db_api, mock_create_keypair,
+    @mock.patch.object(keypair_sync_manager, 'NovaClient')
+    @mock.patch.object(keypair_sync_manager, 'EndpointCache')
+    @mock.patch.object(keypair_sync_manager.KeypairSyncManager,
+                       'create_resources')
+    @mock.patch.object(keypair_sync_manager, 'db_api')
+    def test_keypair_sync_force_true(self, mock_db_api, mock_create_resource,
                                      mock_endpoint_cache, mock_nova):
         payload = dict()
         payload['target'] = [FAKE_TARGET_REGION]
@@ -73,18 +75,18 @@ class TestSyncManager(base.KingbirdTestCase):
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_keypairs.return_value = fake_key
-        sm = sync_manager.SyncManager()
-        sm.keypair_sync_for_user(self.ctxt, FAKE_JOB_ID, payload)
-        mock_create_keypair.assert_called_once_with(
+        ksm = keypair_sync_manager.KeypairSyncManager()
+        ksm.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        mock_create_resource.assert_called_once_with(
             FAKE_JOB_ID, payload['force'], payload['target'][0], fake_key,
             'fake_session', self.ctxt)
 
-    @mock.patch.object(sync_manager, 'NovaClient')
-    @mock.patch.object(sync_manager, 'db_api')
+    @mock.patch.object(keypair_sync_manager, 'NovaClient')
+    @mock.patch.object(keypair_sync_manager, 'db_api')
     def test_create_keypair(self, mock_db_api, mock_nova):
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        sm = sync_manager.SyncManager()
-        sm._create_keypairs(FAKE_JOB_ID, DEFAULT_FORCE, FAKE_TARGET_REGION,
-                            fake_key, 'fake_session', self.ctxt)
+        ksm = keypair_sync_manager.KeypairSyncManager()
+        ksm.create_resources(FAKE_JOB_ID, DEFAULT_FORCE, FAKE_TARGET_REGION,
+                             fake_key, 'fake_session', self.ctxt)
         mock_nova().create_keypairs.\
             assert_called_once_with(DEFAULT_FORCE, fake_key)

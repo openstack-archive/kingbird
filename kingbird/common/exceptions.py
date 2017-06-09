@@ -97,6 +97,14 @@ class JobNotFound(NotFound):
     message = _("Job doesn't exist.")
 
 
+class DependentImageNotFound(NotFound):
+    message = _("Dependent image doesn't exist.")
+
+
+class ImageFormatNotSupported(KingbirdException):
+    message = _("An invalid version was provided")
+
+
 class ConnectionRefused(KingbirdException):
     message = _("Connection to the service endpoint is refused")
 

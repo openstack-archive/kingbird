@@ -23,9 +23,10 @@ from kingbird.common import context
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.common import messaging as rpc_messaging
+from kingbird.engine.image_sync_manager import ImageSyncManager
+from kingbird.engine.keypair_sync_manager import KeypairSyncManager
 from kingbird.engine.quota_manager import QuotaManager
 from kingbird.engine import scheduler
-from kingbird.engine.sync_manager import SyncManager
 from kingbird.objects import service as service_obj
 from oslo_service import service
 from oslo_utils import timeutils
@@ -49,14 +50,14 @@ def request_context(func):
 
 
 class EngineService(service.Service):
-    '''Lifecycle manager for a running service engine.
+    """Lifecycle manager for a running service engine.
 
     - All the methods in here are called from the RPC client.
     - If a RPC call does not have a corresponding method here, an exceptions
       will be thrown.
     - Arguments to these calls are added dynamically and will be treated as
       keyword arguments by the RPC client.
-    '''
+    """
 
     def __init__(self, host, topic, manager=None):
 
@@ -73,7 +74,8 @@ class EngineService(service.Service):
         self.target = None
         self._rpc_server = None
         self.qm = None
-        self.sm = None
+        self.ksm = None
+        self.ism = None
 
     def init_tgm(self):
         self.TG = scheduler.ThreadGroupManager()
@@ -81,14 +83,18 @@ class EngineService(service.Service):
     def init_qm(self):
         self.qm = QuotaManager()
 
-    def init_sm(self):
-        self.sm = SyncManager()
+    def init_ksm(self):
+        self.ksm = KeypairSyncManager()
+
+    def init_ism(self):
+        self.ism = ImageSyncManager()
 
     def start(self):
         self.engine_id = uuidutils.generate_uuid()
         self.init_tgm()
         self.init_qm()
-        self.init_sm()
+        self.init_ksm()
+        self.init_ism()
         target = oslo_messaging.Target(version=self.rpc_api_version,
                                        server=self.host,
                                        topic=self.topic)
@@ -156,7 +162,12 @@ class EngineService(service.Service):
     @request_context
     def keypair_sync_for_user(self, ctxt, job_id, payload):
         # Keypair Sync for a user, will be triggered by KB-API
-        self.sm.keypair_sync_for_user(ctxt, job_id, payload)
+        self.ksm.resource_sync(ctxt, job_id, payload)
+
+    @request_context
+    def image_sync(self, ctxt, job_id, payload):
+        # Image Sync triggered by KB_API.
+        self.ism.resource_sync(ctxt, job_id, payload)
 
     def _stop_rpc_server(self):
         # Stop RPC connection to prevent new requests

@@ -23,8 +23,16 @@ sys.path.insert(0, os.path.abspath('../..'))
 extensions = [
     'sphinx.ext.autodoc',
     #'sphinx.ext.intersphinx',
-    'oslosphinx'
+    'openstackdocstheme'
 ]
+
+# openstackdocstheme options
+repository_name = 'openstack/kingbird'
+bug_project = 'kingbird'
+bug_tag = ''
+
+# Must set this variable to include year, month, day, hours, and minutes.
+html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # autodoc generation is a bit aggressive and a nuisance when doing heavy
 # text edit cycles.

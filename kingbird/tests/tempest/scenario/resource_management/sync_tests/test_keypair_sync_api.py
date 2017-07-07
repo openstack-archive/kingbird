@@ -1,4 +1,4 @@
-# Copyright 2017 Ericsson AB
+# Copyright 2017 Ericsson AB.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,222 +13,167 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from kingbird.tests.tempest.scenario.resource_management \
-    import resource_sync_client
-from kingbird.tests.tempest.scenario.resource_management. \
-    sync_tests import base
-from kingbird.tests.tempest.scenario import consts
-from kingbird.tests import utils
+import kingbirdclient
 
-from novaclient import client as nv_client
+from tempest.lib import decorators
+
+from kingbird.tests.tempest.scenario import consts
+from kingbird.tests.tempest.scenario.resource_management.sync_tests \
+    import base
+from kingbird.tests import utils
 
 FORCE = "True"
 DEFAULT_FORCE = "False"
 
 
-class KingbirdKPTest(base.BaseKingbirdTest):
+class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
+                              base.BaseKingbirdClass):
 
-    @classmethod
-    def setup_clients(self):
-        super(KingbirdKPTest, self).setup_clients()
-
-    def tearDown(self):
-        super(KingbirdKPTest, self).tearDown()
-
-    @classmethod
-    def resource_cleanup(self):
-        super(KingbirdKPTest, self).resource_cleanup()
-        self.delete_keypairs()
-        self.delete_resources()
-
-    @classmethod
-    def resource_setup(self):
-        super(KingbirdKPTest, self).resource_setup()
-        self.create_resources()
-        self.create_keypairs()
-
-    @classmethod
-    def setup_credentials(self):
-        super(KingbirdKPTest, self).setup_credentials()
-        self.session = resource_sync_client.get_session()
-        self.key_client = resource_sync_client.\
-            get_keystone_client(self.session)
-        self.regions = resource_sync_client.get_regions(self.key_client)
-
-    def _check_job_status(self):
-        # Wait until the status of the job is not "IN_PROGRESS"
-        job_list_resp = self.get_sync_list(self.resource_ids["project_id"])
-        status = job_list_resp.json().get('job_set')[0].get('sync_status')
-        return status != consts.JOB_PROGRESS
-
-    def _sync_job_create(self, force):
-        body = {"resource_set": {"resource_type": consts.KEYPAIR_RESOURCE_TYPE,
-                                 "resources": self.resource_ids["keypairs"],
-                                 "source": self.regions[0], "force": force,
-                                 "target": self.regions[1:]}}
-        response = self.sync_keypair(self.resource_ids["project_id"], body)
-        return response
-
-    def _delete_entries_in_db(self, project, job):
-        response = self.delete_db_entries(self.resource_ids["project_id"], job)
-        return response
-
-    def test_keypair_sync(self):
-        create_response = self._sync_job_create(force=FORCE)
-        job_id = create_response.json().get('job_status').get('id')
-        self.assertEqual(create_response.status_code, 200)
+    @decorators.idempotent_id('5024d38b-a46a-4ebb-84be-40c9929eb864')
+    def test_kingbird_keypair_sync(self):
+        # Keypairs created should be available in the response list
+        # Create 2 keypairs:
+        job_details = self._keypair_sync_job_create(FORCE)
         utils.wait_until_true(
             lambda: self._check_job_status(),
-            exception=RuntimeError("Timed out waiting for job %s " % job_id))
-        target_regions = self.regions[1:]
-        for region in target_regions:
-            for keypair in self.resource_ids["keypairs"]:
-                nova_client = nv_client.Client(
-                    self.resource_ids["nova_version"], session=self.session,
-                    region_name=region)
-                source_keypair = nova_client.keypairs.get(
-                    keypair, self.resource_ids["user_id"])
-                self.assertEqual(source_keypair.name, keypair)
-        # Clean_up the database entries
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response, 200)
+            exception=RuntimeError("Timed out waiting for job %s " %
+                                   job_details['job_id']))
+        # Check for resources in target_regions
+        self._check_keypairs_in_target_region(job_details['target'],
+                                              job_details['keys'])
+        # Clean_up the database entries and resources
+        self.delete_db_entries(job_details['job_id'])
+        self._cleanup_resources(job_details['keys'], job_details['target'],
+                                self.client.user_id)
 
-    def test_get_sync_list(self):
-        create_response = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response.status_code, 200)
-        job_id = create_response.json().get('job_status').get('id')
+    @decorators.idempotent_id('8eeb04d1-6371-4834-b2e1-0d2dbed98cd5')
+    def test_get_kingbird_sync_list(self):
+        job_details = self._keypair_sync_job_create(FORCE)
         utils.wait_until_true(
             lambda: self._check_job_status(),
-            exception=RuntimeError("Timed out waiting for job %s " % job_id))
-        job_list_resp = self.get_sync_list(self.resource_ids["project_id"])
-        self.assertEqual(job_list_resp.status_code, 200)
-        # Clean_up the database entries
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response, 200)
+            exception=RuntimeError("Timed out waiting for job %s " %
+                                   job_details['job_id']))
+        job_list_resp = self.get_sync_job_list()
+        self.assertEqual(job_list_resp['job_set'][0]['id'],
+                         job_details['job_id'])
+        # Clean_up the database entries and resources
+        self.delete_db_entries(job_details['job_id'])
+        self._cleanup_resources(job_details['keys'], job_details['target'],
+                                self.client.user_id)
 
+    @decorators.idempotent_id('fed7e0b3-0d47-4729-9959-8b6b14230f48')
     def test_get_sync_job_details(self):
-        create_response = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response.status_code, 200)
-        job_id = create_response.json().get('job_status').get('id')
+        job_details = self._keypair_sync_job_create(FORCE)
         utils.wait_until_true(
             lambda: self._check_job_status(),
-            exception=RuntimeError("Timed out waiting for job %s " % job_id))
-        job_list_resp = self.get_sync_list(self.resource_ids["project_id"],
-                                           job_id)
-        self.assertEqual(job_list_resp.status_code, 200)
+            exception=RuntimeError("Timed out waiting for job %s " %
+                                   job_details['job_id']))
+        job_list_resp = self.get_sync_job_detail(job_details['job_id'])
+        key_list = job_details['keys']
+        for i in range(len(key_list)):
+            for j in range(len(job_list_resp.get('job_set'))):
+                if key_list[i] in job_list_resp.get('job_set')[j].values():
+                    self.assertEqual(
+                        job_list_resp.get('job_set')[j].get('resource'),
+                        key_list[i])
         self.assertEqual(
-            job_list_resp.json().get('job_set')[0].get('resource'),
-            self.resource_ids["keypairs"][0])
-        self.assertEqual(
-            job_list_resp.json().get('job_set')[1].get('resource'),
-            self.resource_ids["keypairs"][1])
-        self.assertEqual(
-            job_list_resp.json().get('job_set')[0].get('resource_type'),
+            job_list_resp.get('job_set')[0].get('resource_type'),
             consts.KEYPAIR_RESOURCE_TYPE)
         # Clean_up the database entries
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response, 200)
+        self.delete_db_entries(job_details['job_id'])
+        self._cleanup_resources(job_details['keys'], job_details['target'],
+                                self.client.user_id)
 
+    @decorators.idempotent_id('f5701f6a-183b-41fe-b0ab-e0ddef3fbd86')
     def test_get_active_jobs(self):
-        create_response = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response.status_code, 200)
-        job_id = create_response.json().get('job_status').get('id')
-        active_job = self.get_sync_list(self.resource_ids["project_id"],
-                                        consts.JOB_ACTIVE)
-        status = active_job.json().get('job_set')[0].get('sync_status')
-        self.assertEqual(active_job.status_code, 200)
+        job_details = self._keypair_sync_job_create(FORCE)
+        active_job = self.get_sync_job_list(consts.JOB_ACTIVE)
+        status = active_job.get('job_set')[0].get('sync_status')
         self.assertEqual(status, consts.JOB_PROGRESS)
         utils.wait_until_true(
             lambda: self._check_job_status(),
-            exception=RuntimeError("Timed out waiting for job %s " % job_id))
+            exception=RuntimeError("Timed out waiting for job %s " %
+                                   job_details['job_id']))
         # Clean_up the database entries
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response, 200)
+        self.delete_db_entries(job_details['job_id'])
+        self._cleanup_resources(job_details['keys'], job_details['target'],
+                                self.client.user_id)
 
+    @decorators.idempotent_id('9e3fd15b-e170-4fa6-877c-ad4c22a137af')
     def test_delete_active_jobs(self):
-        create_response = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response.status_code, 200)
-        job_id = create_response.json().get('job_status').get('id')
-        response = self._delete_entries_in_db(self.resource_ids["project_id"],
-                                              job_id)
+        job_details = self._keypair_sync_job_create(FORCE)
+        self.assertRaisesRegexp(kingbirdclient.exceptions.APIException,
+                                "406 *",
+                                self.delete_db_entries,
+                                job_details['job_id'])
         # Actual result when we try and delete an active_job
-        self.assertEqual(response, 406)
         # Clean_up the database entries
         utils.wait_until_true(
             lambda: self._check_job_status(),
-            exception=RuntimeError("Timed out waiting for job %s " % job_id))
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response, 200)
+            exception=RuntimeError("Timed out waiting for job %s " %
+                                   job_details['job_id']))
+        # Clean_up the database entries
+        self.delete_db_entries(job_details['job_id'])
+        self._cleanup_resources(job_details['keys'], job_details['target'],
+                                self.client.user_id)
 
+    @decorators.idempotent_id('adf565b1-c076-4273-b7d2-305cc144d0e2')
     def test_delete_already_deleted_job(self):
-        create_response = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response.status_code, 200)
-        job_id = create_response.json().get('job_status').get('id')
+        job_details = self._keypair_sync_job_create(FORCE)
         # Clean_up the database entries
         utils.wait_until_true(
             lambda: self._check_job_status(),
-            exception=RuntimeError("Timed out waiting for job %s " % job_id))
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response, 200)
-        delete_response2 = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id)
-        self.assertEqual(delete_response2, 404)
+            exception=RuntimeError("Timed out waiting for job %s " %
+                                   job_details['job_id']))
+        self.delete_db_entries(job_details['job_id'])
+        self.assertRaisesRegexp(kingbirdclient.exceptions.APIException,
+                                "404 *",
+                                self.delete_db_entries, job_details['job_id'])
+        self._cleanup_resources(job_details['keys'], job_details['target'],
+                                self.client.user_id)
 
+    @decorators.idempotent_id('fcdf50e0-1f7f-4844-8806-23de0fb221d6')
     def test_keypair_sync_with_force_true(self):
-        create_response_1 = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response_1.status_code, 200)
-        job_id_1 = create_response_1.json().get('job_status').get('id')
+        job_details_1 = self._keypair_sync_job_create(FORCE)
+        job_id_1 = job_details_1['job_id']
         utils.wait_until_true(
             lambda: self._check_job_status(),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
-        delete_response = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id_1)
-        self.assertEqual(delete_response, 200)
-        create_response_2 = self._sync_job_create(force=FORCE)
-        self.assertEqual(create_response_2.status_code, 200)
-        job_id_2 = create_response_2.json().get('job_status').get('id')
+        self.delete_db_entries(job_id_1)
+        job_details_2 = self._keypair_sync_job_create(FORCE)
+        job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
             lambda: self._check_job_status(),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_2))
         # Clean_up the database entries
-        delete_response_2 = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id_2)
-        self.assertEqual(delete_response_2, 200)
+        self.delete_db_entries(job_id_2)
+        self._cleanup_resources(job_details_2['keys'], job_details_2['target'],
+                                self.client.user_id)
 
+    @decorators.idempotent_id('a340a910-d367-401e-b79a-0a979a3ce65b')
     def test_keypair_sync_with_force_false(self):
-        create_response_1 = self._sync_job_create(force=DEFAULT_FORCE)
-        self.assertEqual(create_response_1.status_code, 200)
-        job_id_1 = create_response_1.json().get('job_status').get('id')
+        job_details_1 = self._keypair_sync_job_create(DEFAULT_FORCE)
+        job_id_1 = job_details_1['job_id']
         utils.wait_until_true(
             lambda: self._check_job_status(),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
-        delete_response_1 = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id_1)
-        self.assertEqual(delete_response_1, 200)
-        create_response_2 = self._sync_job_create(force=DEFAULT_FORCE)
-        self.assertEqual(create_response_2.status_code, 200)
-        job_id_2 = create_response_2.json().get('job_status').get('id')
+        self.delete_db_entries(job_id_1)
+        job_details_2 = self._keypair_sync_job_create(DEFAULT_FORCE,
+                                                      job_details_1['keys'])
+        job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
             lambda: self._check_job_status(),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_2))
-        job_list_resp = self.get_sync_list(self.resource_ids["project_id"],
-                                           job_id_2)
-        self.assertEqual(job_list_resp.status_code, 200)
+        job_list_resp = self.get_sync_job_detail(job_id_2)
         # This job fail because resoruce is already created.
         # We can use force to recreate that resource.
         self.assertEqual(
-            job_list_resp.json().get('job_set')[0].get('sync_status'),
+            job_list_resp.get('job_set')[0].get('sync_status'),
             consts.JOB_FAILURE)
         self.assertEqual(
-            job_list_resp.json().get('job_set')[1].get('sync_status'),
+            job_list_resp.get('job_set')[1].get('sync_status'),
             consts.JOB_FAILURE)
         # Clean_up the database entries
-        delete_response_2 = self._delete_entries_in_db(
-            self.resource_ids["project_id"], job_id_2)
-        self.assertEqual(delete_response_2, 200)
+        self.delete_db_entries(job_id_2)
+        self._cleanup_resources(job_details_2['keys'], job_details_2['target'],
+                                self.client.user_id)

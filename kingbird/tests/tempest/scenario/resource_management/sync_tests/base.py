@@ -13,21 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ast
+from glanceclient import Client as gl_client
 from keystoneclient.auth.identity import v3
 from keystoneclient import session
 from keystoneclient.v3 import client as ks_client
 from kingbirdclient.api.v1 import client as kb_client
+from novaclient import client as nv_client
+import six
+import tempest.test
 
 from tempest.api.compute import base as kp_base
 from tempest import config
 from tempest.lib.common.utils import data_utils
+from tempest.lib.common.utils import test_utils
 
 from kingbird.tests.tempest.scenario import consts
-from novaclient import client as nv_client
 
 CONF = config.CONF
 KINGBIRD_URL = CONF.kingbird.endpoint_url + CONF.kingbird.api_version
 NOVA_API_VERSION = "2.37"
+GLANCE_API_VERSION = "2"
 
 
 class BaseKingbirdClass(object):
@@ -54,6 +60,24 @@ class BaseKingbirdClass(object):
         result['job_id'] = job_id
         result['admin'] = admin_client
         result['target'] = target_regions
+        return result
+
+    def _image_sync_job_create(self, force, **kwargs):
+        result = dict()
+        images = self._create_images(**kwargs)
+        admin_client = self._get_admin_keystone()
+        regions = self._get_regions(admin_client)
+        target_regions = regions
+        target_regions.remove(self.client.region)
+        # Now sync the created images in other regions.
+        create_response = self._sync_job_create(
+            consts.IMAGE_RESOURCE_TYPE, target_regions, images.keys(),
+            force=force)
+        job_id = create_response.get('job_status').get('id')
+        result['job_id'] = job_id
+        result['admin'] = admin_client
+        result['target'] = target_regions
+        result['images'] = images
         return result
 
     def _check_job_status(self):
@@ -192,3 +216,179 @@ class BaseKBKeypairTest(kp_base.BaseV2ComputeTest):
             project_id=self.client.tenant_id)
         self.addCleanup(self._delete_keypair, keypair_name, **delete_params)
         return body
+
+
+class BaseKBImageTest(tempest.test.BaseTestCase):
+    """Base test class for Image API tests."""
+
+    credentials = ['primary']
+
+    @classmethod
+    def skip_checks(cls):
+        super(BaseKBImageTest, cls).skip_checks()
+        if not CONF.service_available.glance:
+            skip_msg = ("%s skipped as glance is not available" % cls.__name__)
+            raise cls.skipException(skip_msg)
+
+    @classmethod
+    def setup_credentials(cls):
+        cls.set_network_resources()
+        super(BaseKBImageTest, cls).setup_credentials()
+
+    @classmethod
+    def setup_clients(cls):
+        super(BaseKBImageTest, cls).setup_clients()
+        cls.client = cls.os.image_client_v2
+
+    @classmethod
+    def resource_setup(cls):
+        super(BaseKBImageTest, cls).resource_setup()
+        cls.created_images = []
+
+    @classmethod
+    def resource_cleanup(cls):
+        for image_id in cls.created_images:
+            test_utils.call_and_ignore_notfound_exc(
+                cls.client.delete_image, image_id)
+
+        for image_id in cls.created_images:
+                cls.client.wait_for_resource_deletion(image_id)
+        super(BaseKBImageTest, cls).resource_cleanup()
+
+    @classmethod
+    def create_and_upload_image(cls, data=None, **kwargs):
+        """Wrapper that returns a test image."""
+        if 'name' not in kwargs:
+            name = data_utils.rand_name("kb-image")
+            kwargs['name'] = name
+
+        params = cls._get_create_params(**kwargs)
+        if data:
+            # NOTE: On glance v1 API, the data should be passed on
+            # a header. Then here handles the data separately.
+            params['data'] = data
+
+        image = cls.client.create_image(**params)
+        # Image objects returned by the v1 client have the image
+        # data inside a dict that is keyed against 'image'.
+        if 'image' in image:
+            image = image['image']
+        cls.created_images.append(image['id'])
+        # Upload image to glance artifactory.
+        file_content = data_utils.random_bytes()
+        image_file = six.BytesIO(file_content)
+        cls.client.store_image_file(image['id'], image_file)
+        cls.kingbird_client = kb_client.Client(
+            kingbird_url=KINGBIRD_URL, auth_token=cls.client.token,
+            project_id=cls.client.tenant_id)
+        return image
+
+    @classmethod
+    def _get_create_params(cls, **kwargs):
+        return kwargs
+
+    def _get_endpoint_from_region(self, keystone_admin, region):
+        services_list = keystone_admin.services.list()
+        endpoints_list = keystone_admin.endpoints.list()
+        service_id = [service.id for service in
+                      services_list if service.type == 'image'][0]
+
+        glance_endpoint = [endpoint.url for endpoint in
+                           endpoints_list
+                           if endpoint.service_id == service_id
+                           and endpoint.region == region and
+                           endpoint.interface == 'public'][0]
+        return glance_endpoint
+
+    def _create_images(self, **kwargs):
+        images = dict()
+        for _ in range(2):
+            image = self.create_and_upload_image(**kwargs)
+            images[image['id']] = image['name']
+        return images
+
+    def _sync_ami_image(self, force, ami_id):
+        result = dict()
+        admin_client = self._get_admin_keystone()
+        regions = self._get_regions(admin_client)
+        target_regions = regions
+        target_regions.remove(self.client.region)
+        # Now sync the created images in other regions.
+        create_response = self._sync_job_create(
+            consts.IMAGE_RESOURCE_TYPE, target_regions, [ami_id],
+            force=force)
+        job_id = create_response.get('job_status').get('id')
+        result['job_id'] = job_id
+        result['admin'] = admin_client
+        result['target'] = target_regions
+        result['images'] = ami_id
+        return result
+
+    def _check_image_properties_in_target_region(self, image, **kwargs):
+        if 'architecture' in kwargs:
+            self.assertEqual(image.architecture,
+                             kwargs['architecture'])
+        if 'hypervisor_type' in kwargs:
+            self.assertEqual(image.hypervisor_type,
+                             kwargs['hypervisor_type'])
+        if 'ramdisk_id' in kwargs:
+            self.assertIsNotNone(image.ramdisk_id)
+        if 'kernel_id' in kwargs:
+            self.assertIsNotNone(image.kernel_id)
+
+        self.assertEqual(image.container_format,
+                         kwargs['container_format'])
+        self.assertEqual(image.disk_format,
+                         kwargs['disk_format'])
+        self.assertEqual(image.visibility,
+                         kwargs['visibility'])
+
+    def _check_images_delete_target_region(self, keystone_admin,
+                                           target_regions, images,
+                                           force, **kwargs):
+        for region in target_regions:
+            for image in images:
+                region_endpoint = self._get_endpoint_from_region(
+                    keystone_admin, region)
+                glance_client = gl_client(GLANCE_API_VERSION,
+                                          session=self.sess,
+                                          endpoint=region_endpoint)
+                target_region_images = glance_client.images.list()
+                for target_image in target_region_images:
+                    if target_image['name'] == images[image]:
+                        region_image = glance_client.images.\
+                            get(target_image['id'])
+                        if ast.literal_eval(force):
+                            self.assertNotEqual(region_image.id, image)
+                        else:
+                            self.assertEqual(region_image.id, image)
+                        self._check_image_properties_in_target_region(
+                            region_image, **kwargs)
+                        glance_client.images.delete(target_image['id'])
+
+    def _check_and_delete_dependent_images_target_region(self, keystone_admin,
+                                                         target_regions, image,
+                                                         force, **kwargs):
+        for region in target_regions:
+            region_endpoint = self._get_endpoint_from_region(keystone_admin,
+                                                             region)
+            glance_client = gl_client(GLANCE_API_VERSION, session=self.sess,
+                                      endpoint=region_endpoint)
+            target_region_images = glance_client.images.list()
+            for target_image in target_region_images:
+                if target_image['name'] == image['name']:
+                    region_image = glance_client.images.\
+                        get(target_image['id'])
+                    self._check_image_properties_in_target_region(
+                        region_image, **kwargs)
+                    if ast.literal_eval(force):
+                        self.assertNotEqual(region_image.id, image['id'])
+                    else:
+                        self.assertEqual(region_image.id, image['id'])
+                    source_aki_image = glance_client.images.get(
+                        region_image.kernel_id)
+                    glance_client.images.delete(source_aki_image.id)
+                    source_ari_image = glance_client.images.get(
+                        region_image.ramdisk_id)
+                    glance_client.images.delete(source_ari_image.id)
+                    glance_client.images.delete(target_image['id'])

@@ -26,17 +26,18 @@ from kingbird.drivers.openstack.nova_v2 import NovaClient
 LOG = logging.getLogger(__name__)
 
 
-class SyncManager(object):
-    """Manages tasks related to resource management"""
+class KeypairSyncManager(object):
+    """Manages tasks related to resource management."""
 
     def __init__(self, *args, **kwargs):
-        super(SyncManager, self).__init__()
+        super(KeypairSyncManager, self).__init__()
 
-    def _create_keypairs_in_region(self, job_id, force, target_regions,
+    def create_resources_in_region(self, job_id, force, target_regions,
                                    source_keypair, session, context):
+        """Create Region specific threads."""
         regions_thread = list()
         for region in target_regions:
-            thread = threading.Thread(target=self._create_keypairs,
+            thread = threading.Thread(target=self.create_resources,
                                       args=(job_id, force, region,
                                             source_keypair, session,
                                             context))
@@ -45,8 +46,9 @@ class SyncManager(object):
             for region_thread in regions_thread:
                 region_thread.join()
 
-    def _create_keypairs(self, job_id, force, region, source_keypair,
+    def create_resources(self, job_id, force, region, source_keypair,
                          session, context):
+        """Create resources using threads."""
         target_nova_client = NovaClient(region, session)
         try:
             target_nova_client.create_keypairs(force, source_keypair)
@@ -69,7 +71,14 @@ class SyncManager(object):
                 raise
             pass
 
-    def keypair_sync_for_user(self, context, job_id, payload):
+    def resource_sync(self, context, job_id, payload):
+        """Create resources in target regions.
+
+        :param context: request context object.
+        :param job_id: ID of the job which triggered image_sync.
+        :payload: request payload.
+        """
+        LOG.info("Triggered Keypair Sync.")
         keypairs_thread = list()
         target_regions = payload['target']
         force = eval(str(payload.get('force', False)))
@@ -81,7 +90,7 @@ class SyncManager(object):
         source_nova_client = NovaClient(source_region, session)
         for keypair in resource_ids:
             source_keypair = source_nova_client.get_keypairs(keypair)
-            thread = threading.Thread(target=self._create_keypairs_in_region,
+            thread = threading.Thread(target=self.create_resources_in_region,
                                       args=(job_id, force, target_regions,
                                             source_keypair, session,
                                             context,))
@@ -89,8 +98,6 @@ class SyncManager(object):
             thread.start()
             for keypair_thread in keypairs_thread:
                 keypair_thread.join()
-
-        # Update the  parent_db after the sync
         try:
             resource_sync_details = db_api.\
                 resource_sync_status(context, job_id)

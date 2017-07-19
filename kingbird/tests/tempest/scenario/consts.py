@@ -1,4 +1,4 @@
-# Copyright 2016 Ericsson AB
+# Copyright 2016 Ericsson AB.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,15 +15,13 @@
 
 
 DEFAULT_QUOTAS = {
-    u'quota_set': {
-        u'metadata_items': 128, u'subnet': 10,
-        u'floatingip': 50, u'gigabytes': 1000, u'backup_gigabytes': 1000,
-        u'ram': 51200, u'floating_ips': 10, u'snapshots': 10,
-        u'security_group_rule': 100,
-        u'instances': 10, u'key_pairs': 100, u'volumes': 10, u'router': 10,
-        u'security_group': 10, u'cores': 20, u'backups': 10, u'fixed_ips': -1,
-        u'port': 50, u'security_groups': 10, u'network': 10
-        }
+    u'metadata_items': 128, u'subnet': 10,
+    u'floatingip': 50, u'gigabytes': 1000, u'backup_gigabytes': 1000,
+    u'ram': 51200, u'floating_ips': 10, u'snapshots': 10,
+    u'security_group_rule': 100,
+    u'instances': 10, u'key_pairs': 100, u'volumes': 10, u'router': 10,
+    u'security_group': 10, u'cores': 20, u'backups': 10, u'fixed_ips': -1,
+    u'port': 50, u'security_groups': 10, u'network': 10
 }
 
 KEYPAIR_RESOURCE_TYPE = "keypair"

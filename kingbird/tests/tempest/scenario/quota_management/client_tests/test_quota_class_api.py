@@ -13,10 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import kingbirdclient
+
 from kingbird.tests.tempest.scenario.quota_management. \
     client_tests import base
+from kingbird.tests import utils
 
 DEFAULT_CLASS = "default"
+DEFAULT_QUOTAS = base.DEFAULT_QUOTAS
+QUOTA_CLASS_FORMAT = base.DEFAULT_QUOTAS.copy()
 
 
 class KingbirdQuotaClassTestJSON(base.BaseKingbirdTest):
@@ -38,60 +43,68 @@ class KingbirdQuotaClassTestJSON(base.BaseKingbirdTest):
         super(KingbirdQuotaClassTestJSON, self).resource_setup()
         self.create_resources()
 
+    def _delete_quota_values(self, class_name):
+        quota_value = self.get_quota_for_class(class_name)
+        resource_value = quota_value['cores']
+        return resource_value == DEFAULT_QUOTAS['cores']
+
     def test_kb_quota_class_put_method(self):
-        new_quota = {"quota_class_set": {"instances": 15, "cores": 10}}
+        new_quota = {"instances": 15, "cores": 10}
         actual_value = self.update_quota_for_class(
-            self.class_name, self.resource_ids["project_id"],
-            new_quota)
-        new_quota["quota_class_set"].update({"id": self.class_name})
-        self.assertEqual(new_quota, eval(actual_value))
-        self.delete_quota_for_class(self.class_name,
-                                    self.resource_ids["project_id"])
+            self.class_name, new_quota)
+        expected_value = QUOTA_CLASS_FORMAT
+        expected_value['cores'] = 10
+        expected_value['instances'] = 15
+        expected_value['class_name'] = self.class_name
+        self.assertEqual(expected_value, actual_value)
+        self.delete_quota_for_class(self.class_name)
+        utils.wait_until_true(
+            lambda: self._delete_quota_values(self.class_name),
+            exception=RuntimeError("Timed out "))
 
     def test_kb_quota_class_get_method(self):
-        new_quota = {"quota_class_set": {"instances": 15, "cores": 10}}
-        self.update_quota_for_class(
-            self.class_name, self.resource_ids["project_id"], new_quota)
-        actual_value = self.get_quota_for_class(
-            self.class_name, self.resource_ids["project_id"])
-        new_quota["quota_class_set"].update({'id': self.class_name})
-        self.assertEqual(new_quota, eval(actual_value))
-        self.delete_quota_for_class(self.class_name,
-                                    self.resource_ids["project_id"])
+        new_quota = {"instances": 15, "cores": 10}
+        self.update_quota_for_class(self.class_name, new_quota)
+        actual_value = self.get_quota_for_class(self.class_name)
+        expected_value = QUOTA_CLASS_FORMAT
+        expected_value['cores'] = 10
+        expected_value['instances'] = 15
+        expected_value['class_name'] = self.class_name
+        self.assertEqual(expected_value, actual_value)
+        self.delete_quota_for_class(self.class_name)
+        utils.wait_until_true(
+            lambda: self._delete_quota_values(self.class_name),
+            exception=RuntimeError("Timed out "))
 
     def test_kb_quota_class_delete_method(self):
-        new_quota = {"quota_class_set": {"instances": 15, "cores": 10}}
-        self.update_quota_for_class(
-            self.class_name, self.resource_ids["project_id"], new_quota)
-        self.delete_quota_for_class(self.class_name,
-                                    self.resource_ids["project_id"])
-        quota_after_delete = eval(self.get_quota_for_class(
-            self.class_name, self.resource_ids["project_id"]))
-        self.assertNotIn("cores", quota_after_delete["quota_class_set"])
-        self.assertNotIn("instances", quota_after_delete["quota_class_set"])
+        new_quota = {"instances": 15, "cores": 15}
+        self.update_quota_for_class(self.class_name, new_quota)
+        self.delete_quota_for_class(self.class_name)
+        utils.wait_until_true(
+            lambda: self._delete_quota_values(self.class_name),
+            exception=RuntimeError("Timed out "))
+        quota_after_delete = self.get_quota_for_class(self.class_name)
+        self.assertNotEqual(quota_after_delete['cores'], 15)
+        self.assertNotEqual(quota_after_delete['instances'], 15)
 
     def test_kb_quota_class_wrong_input(self):
-        new_quota = {"quota_class_unset": {"instances": 15, "cores": 10}}
-        actual_value = self.update_quota_for_class(
-            self.class_name, self.resource_ids["project_id"], new_quota)
-        self.assertIn("Missing quota_class_set in the body", actual_value)
-
-    def test_kb_quota_class_wrong_quotas(self):
-        new_quota = {"quota_class_set": {"instan": 15, "cor": 10}}
-        actual_value = self.update_quota_for_class(
-            self.class_name, self.resource_ids["project_id"],
-            new_quota)
-        self.assertEmpty(actual_value)
+        new_quota = {"instanc": 15, "cores": 10}
+        self.assertRaises(kingbirdclient.exceptions.APIException,
+                          self.update_quota_for_class, self.class_name,
+                          new_quota)
 
     def test_kb_quota_default_class_get_method(self):
-        actual_value = self.get_quota_for_class(
-            DEFAULT_CLASS, self.resource_ids["project_id"])
-        expected_value = {"quota_class_set": base.DEFAULT_QUOTAS["quota_set"]}
-        expected_value["quota_class_set"].update({"id": DEFAULT_CLASS})
-        self.assertEqual(eval(actual_value), expected_value)
+        actual_value = self.get_quota_for_class(DEFAULT_CLASS)
+        expected_value = DEFAULT_QUOTAS
+        expected_value['class_name'] = DEFAULT_CLASS
+        self.assertEqual(actual_value, expected_value)
 
-    def test_kb_quota_class_get_method_wrong_class_name(self):
-        actual_value = self.get_quota_for_class(
-            "no_class", self.resource_ids["project_id"])
-        expected_value = {"quota_class_set": {"id": "no_class"}}
-        self.assertEqual(eval(actual_value), expected_value)
+    def test_kb_quota_class_get_method_for_random_class_name(self):
+        actual_value = self.get_quota_for_class("random_class")
+        expected_value = DEFAULT_QUOTAS
+        expected_value['class_name'] = "random_class"
+        self.assertEqual(actual_value, expected_value)
+
+    def test_delete_quota_for_random_class(self):
+        self.assertRaisesRegex(kingbirdclient.exceptions.APIException, "404 *",
+                               self.delete_quota_for_class, 'random_class')

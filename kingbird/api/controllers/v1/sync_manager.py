@@ -154,6 +154,24 @@ class ResourceSyncController(object):
                                                source_resources,
                                                resource_type, job_id)
             return self._image_sync(job_id, payload, context, result)
+
+        elif resource_type == consts.FLAVOR:
+            if not context.is_admin:
+                pecan.abort(403, _('Admin required'))
+            session = EndpointCache().get_session_from_token(
+                context.auth_token, context.project)
+            # Create Source Region object
+            source_nova_client = NovaClient(source_region, session)
+            for flavor in source_resources:
+                source_flavor = source_nova_client.get_flavor(flavor)
+                if not source_flavor:
+                    pecan.abort(404)
+            result = self._entries_to_database(context, target_regions,
+                                               source_region,
+                                               source_resources,
+                                               resource_type, job_id)
+            return self._flavor_sync(job_id, payload, context, result)
+
         else:
             pecan.abort(400, _('Bad resource_type'))
 
@@ -208,5 +226,18 @@ class ResourceSyncController(object):
         :param result: Result object to return an output.
         """
         self.rpc_client.image_sync(context, job_id, payload)
+        return {'job_status': {'id': result.id, 'status': result.sync_status,
+                               'created_at': result.created_at}}
+
+    def _flavor_sync(self, job_id, payload, context, result):
+        """Make an rpc call to engine.
+
+        :param job_id: ID of the job to update values in database based on
+            the job_id.
+        :param payload: payload object.
+        :param context: context of the request.
+        :param result: Result object to return an output.
+        """
+        self.rpc_client.flavor_sync(context, job_id, payload)
         return {'job_status': {'id': result.id, 'status': result.sync_status,
                                'created_at': result.created_at}}

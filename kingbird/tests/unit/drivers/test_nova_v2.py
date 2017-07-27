@@ -26,16 +26,18 @@ class Server(object):
         self.flavor['id'] = id
 
 
-class Flavor(object):
-    def __init__(self, id, ram, cores, disks):
+class Fake_Flavor(object):
+    def __init__(self, id, ram, cores, disks, name, swap, is_public=True):
         self.id = id
         self.ram = ram
         self.vcpus = cores
         self.disk = disks
+        self.name = name
+        self.is_public = is_public
+        self.swap = swap
 
 s1 = Server(1, {'mkey': 'mvalue'})
 s2 = Server(1, {'mkey': 'mvalue', 'm2key': 'm2value'})
-FAKE_FLAVOR = Flavor(1, 512, 10, 50)
 DISABLED_QUOTAS = ["floating_ips", "fixed_ips", "security_groups"]
 FAKE_KEYPAIRS = ['key1', 'key2']
 FAKE_LIMITS = {'absolute':
@@ -146,3 +148,12 @@ class TestNovaClient(base.KingbirdTestCase):
         mock_novaclient.Client().keypairs.create.\
             assert_called_once_with(fake_key.name,
                                     public_key=fake_key.public_key)
+
+    @mock.patch.object(nova_v2, 'client')
+    def test_get_flavor(self, mock_novaclient):
+        nv_client = nova_v2.NovaClient('fake_region', self.session,
+                                       DISABLED_QUOTAS)
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1)
+        nv_client.get_flavor(fake_flavor.id)
+        mock_novaclient.Client().flavors.get.\
+            assert_called_once_with(fake_flavor.id)

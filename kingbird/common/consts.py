@@ -49,3 +49,5 @@ JOB_SUCCESS = "SUCCESS"
 JOB_FAILURE = "FAILURE"
 
 IMAGE = "image"
+
+FLAVOR = "flavor"

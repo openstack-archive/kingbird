@@ -79,3 +79,8 @@ class EngineClient(object):
         return self.cast(
             ctxt,
             self.make_msg('image_sync', job_id=job_id, payload=payload))
+
+    def flavor_sync(self, ctxt, job_id, payload):
+        return self.cast(
+            ctxt,
+            self.make_msg('flavor_sync', job_id=job_id, payload=payload))

@@ -16,7 +16,7 @@ groups, etc. across regions.
 
 
 * Free software: Apache license
-* Wiki:https://wiki.openstack.org/wiki/kingbird
+* Wiki: https://wiki.openstack.org/wiki/kingbird
 * Documentation: http://docs.openstack.org/developer/kingbird
 * Source: https://github.com/openstack/kingbird
 * Bugs: http://bugs.launchpad.net/kingbird

@@ -132,3 +132,14 @@ class NovaClient(base.DriverBase):
         return self.nova_client.keypairs. \
             create(keypair.name,
                    public_key=keypair.public_key)
+
+    def get_flavor(self, res_id):
+        """Get Flavor for a specified context."""
+        try:
+            flavor = self.nova_client.flavors.get(res_id)
+            LOG.info("Source Flavor: %s", flavor.name)
+            return flavor
+        except exceptions.ResourceNotFound():
+            LOG.error('Exception Occurred: Source Flavor %s not available',
+                      res_id)
+            pass

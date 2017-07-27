@@ -26,6 +26,7 @@ from kingbird.tests import utils
 
 DEFAULT_FORCE = False
 SOURCE_KEYPAIR = 'fake_key1'
+SOURCE_FLAVOR = 'fake_flavor1'
 SOURCE_IMAGE_NAME = 'fake_image'
 SOURCE_IMAGE_ID = utils.UUID4
 WRONG_SOURCE_IMAGE_ID = utils.UUID5
@@ -41,13 +42,25 @@ fake_user = utils.UUID3
 FAKE_STATUS = consts.JOB_PROGRESS
 FAKE_HEADERS = {'X-Tenant-Id': FAKE_TENANT, 'X_ROLE': 'admin',
                 'X-Identity-Status': 'Confirmed'}
-NON_ADMIN_HEADERS = {'X-Tenant-Id': FAKE_TENANT}
+NON_ADMIN_HEADERS = {'X-Tenant-Id': FAKE_TENANT, 'X_ROLE': 'fake_admin',
+                     'X-Identity-Status': 'Confirmed'}
 
 
 class FakeKeypair(object):
     def __init__(self, name, public_key):
         self.name = name
         self.public_key = public_key
+
+
+class Fake_Flavor(object):
+    def __init__(self, id, ram, cores, disks, name, swap, is_public=True):
+        self.id = id
+        self.ram = ram
+        self.vcpus = cores
+        self.disk = disks
+        self.name = name
+        self.is_public = is_public
+        self.swap = swap
 
 
 class FakeImage(object):
@@ -103,6 +116,52 @@ class TestResourceManager(testroot.KBApiTest):
         self.assertEqual(1,
                          mock_db_api.sync_job_create.call_count)
         self.assertEqual(response.status_int, 200)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_flavor_sync_admin(self, mock_db_api, mock_endpoint_cache,
+                                    mock_nova, mock_rpc_client):
+        time_now = timeutils.utcnow()
+        data = {"resource_set": {"resources": [SOURCE_FLAVOR],
+                                 "resource_type": "flavor",
+                                 "force": "True",
+                                 "source": FAKE_SOURCE_REGION,
+                                 "target": [FAKE_TARGET_REGION]}}
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1)
+        sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_flavor.return_value = fake_flavor
+        mock_db_api.sync_job_create.return_value = sync_job_result
+        response = self.app.post_json(FAKE_URL,
+                                      headers=FAKE_HEADERS,
+                                      params=data)
+        self.assertEqual(1,
+                         mock_nova().get_flavor.call_count)
+        self.assertEqual(1,
+                         mock_db_api.resource_sync_create.call_count)
+        self.assertEqual(1,
+                         mock_db_api.sync_job_create.call_count)
+        self.assertEqual(response.status_int, 200)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_flavor_sync_non_admin(self, mock_db_api,
+                                        mock_endpoint_cache,
+                                        mock_nova, mock_rpc_client):
+        data = {"resource_set": {"resources": [SOURCE_FLAVOR],
+                                 "resource_type": "flavor",
+                                 "force": "True",
+                                 "source": FAKE_SOURCE_REGION,
+                                 "target": [FAKE_TARGET_REGION]}}
+        self.assertRaisesRegexp(webtest.app.AppError, "403 *",
+                                self.app.post_json, FAKE_URL,
+                                headers=NON_ADMIN_HEADERS,
+                                params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'GlanceClient')
@@ -220,6 +279,24 @@ class TestResourceManager(testroot.KBApiTest):
                                  "target": [FAKE_TARGET_REGION]}}
         wrong_image = FakeImage(WRONG_SOURCE_IMAGE_ID, SOURCE_IMAGE_NAME)
         mock_glance().check_image.return_value = wrong_image
+        self.assertRaisesRegexp(webtest.app.AppError, "404 *",
+                                self.app.post_json, FAKE_URL,
+                                headers=FAKE_HEADERS, params=data)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    def test_post_no_flavors_in_source_region(self, mock_nova,
+                                              mock_endpoint_cache,
+                                              mock_rpc_client):
+        data = {"resource_set": {"resources": [SOURCE_FLAVOR],
+                                 "resource_type": "flavor",
+                                 "force": "True",
+                                 "source": FAKE_SOURCE_REGION,
+                                 "target": [FAKE_TARGET_REGION]}}
+        mock_endpoint_cache().get_session_from_token.\
+            return_value = 'fake_session'
+        mock_nova().get_flavor.return_value = None
         self.assertRaisesRegexp(webtest.app.AppError, "404 *",
                                 self.app.post_json, FAKE_URL,
                                 headers=FAKE_HEADERS, params=data)

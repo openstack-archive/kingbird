@@ -23,6 +23,7 @@ from kingbird.common import context
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.common import messaging as rpc_messaging
+from kingbird.engine.flavor_sync_manager import FlavorSyncManager
 from kingbird.engine.image_sync_manager import ImageSyncManager
 from kingbird.engine.keypair_sync_manager import KeypairSyncManager
 from kingbird.engine.quota_manager import QuotaManager
@@ -76,6 +77,7 @@ class EngineService(service.Service):
         self.qm = None
         self.ksm = None
         self.ism = None
+        self.fsm = None
 
     def init_tgm(self):
         self.TG = scheduler.ThreadGroupManager()
@@ -89,12 +91,16 @@ class EngineService(service.Service):
     def init_ism(self):
         self.ism = ImageSyncManager()
 
+    def init_fsm(self):
+        self.fsm = FlavorSyncManager()
+
     def start(self):
         self.engine_id = uuidutils.generate_uuid()
         self.init_tgm()
         self.init_qm()
         self.init_ksm()
         self.init_ism()
+        self.init_fsm()
         target = oslo_messaging.Target(version=self.rpc_api_version,
                                        server=self.host,
                                        topic=self.topic)
@@ -168,6 +174,11 @@ class EngineService(service.Service):
     def image_sync(self, ctxt, job_id, payload):
         # Image Sync triggered by KB_API.
         self.ism.resource_sync(ctxt, job_id, payload)
+
+    @request_context
+    def flavor_sync(self, ctxt, job_id, payload):
+        # Flavor Sync triggered by KB_API.
+        self.fsm.resource_sync(ctxt, job_id, payload)
 
     def _stop_rpc_server(self):
         # Stop RPC connection to prevent new requests

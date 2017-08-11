@@ -58,6 +58,11 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_ksm()
         self.assertIsNotNone(self.service_obj.ksm)
 
+    @mock.patch.object(service, 'FlavorSyncManager')
+    def test_init_fsm(self, mock_flavor_sync_manager):
+        self.service_obj.init_fsm()
+        self.assertIsNotNone(self.service_obj.fsm)
+
     @mock.patch.object(service, 'ImageSyncManager')
     def test_init_ism(self, mock_image_sync_manager):
         self.service_obj.init_ism()
@@ -130,4 +135,12 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_ism()
         self.service_obj.image_sync(self.context, self.job_id, self.payload)
         mock_image_sync_manager().resource_sync.\
+            assert_called_once_with(self.context, self.job_id, self.payload)
+
+    @mock.patch.object(service, 'FlavorSyncManager')
+    def test_flavor_sync(self, mock_flavor_sync_manager):
+        self.service_obj.init_tgm()
+        self.service_obj.init_fsm()
+        self.service_obj.flavor_sync(self.context, self.job_id, self.payload)
+        mock_flavor_sync_manager().resource_sync.\
             assert_called_once_with(self.context, self.job_id, self.payload)

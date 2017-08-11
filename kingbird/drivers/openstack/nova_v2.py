@@ -142,4 +142,61 @@ class NovaClient(base.DriverBase):
         except exceptions.ResourceNotFound():
             LOG.error('Exception Occurred: Source Flavor %s not available',
                       res_id)
+
+    def get_flavor_access_tenant(self, res_id):
+        """Get tenant which has access to the Flavor."""
+        try:
+            access_tenants = [access.tenant_id for access in
+                              self.nova_client.
+                              flavor_access.list(flavor=res_id)]
+            LOG.info("Access to only : %s", access_tenants)
+            return access_tenants
+        except exceptions.InternalError():
+            LOG.error('Exception Occurred couldnot find access tenants.')
             pass
+
+    def check_and_delete_flavor_in_target_region(self, flavor,
+                                                 resource_flavor):
+        try:
+            target_flavor = self.nova_client.flavors.get(flavor.id)
+            if target_flavor:
+                resource_flavor.pop("flavorid", None)
+        except exceptions.ResourceNotFound():
+            LOG.error('Exception Occurred: %s not available', flavor.id)
+            pass
+        flavor_list = self.nova_client.flavors.list(is_public=None)
+        for target_region_flavor in flavor_list:
+            if target_region_flavor.name == flavor.name:
+                self.nova_client.flavors.delete(target_region_flavor.id)
+                LOG.info("Deleted Flavor: %s", flavor.name)
+
+    def create_flavor(self, force, flavor, access_tenants=None):
+        """Create Flavor in target regions."""
+        resource_flavor = flavor._info.copy()
+        resource_flavor.update({'flavorid': resource_flavor['id']})
+        resource_flavor.pop("links", None)
+        resource_flavor.pop("OS-FLV-DISABLED:disabled", None)
+        resource_flavor.pop("OS-FLV-EXT-DATA:ephemeral", None)
+        resource_flavor.pop("os-flavor-access:is_public", None)
+        resource_flavor.pop("id", None)
+        if not resource_flavor['swap']:
+            resource_flavor.pop("swap", None)
+        if not flavor.is_public:
+            resource_flavor.update({'is_public': False})
+        if force:
+            self.check_and_delete_flavor_in_target_region(
+                flavor, resource_flavor)
+        target_flavor = self.nova_client.flavors.create(**resource_flavor)
+        target_flavor_properties = flavor.get_keys()
+        if target_flavor_properties:
+            try:
+                target_flavor.set_keys(target_flavor_properties)
+            except Exception as e:
+                LOG.error(_("Failed to set flavor property: %s"), e)
+        if access_tenants:
+            for tenant in access_tenants:
+                self.nova_client.flavor_access.add_tenant_access(
+                    target_flavor.id, tenant)
+                LOG.info('%(flavor)s Access Granted to %(tenant)s'
+                         % {'flavor': target_flavor.name, 'tenant': tenant})
+        return target_flavor

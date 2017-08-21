@@ -15,11 +15,11 @@
 
 import collections
 
-from keystoneauth1.identity import v3 as auth_identity
 from keystoneauth1 import loading
 from keystoneauth1 import session
-from keystoneclient.auth import token_endpoint
+
 from keystoneclient.v3 import client as keystone_client
+
 from oslo_config import cfg
 
 
@@ -31,24 +31,16 @@ class EndpointCache(object):
         self._update_endpoints()
 
     @staticmethod
-    def _get_admin_token(self):
-        auth = auth_identity.Password(
+    def _get_endpoint_from_keystone(self):
+        loader = loading.get_plugin_loader(
+            cfg.CONF.keystone_authtoken.auth_type)
+        auth = loader.load_from_options(
             auth_url=cfg.CONF.cache.auth_uri,
             username=cfg.CONF.cache.admin_username,
             password=cfg.CONF.cache.admin_password,
-            project_name=cfg.CONF.cache.admin_tenant,
-            user_domain_name=cfg.CONF.cache.admin_user_domain_name,
-            project_domain_name=cfg.CONF.cache.admin_project_domain_name)
-        sess = session.Session(auth=auth)
-        self.admin_session = sess
-        return sess.get_token()
-
-    @staticmethod
-    def _get_endpoint_from_keystone(self):
-        auth = token_endpoint.Token(cfg.CONF.cache.auth_uri,
-                                    EndpointCache._get_admin_token(self))
-        sess = session.Session(auth=auth)
-        cli = keystone_client.Client(session=sess)
+            project_id=cfg.CONF.cache.admin_tenant)
+        self.admin_session = session.Session(auth=auth)
+        cli = keystone_client.Client(session=self.admin_session)
         self.keystone_client = cli
 
         service_id_name_map = {}

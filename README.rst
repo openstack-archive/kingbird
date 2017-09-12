@@ -1,6 +1,13 @@
-===============================
 Kingbird
 ===============================
+
+.. image:: https://img.shields.io/pypi/v/kingbird.svg
+    :target: https://pypi.python.org/pypi/kingbird/
+    :alt: Latest Version
+
+.. image:: https://img.shields.io/pypi/dm/kingbird.svg
+    :target: https://pypi.python.org/pypi/kingbird/
+    :alt: Downloads
 
 Centralized service for multi-region OpenStack deployments.
 
@@ -15,10 +22,19 @@ space management, synchronisation of ssh keys, images, flavors, security
 groups, etc. across regions.
 
 
+Useful Links
+============
 * Free software: Apache license
-* Wiki:https://wiki.openstack.org/wiki/kingbird
-* Documentation: http://docs.openstack.org/developer/kingbird
-* Source: https://github.com/openstack/kingbird
-* Bugs: http://bugs.launchpad.net/kingbird
-* Blueprints: https://launchpad.net/kingbird
+* `PyPi`_ - package installation
+* `Launchpad project`_ - release management
+* `Blueprints`_ - feature specifications
+* `Bugs`_ - issue tracking
+* `Source`_
+* `How to Contribute`_
 
+.. _PyPi: https://pypi.python.org/pypi/kingbird/1.2.0
+.. _Launchpad project: https://launchpad.net/kingbird
+.. _Bugs: https://bugs.launchpad.net/kingbird
+.. _Blueprints: https://blueprints.launchpad.net/kingbird
+.. _Source: http://git.openstack.org/cgit/openstack/kingbird
+.. _How to Contribute: http://docs.openstack.org/infra/manual/developers.html

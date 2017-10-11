@@ -325,7 +325,7 @@ class BaseKBImageTest(tempest.test.BaseTestCase):
     @classmethod
     def setup_clients(cls):
         super(BaseKBImageTest, cls).setup_clients()
-        cls.client = cls.os.image_client_v2
+        cls.client = cls.os_primar_primaryy.image_client_v2
 
     @classmethod
     def resource_setup(cls):

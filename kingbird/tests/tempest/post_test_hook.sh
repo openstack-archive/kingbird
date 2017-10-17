@@ -50,7 +50,7 @@ if [ -d .testrepository ]; then
   sudo rm -r .testrepository
 fi
 
-sudo chown -R jenkins:stack $DEST/tempest
+sudo chown -R $USER:stack $DEST/tempest
 
 # change the tempest configruation to test Kingbird
 env | grep OS_

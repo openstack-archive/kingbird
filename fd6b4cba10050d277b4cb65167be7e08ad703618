@@ -1,0 +1,9 @@
+Verified+1: Jenkins
+Code-Review+2: Goutham Pratapa <pratapagoutham@gmail.com>
+Workflow+1: Goutham Pratapa <pratapagoutham@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 18 Oct 2017 05:38:21 +0000
+Reviewed-on: https://review.openstack.org/492881
+Project: openstack/kingbird
+Branch: refs/heads/master

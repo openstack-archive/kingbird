@@ -16,10 +16,10 @@
 import pecan
 from pecan.configuration import set_config
 from pecan.testing import load_test_app
+import ujson
 
 from oslo_config import cfg
 from oslo_config import fixture as fixture_config
-from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from kingbird.api import api_config
@@ -32,7 +32,7 @@ cfg.CONF.import_group(OPT_GROUP_NAME, "keystonemiddleware.auth_token")
 
 
 def fake_delete_response(self, context):
-    resp = jsonutils.dumps(context.to_dict())
+    resp = ujson.dumps(context.to_dict())
     return resp
 
 
@@ -78,7 +78,7 @@ class TestRootController(KBApiTest):
     def test_get(self):
         response = self.app.get('/')
         self.assertEqual(response.status_int, 200)
-        json_body = jsonutils.loads(response.body)
+        json_body = ujson.loads(response.body)
         versions = json_body.get('versions')
         self.assertEqual(1, len(versions))
 

@@ -11,10 +11,10 @@
 # under the License.
 
 import eventlet
+import ujson
 
 from oslo_config import cfg
 import oslo_messaging
-from oslo_serialization import jsonutils
 
 from kingbird.common import context
 
@@ -54,7 +54,7 @@ class RequestContextSerializer(oslo_messaging.Serializer):
 class JsonPayloadSerializer(oslo_messaging.NoOpSerializer):
     @classmethod
     def serialize_entity(cls, context, entity):
-        return jsonutils.to_primitive(entity, convert_instances=True)
+        return ujson.to_primitive(entity, convert_instances=True)
 
 
 def setup(url=None, optional=False):

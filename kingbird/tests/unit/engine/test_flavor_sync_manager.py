@@ -212,5 +212,5 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
         mock_nova().create_flavor.assert_called_once_with(
             payload['force'], fake_flavor, access_tenants)
         mock_db_api.resource_sync_update.assert_called_once_with(
-            self.ctxt, FAKE_JOB_ID, payload['target'][0], fake_flavor.id,
+            self.ctxt, FAKE_JOB_ID, payload['target'][0], fake_flavor.name,
             JOB_RESULT)

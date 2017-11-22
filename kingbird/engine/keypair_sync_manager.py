@@ -84,6 +84,8 @@ class KeypairSyncManager(object):
         force = eval(str(payload.get('force', False)))
         resource_ids = payload.get('resources')
         source_region = payload['source']
+        if(isinstance(source_region, list)):
+            source_region = source_region[0]
         session = EndpointCache().get_session_from_token(
             context.auth_token, context.project)
         # Create Source Region object

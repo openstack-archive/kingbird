@@ -25,6 +25,7 @@ from kingbird.tests.unit.api import test_root_controller as testroot
 from kingbird.tests import utils
 
 DEFAULT_FORCE = False
+JOB_NAME = 'fake_job_name'
 SOURCE_KEYPAIR = 'fake_key1'
 SOURCE_FLAVOR = 'fake_flavor1'
 SOURCE_IMAGE_NAME = 'fake_image'
@@ -70,15 +71,17 @@ class FakeImage(object):
 
 
 class Result(object):
-    def __init__(self, job_id, status, time):
+    def __init__(self, job_id, name, status, time):
         self.job_id = job_id
+        self.name = name
         self.status = status
         self.time = time
 
 
 class SyncJob(object):
-    def __init__(self, id, sync_status, created_at):
+    def __init__(self, id, name, sync_status, created_at):
         self.id = id
+        self.name = name
         self.sync_status = sync_status
         self.created_at = created_at
 
@@ -87,6 +90,21 @@ class TestResourceManager(testroot.KBApiTest):
     def setUp(self):
         super(TestResourceManager, self).setUp()
         self.ctx = utils.dummy_context()
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'NovaClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_request_data(self, mock_db_api, mock_endpoint_cache,
+                               mock_nova, mock_rpc_client):
+        payload = {"resources": [SOURCE_KEYPAIR],
+                   "resource_type": "keypair",
+                   "source": FAKE_SOURCE_REGION,
+                   "target": [FAKE_TARGET_REGION]}
+        result = sync_manager.ResourceSyncController().\
+            _get_post_data(payload, self.ctx, JOB_NAME)
+        self.assertEqual(result['job_status'].get('status'),
+                         mock_db_api.sync_job_create().sync_status)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'NovaClient')
@@ -101,7 +119,8 @@ class TestResourceManager(testroot.KBApiTest):
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
+        sync_job_result = SyncJob(JOB_NAME, FAKE_JOB,
+                                  consts.JOB_PROGRESS, time_now)
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_keypairs.return_value = fake_key
@@ -129,8 +148,10 @@ class TestResourceManager(testroot.KBApiTest):
                                  "force": "True",
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1)
-        sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
+        fake_flavor = Fake_Flavor('fake_id', 512, 2,
+                                  30, 'fake_flavor', 1)
+        sync_job_result = SyncJob(JOB_NAME, FAKE_JOB,
+                                  consts.JOB_PROGRESS, time_now)
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_flavor.return_value = fake_flavor
@@ -172,7 +193,8 @@ class TestResourceManager(testroot.KBApiTest):
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
         fake_image = FakeImage(SOURCE_IMAGE_ID, SOURCE_IMAGE_NAME)
-        sync_job_result = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, time_now)
+        sync_job_result = SyncJob(JOB_NAME, FAKE_JOB,
+                                  consts.JOB_PROGRESS, time_now)
         mock_glance().check_image.return_value = fake_image.id
         mock_db_api.sync_job_create.return_value = sync_job_result
         response = self.app.post_json(FAKE_URL,
@@ -368,11 +390,11 @@ class TestResourceManager(testroot.KBApiTest):
     @mock.patch.object(sync_manager, 'db_api')
     def test_entries_to_database(self, mock_db_api, mock_rpc_client):
         time_now = timeutils.utcnow()
-        result = Result(FAKE_JOB, FAKE_STATUS, time_now)
+        result = Result(JOB_NAME, FAKE_JOB, FAKE_STATUS, time_now)
         mock_db_api.sync_job_create.return_value = result
         sync_manager.ResourceSyncController()._entries_to_database(
             self.ctx, FAKE_TARGET_REGION, FAKE_SOURCE_REGION,
-            FAKE_RESOURCE_ID, FAKE_RESOURCE_TYPE, FAKE_JOB)
+            FAKE_RESOURCE_ID, FAKE_RESOURCE_TYPE, FAKE_TENANT, JOB_NAME)
         mock_db_api.resource_sync_create.assert_called_once_with(
             self.ctx, result, FAKE_TARGET_REGION[0], FAKE_SOURCE_REGION,
             FAKE_RESOURCE_ID[0], FAKE_RESOURCE_TYPE)

@@ -58,7 +58,7 @@ class FlavorSyncManager(object):
                      % {'flavor': source_flavor.name, 'region': region})
             try:
                 db_api.resource_sync_update(context, job_id, region,
-                                            source_flavor.id,
+                                            source_flavor.name,
                                             consts.JOB_SUCCESS)
             except exceptions.JobNotFound():
                 raise
@@ -67,7 +67,7 @@ class FlavorSyncManager(object):
                       % {'msg': exc.message, 'region': region})
             try:
                 db_api.resource_sync_update(context, job_id, region,
-                                            source_flavor.id,
+                                            source_flavor.name,
                                             consts.JOB_FAILURE)
             except exceptions.JobNotFound():
                 raise
@@ -87,6 +87,8 @@ class FlavorSyncManager(object):
         force = eval(str(payload.get('force', False)))
         resource_ids = payload.get('resources')
         source_region = payload['source']
+        if(isinstance(source_region, list)):
+            source_region = "".join(source_region)
         session = EndpointCache().get_session_from_token(
             context.auth_token, context.project)
         # Create Source Region object

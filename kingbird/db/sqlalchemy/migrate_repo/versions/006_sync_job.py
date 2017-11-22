@@ -22,6 +22,7 @@ def upgrade(migrate_engine):
 
     sync_job = sqlalchemy.Table(
         'sync_job', meta,
+        sqlalchemy.Column('name', sqlalchemy.String(255)),
         sqlalchemy.Column('id', sqlalchemy.String(36),
                           primary_key=True),
         sqlalchemy.Column('sync_status', sqlalchemy.String(length=36),

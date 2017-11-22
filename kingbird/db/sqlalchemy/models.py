@@ -154,6 +154,8 @@ class SyncJob(BASE, KingbirdBase):
 
     __tablename__ = 'sync_job'
 
+    name = Column('name', String(255))
+
     id = Column('id', String(36), primary_key=True)
 
     sync_status = Column(String(36), default=consts.JOB_PROGRESS,

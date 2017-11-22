@@ -136,6 +136,7 @@ class NovaClient(base.DriverBase):
     def get_flavor(self, res_id):
         """Get Flavor for a specified context."""
         try:
+            res_id = self.nova_client.flavors.find(name=res_id)
             flavor = self.nova_client.flavors.get(res_id)
             LOG.info("Source Flavor: %s", flavor.name)
             return flavor

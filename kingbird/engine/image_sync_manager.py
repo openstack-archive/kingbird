@@ -186,6 +186,8 @@ class ImageSyncManager(object):
         force = eval(str(payload.get('force', False)))
         resource_ids = payload.get('resources')
         source_region = payload['source']
+        if(isinstance(source_region, list)):
+            source_region = "".join(source_region)
         for resource in resource_ids:
             thread = threading.Thread(target=self.create_resources_in_region,
                                       args=(job_id, target_regions,

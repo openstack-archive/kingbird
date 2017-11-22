@@ -69,7 +69,8 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         self.ctx = utils.dummy_context()
 
     def test_create_sync_job(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         self.assertEqual(consts.JOB_PROGRESS, job.sync_status)
         created_job = db_api.sync_job_list(self.ctx, "active")
@@ -77,38 +78,44 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
                          created_job[0].get('sync_status'))
 
     def test_primary_key_sync_job(self):
-        self.sync_job_create(self.ctx, job_id=UUID1)
+        self.sync_job_create(self.ctx, job_name='fake_job_name', job_id=UUID1)
         self.assertRaises(oslo_db.exception.DBDuplicateEntry,
-                          self.sync_job_create, self.ctx, job_id=UUID1)
+                          self.sync_job_create, self.ctx,
+                          job_name='fake_job_name', job_id=UUID1)
 
     def test_sync_job_update(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         db_api.sync_job_update(self.ctx, UUID1, consts.JOB_SUCCESS)
         updated_job = db_api.sync_job_list(self.ctx)
         self.assertEqual(consts.JOB_SUCCESS, updated_job[0].get('sync_status'))
 
     def test_active_jobs(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         query = db_api.sync_job_list(self.ctx, 'active')
         self.assertEqual(query[0].get('sync_status'), job.sync_status)
 
     def test_sync_job_status(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         query = db_api.sync_job_status(self.ctx, job_id=UUID1)
         self.assertEqual(query, consts.JOB_PROGRESS)
 
     def test_update_invalid_job(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         self.assertRaises(exceptions.JobNotFound,
                           db_api.sync_job_update, self.ctx, 'fake_job',
                           consts.JOB_SUCCESS)
 
     def test_resource_sync_create(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         resource_sync_create = self.resource_sync_create(
             self.ctx, job=job, region='Fake_region',
             source_region='Fake_region2', resource='fake_key',
@@ -117,7 +124,8 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         self.assertEqual(consts.JOB_PROGRESS, resource_sync_create.sync_status)
 
     def test_resource_sync_status(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         resource_sync_create = self.resource_sync_create(
             self.ctx, job=job, region='Fake_region',
             source_region='Fake_region2', resource='fake_key',
@@ -127,7 +135,8 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         self.assertEqual(consts.JOB_PROGRESS, status[0])
 
     def test_resource_sync_update(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         resource_sync_create = self.resource_sync_create(
             self.ctx, job=job, region='Fake_region',
             source_region='Fake_region2', resource='fake_key',
@@ -140,7 +149,8 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         self.assertEqual(consts.JOB_SUCCESS, updated_job[0].get('sync_status'))
 
     def test_foreign_key(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         resource_sync_create = self.resource_sync_create(
             self.ctx, job=job, region='Fake_region',
@@ -151,7 +161,8 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
 
     def test_delete_sync_job(self):
         job_id = UUID1
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.assertIsNotNone(job)
         self.resource_sync_create(
             self.ctx, job=job, region='Fake_region',
@@ -162,7 +173,8 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         self.assertEqual(0, len(updated_job))
 
     def test_composite_primary_key(self):
-        job = self.sync_job_create(self.ctx, job_id=UUID1)
+        job = self.sync_job_create(self.ctx, job_name='fake_job_name',
+                                   job_id=UUID1)
         self.resource_sync_create(
             self.ctx, job=job, region='Fake_region',
             source_region='Fake_region2', resource='fake_key',

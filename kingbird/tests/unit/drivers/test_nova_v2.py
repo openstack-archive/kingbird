@@ -175,11 +175,15 @@ class TestNovaClient(base.KingbirdTestCase):
     @mock.patch.object(nova_v2, 'client')
     def test_get_flavor(self, mock_novaclient):
         """Test get_flavor method of nova."""
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+                                  1.0, False)
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        nv_client.get_flavor('fake_id')
+
+        nv_client.get_flavor(fake_flavor.name)
+        result = mock_novaclient.Client().flavors.find(fake_flavor.name)
         mock_novaclient.Client().flavors.get.\
-            assert_called_once_with('fake_id')
+            assert_called_once_with(result)
 
     @mock.patch.object(nova_v2, 'client')
     def test_get_flavor_access_tenants(self, mock_novaclient):

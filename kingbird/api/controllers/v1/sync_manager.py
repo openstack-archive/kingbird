@@ -55,11 +55,12 @@ class ResourceSyncController(object):
         pass
 
     def _entries_to_database(self, context, target_regions, source_region,
-                             resources, resource_type, job_id):
+                             resources, resource_type, job_id, job_name):
         """Manage the entries to database for both Keypair and image."""
         # Insert into the parent table
         try:
-            result = db_api.sync_job_create(context, job_id=job_id)
+
+            result = db_api.sync_job_create(context, job_name, job_id=job_id)
         except exceptions.InternalError:
             pecan.abort(500, _('Internal Server Error.'))
             # Insert into the child table
@@ -107,17 +108,32 @@ class ResourceSyncController(object):
         context = restcomm.extract_context_from_environ()
         if not uuidutils.is_uuid_like(project) or project != context.project:
             pecan.abort(400, _('Invalid request URL'))
-        payload = eval(request.body)
-        if not payload:
+        request_data = eval(request.body)
+        if not request_data:
             pecan.abort(400, _('Body required'))
-        payload = payload.get('resource_set')
-        if not payload:
+        request_data = request_data.get('resource_set')
+        if not request_data:
             pecan.abort(400, _('resource_set required'))
+        job_name = None
+        if 'name' in request_data.keys():
+            job_name = request_data.get('name')
+            for iteration in range(0, len(request_data['Sync'])):
+                payload = request_data['Sync'][iteration]
+                response = self._get_post_data(payload,
+                                               context, job_name)
+        else:
+            response = self._get_post_data(request_data,
+                                           context, job_name)
+        return response
+
+    def _get_post_data(self, payload, context, job_name):
         resource_type = payload.get('resource_type')
         target_regions = payload.get('target')
         if not target_regions or not isinstance(target_regions, list):
             pecan.abort(400, _('Target regions required'))
         source_region = payload.get('source')
+        if(isinstance(source_region, list)):
+            source_region = "".join(source_region)
         if not source_region or not isinstance(source_region, str):
             pecan.abort(400, _('Source region required'))
         source_resources = payload.get('resources')
@@ -138,7 +154,8 @@ class ResourceSyncController(object):
             result = self._entries_to_database(context, target_regions,
                                                source_region,
                                                source_resources,
-                                               resource_type, job_id)
+                                               resource_type,
+                                               job_id, job_name)
             return self._keypair_sync(job_id, payload, context, result)
 
         elif resource_type == consts.IMAGE:
@@ -152,7 +169,8 @@ class ResourceSyncController(object):
             result = self._entries_to_database(context, target_regions,
                                                source_region,
                                                source_resources,
-                                               resource_type, job_id)
+                                               resource_type,
+                                               job_id, job_name)
             return self._image_sync(job_id, payload, context, result)
 
         elif resource_type == consts.FLAVOR:
@@ -169,7 +187,8 @@ class ResourceSyncController(object):
             result = self._entries_to_database(context, target_regions,
                                                source_region,
                                                source_resources,
-                                               resource_type, job_id)
+                                               resource_type,
+                                               job_id, job_name)
             return self._flavor_sync(job_id, payload, context, result)
 
         else:
@@ -212,8 +231,8 @@ class ResourceSyncController(object):
         :param result: Result object to return an output.
         """
         self.rpc_client.keypair_sync_for_user(context, job_id, payload)
-
-        return {'job_status': {'id': result.id, 'status': result.sync_status,
+        return {'job_status': {'name': result.name, 'id': result.id,
+                               'status': result.sync_status,
                                'created_at': result.created_at}}
 
     def _image_sync(self, job_id, payload, context, result):
@@ -226,7 +245,8 @@ class ResourceSyncController(object):
         :param result: Result object to return an output.
         """
         self.rpc_client.image_sync(context, job_id, payload)
-        return {'job_status': {'id': result.id, 'status': result.sync_status,
+        return {'job_status': {'name': result.name, 'id': result.id,
+                               'status': result.sync_status,
                                'created_at': result.created_at}}
 
     def _flavor_sync(self, job_id, payload, context, result):
@@ -239,5 +259,6 @@ class ResourceSyncController(object):
         :param result: Result object to return an output.
         """
         self.rpc_client.flavor_sync(context, job_id, payload)
-        return {'job_status': {'id': result.id, 'status': result.sync_status,
+        return {'job_status': {'name': result.name, 'id': result.id,
+                               'status': result.sync_status,
                                'created_at': result.created_at}}

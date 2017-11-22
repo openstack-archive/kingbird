@@ -383,9 +383,11 @@ def service_get_all(context):
 ##########################
 
 @require_context
-def sync_job_create(context, job_id):
+def sync_job_create(context, job_name, job_id):
     with write_session() as session:
         sjc = models.SyncJob()
+        if(job_name != ""):
+            sjc.name = job_name
         sjc.id = job_id
         sjc.user_id = context.user
         sjc.project_id = context.project

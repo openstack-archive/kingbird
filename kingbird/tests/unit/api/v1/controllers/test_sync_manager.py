@@ -101,6 +101,10 @@ class TestResourceManager(testroot.KBApiTest):
                    "resource_type": "keypair",
                    "source": FAKE_SOURCE_REGION,
                    "target": [FAKE_TARGET_REGION]}
+        mock_db_api.validate_job_name(self.ctx, JOB_NAME)
+        self.assertEqual(1,
+                         mock_db_api.validate_job_name
+                         .call_count)
         result = sync_manager.ResourceSyncController().\
             _get_post_data(payload, self.ctx, JOB_NAME)
         self.assertEqual(result['job_status'].get('status'),
@@ -367,13 +371,6 @@ class TestResourceManager(testroot.KBApiTest):
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_get_wrong_action(self, mock_db_api, mock_rpc_client):
-        get_url = FAKE_URL + '/fake'
-        self.assertRaises(webtest.app.AppError, self.app.get, get_url,
-                          headers=FAKE_HEADERS)
-
-    @mock.patch.object(rpc_client, 'EngineClient')
-    @mock.patch.object(sync_manager, 'db_api')
     def test_get_active_job(self, mock_db_api, mock_rpc_client):
         get_url = FAKE_URL + '/active'
         self.app.get(get_url, headers=FAKE_HEADERS)
@@ -381,10 +378,21 @@ class TestResourceManager(testroot.KBApiTest):
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_get_detail_job(self, mock_db_api, mock_rpc_client):
+    def test_get_detail_job_by_id(self, mock_db_api, mock_rpc_client):
         get_url = FAKE_URL + '/' + FAKE_JOB
         self.app.get(get_url, headers=FAKE_HEADERS)
-        self.assertEqual(1, mock_db_api.resource_sync_list_by_job.call_count)
+        self.assertEqual(1,
+                         mock_db_api.resource_sync_list_by_job_id
+                         .call_count)
+
+    @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_get_detail_job_by_name(self, mock_db_api, mock_rpc_client):
+        get_url = FAKE_URL + '/' + JOB_NAME
+        self.app.get(get_url, headers=FAKE_HEADERS)
+        self.assertEqual(1,
+                         mock_db_api.resource_sync_list_by_job_name
+                         .call_count)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')

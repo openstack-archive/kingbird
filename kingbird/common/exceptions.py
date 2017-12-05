@@ -124,3 +124,7 @@ class InvalidInputError(KingbirdException):
 
 class ResourceNotFound(NotFound):
     message = _("Resource not available")
+
+
+class DuplicateJobEntry(KingbirdException):
+    message = _("Job name is already present")

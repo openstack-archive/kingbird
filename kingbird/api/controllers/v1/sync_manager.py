@@ -91,12 +91,16 @@ class ResourceSyncController(object):
             result['job_set'] = db_api.sync_job_list(context, action)
         elif uuidutils.is_uuid_like(action):
             try:
-                result['job_set'] = db_api.resource_sync_list_by_job(
+                result['job_set'] = db_api.resource_sync_list_by_job_id(
                     context, action)
             except exceptions.JobNotFound:
                 pecan.abort(404, _('Job not found'))
         else:
-            pecan.abort(400, _('Invalid request URL'))
+            try:
+                result['job_set'] = db_api.resource_sync_list_by_job_name(
+                    context, action)
+            except exceptions.JobNotFound:
+                pecan.abort(404, _('Job not found'))
         return result
 
     @index.when(method='POST', template='json')
@@ -117,7 +121,8 @@ class ResourceSyncController(object):
         job_name = None
         if 'name' in request_data.keys():
             job_name = request_data.get('name')
-            for iteration in range(0, len(request_data['Sync'])):
+            db_api.validate_job_name(context, job_name)
+            for iteration in range(len(request_data['Sync'])):
                 payload = request_data['Sync'][iteration]
                 response = self._get_post_data(payload,
                                                context, job_name)

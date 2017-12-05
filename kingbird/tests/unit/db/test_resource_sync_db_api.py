@@ -24,6 +24,7 @@ from kingbird.common import consts
 from kingbird.common import exceptions
 from kingbird.db import api as api
 from kingbird.db.sqlalchemy import api as db_api
+from kingbird.db.sqlalchemy import models as db_models
 from kingbird.tests import base
 from kingbird.tests import utils
 
@@ -145,7 +146,16 @@ class DBAPIResourceSyncTest(base.KingbirdTestCase):
         self.assertEqual(consts.JOB_PROGRESS, resource_sync_create.sync_status)
         db_api.resource_sync_update(
             self.ctx, job.id, 'Fake_region', 'fake_key', consts.JOB_SUCCESS)
-        updated_job = db_api.resource_sync_list_by_job(self.ctx, job.id)
+        rows = db_api.model_query(self.ctx, db_models.ResourceSync).\
+            filter_by(job_id=UUID1).all()
+        individual_result = db_api.sync_individual_resource(rows)
+        self.assertEqual(consts.JOB_SUCCESS, individual_result[0].
+                         get('sync_status'))
+        updated_job = db_api.resource_sync_list_by_job_id(self.ctx, job.id)
+        self.assertEqual(consts.JOB_SUCCESS, updated_job[0].get('sync_status'))
+        updated_job = db_api.\
+            resource_sync_list_by_job_name(self.ctx,
+                                           'fake_job_name')
         self.assertEqual(consts.JOB_SUCCESS, updated_job[0].get('sync_status'))
 
     def test_foreign_key(self):

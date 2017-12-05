@@ -386,7 +386,7 @@ def service_get_all(context):
 def sync_job_create(context, job_name, job_id):
     with write_session() as session:
         sjc = models.SyncJob()
-        if(job_name != ""):
+        if job_name is not None:
             sjc.name = job_name
         sjc.id = job_id
         sjc.user_id = context.user
@@ -410,6 +410,7 @@ def sync_job_list(context, action=None):
     for row in rows:
         result = dict()
         result['id'] = row.id
+        result['name'] = row.name
         result['sync_status'] = row.sync_status
         result['created_at'] = row.created_at
         if row.updated_at:
@@ -505,7 +506,30 @@ def resource_sync_status(context, job_id):
 
 
 @require_context
-def resource_sync_list_by_job(context, job_id):
+def resource_sync_list_by_job_name(context, job_name):
+    final_response = list()
+    parent_row = model_query(context, models.SyncJob).\
+        filter_by(name=job_name, user_id=context.user,
+                  project_id=context.project).all()
+    if not parent_row:
+        raise exception.JobNotFound()
+    for iteration in range(0, len(parent_row)):
+        rows = model_query(context, models.ResourceSync).\
+            filter_by(job_id=parent_row[iteration].id).all()
+        final_response = final_response + sync_individual_resource(rows)
+    return final_response
+
+
+def validate_job_name(context, job_name):
+    parent_row = model_query(context, models.SyncJob).\
+        filter_by(name=job_name, user_id=context.user,
+                  project_id=context.project).all()
+    if parent_row:
+        raise exception.DuplicateJobEntry()
+
+
+@require_context
+def resource_sync_list_by_job_id(context, job_id):
     parent_row = model_query(context, models.SyncJob).\
         filter_by(id=job_id, user_id=context.user,
                   project_id=context.project).first()
@@ -513,11 +537,16 @@ def resource_sync_list_by_job(context, job_id):
         raise exception.JobNotFound()
     rows = model_query(context, models.ResourceSync).\
         filter_by(job_id=parent_row.id).all()
+    return sync_individual_resource(rows)
+
+
+def sync_individual_resource(rows):
     output = list()
     if not rows:
         raise exception.JobNotFound()
     for row in rows:
         result = dict()
+        result['id'] = row.job_id
         result['target_region'] = row.target_region
         result['source_region'] = row.source_region
         result['resource'] = row.resource

@@ -70,7 +70,7 @@ def setup(url=None, optional=False):
         oslo_messaging.set_transport_defaults('kingbird')
         exmods = ['kingbird.common.exception']
         try:
-            TRANSPORT = oslo_messaging.get_transport(
+            TRANSPORT = oslo_messaging.get_rpc_transport(
                 cfg.CONF, url, allowed_remote_exmods=exmods, aliases=_ALIASES)
         except oslo_messaging.InvalidTransportURL as e:
             TRANSPORT = None

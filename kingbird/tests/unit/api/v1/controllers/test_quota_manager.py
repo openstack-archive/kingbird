@@ -23,6 +23,7 @@ from kingbird.common import config
 from kingbird.rpc import client as rpc_client
 from kingbird.tests.unit.api import test_root_controller as testroot
 from kingbird.tests import utils
+from kingbird.tests.tempest.scenario import consts as tempest_consts
 
 config.register_options()
 OPT_GROUP_NAME = 'keystone_authtoken'
@@ -51,19 +52,47 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_all_admin(self, mock_db_api):
-        Res = Result(TARGET_FAKE_TENANT, 'ram', 100)
-        mock_db_api.quota_get_all_by_project.return_value = \
-            {"project_id": Res.project_id,
-             Res.resource: Res.hard_limit}
+        updated_values = {'subnet': 11}
+        default_values = tempest_consts.DEFAULT_QUOTAS
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (FAKE_TENANT, TARGET_FAKE_TENANT)
+            % (FAKE_TENANT, FAKE_TENANT)
+        mock_db_api.quota_get_all_by_project.return_value = updated_values
+        mock_db_api.quota_class_get_default.return_value = default_values
         response = self.app.get(
             fake_url,
             headers=ADMIN_HEADERS)
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual({'quota_set':
-                         {'project_id': TARGET_FAKE_TENANT, 'ram': 100}},
-                         eval(response.text))
+        default_values.update(updated_values)
+        self.assertEqual(response.json['quota_set'], default_values)
+
+    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_tenant_with_admin(self, mock_db_api):
+        updated_values = {'subnet': 11}
+        default_values = tempest_consts.DEFAULT_QUOTAS
+        fake_url = '/v1.0/%s/os-quota-sets/%s'\
+            % (FAKE_TENANT, TARGET_FAKE_TENANT)
+        mock_db_api.quota_get_all_by_project.return_value = updated_values
+        mock_db_api.quota_class_get_default.return_value = default_values
+        response = self.app.get(
+            fake_url,
+            headers=ADMIN_HEADERS)
+        default_values.update(updated_values)
+        self.assertEqual(response.json['quota_set'], default_values)
+
+    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
+    @mock.patch.object(quota_manager, 'db_api')
+    def test_get_tenant_without_admin(self, mock_db_api):
+        updated_values = {'subnet': 11}
+        default_values = tempest_consts.DEFAULT_QUOTAS
+        fake_url = '/v1.0/%s/os-quota-sets/%s'\
+            % (TARGET_FAKE_TENANT, TARGET_FAKE_TENANT)
+        mock_db_api.quota_get_all_by_project.return_value = updated_values
+        mock_db_api.quota_class_get_default.return_value = default_values
+        response = self.app.get(
+            fake_url,
+            headers=NON_ADMIN_HEADERS)
+        default_values.update(updated_values)
+        self.assertEqual(response.json['quota_set'], default_values)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
@@ -267,22 +296,6 @@ class TestQuotaManager(testroot.KBApiTest):
         self.assertRaisesRegexp(webtest.app.AppError, "403 *",
                                 self.app.get, fake_url,
                                 headers=NON_ADMIN_HEADERS)
-
-    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
-    @mock.patch.object(quota_manager, 'db_api')
-    def test_get_all_another_tenant_with_admin(self, mock_db_api):
-        fake_url = '/v1.0/%s/os-quota-sets/%s'\
-            % (FAKE_TENANT, TARGET_FAKE_TENANT)
-        Res = Result('tenant_1', 'ram', 100)
-        mock_db_api.quota_get_all_by_project.return_value = \
-            {"project_id": Res.project_id,
-             Res.resource: Res.hard_limit}
-        response = self.app.get(
-            fake_url,
-            headers=ADMIN_HEADERS)
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual({'quota_set': {'project_id': 'tenant_1', 'ram': 100}},
-                         eval(response.text))
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')

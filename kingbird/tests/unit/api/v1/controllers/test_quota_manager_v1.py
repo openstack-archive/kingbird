@@ -21,6 +21,7 @@ from oslo_config import cfg
 from kingbird.api.controllers.v1 import quota_manager
 from kingbird.common import config
 from kingbird.rpc import client as rpc_client
+from kingbird.tests.tempest.scenario import consts as tempest_consts
 from kingbird.tests.unit.api import test_root_controller as testroot
 from kingbird.tests import utils
 
@@ -49,21 +50,18 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
     @mock.patch.object(quota_manager, 'enf')
-    def test_get_quota_details_admin(self, mock_enf, mock_db_api):
-        Res = Result(TARGET_FAKE_TENANT, 'ram', 100)
-        mock_enf.enforce.return_value = True
-        mock_db_api.quota_get_all_by_project.return_value = \
-            {"project_id": Res.project_id,
-             Res.resource: Res.hard_limit}
+    def test_get_quota_details(self, mock_enf, mock_db_api):
+        updated_values = {'subnet': 11}
+        default_values = tempest_consts.DEFAULT_QUOTAS
         fake_url = '/v1.1/%s/os-quota-sets/'\
             % (FAKE_TENANT)
+        mock_db_api.quota_get_all_by_project.return_value = updated_values
+        mock_db_api.quota_class_get_default.return_value = default_values
         response = self.app.get(
             fake_url,
             headers=HEADERS)
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual({'quota_set':
-                         {'project_id': TARGET_FAKE_TENANT, 'ram': 100}},
-                         eval(response.text))
+        default_values.update(updated_values)
+        self.assertEqual(response.json['quota_set'], default_values)
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'db_api')
@@ -258,25 +256,6 @@ class TestQuotaManager(testroot.KBApiTest):
         self.assertRaisesRegexp(webtest.app.AppError, "403 *",
                                 self.app.get, fake_url,
                                 headers=HEADERS)
-
-    @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
-    @mock.patch.object(quota_manager, 'db_api')
-    @mock.patch.object(quota_manager, 'enf')
-    def test_get_complete_quota_another_tenant_with_admin(self, mock_enf,
-                                                          mock_db_api):
-        fake_url = '/v1.1/%s/os-quota-sets'\
-            % (FAKE_TENANT)
-        Res = Result(FAKE_TENANT, 'ram', 100)
-        mock_db_api.quota_get_all_by_project.return_value = \
-            {"project_id": Res.project_id,
-             Res.resource: Res.hard_limit}
-        mock_enf.enforce.return_value = True
-        response = self.app.get(
-            fake_url,
-            headers=HEADERS)
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual({'quota_set': {'project_id': FAKE_TENANT,
-                          'ram': 100}}, eval(response.text))
 
     @mock.patch.object(rpc_client, 'EngineClient', new=mock.Mock())
     @mock.patch.object(quota_manager, 'enf')

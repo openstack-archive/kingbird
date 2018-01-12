@@ -24,6 +24,7 @@ from pecan import request
 
 from kingbird.api.controllers import restcomm
 from kingbird.api import enforcer as enf
+from kingbird.common import consts
 from kingbird.common import exceptions
 from kingbird.common.i18n import _
 from kingbird.common import utils
@@ -52,10 +53,25 @@ class BaseController(object):
 
     It references all other resources belonging to both the API's.
     """
+    supported_quotas = []
 
     def __init__(self, *args, **kwargs):
         super(BaseController, self).__init__(*args, **kwargs)
+        self.supported_quotas = list(
+            consts.CINDER_QUOTA_FIELDS +
+            consts.NEUTRON_QUOTA_FIELDS +
+            consts.NOVA_QUOTA_FIELDS)
         self.rpc_client = rpc_client.EngineClient()
+
+    def _format_quota_set(self, context, quota_set):
+        result = self.get_defaults(context,
+                                   CONF.kingbird_global_limit)
+
+        for quota in self.supported_quotas:
+            if quota in quota_set:
+                result[quota] = quota_set[quota]
+
+        return result
 
     def get_quota(self, context, project_id, action=None):
         """Get quota for a specified tenant.
@@ -84,7 +100,8 @@ class BaseController(object):
                     context, project_id)
             else:
                 # Get quota limits for all the resources for a project
-                result = db_api.quota_get_all_by_project(context, project_id)
+                values = db_api.quota_get_all_by_project(context, project_id)
+                result = self._format_quota_set(context, values)
         return result
 
     def get_defaults(self, context, config_defaults):

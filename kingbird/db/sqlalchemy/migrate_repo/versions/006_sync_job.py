@@ -48,7 +48,7 @@ def upgrade(migrate_engine):
                           primary_key=True),
         sqlalchemy.Column('target_region', sqlalchemy.String(36),
                           primary_key=True),
-        sqlalchemy.Column('resource', sqlalchemy.String(36),
+        sqlalchemy.Column('resource', sqlalchemy.String(255),
                           primary_key=True),
         sqlalchemy.Column('resource_type', sqlalchemy.String(36),
                           nullable=False),

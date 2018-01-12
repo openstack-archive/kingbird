@@ -180,7 +180,7 @@ class ResourceSync(BASE, KingbirdBase):
 
     target_region = Column('target_region', String(36), primary_key=True)
 
-    resource = Column('resource', String(36), primary_key=True)
+    resource = Column('resource', String(255), primary_key=True)
 
     resource_type = Column('resource_type', String(36), nullable=False)
 

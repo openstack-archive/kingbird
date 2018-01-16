@@ -180,6 +180,8 @@ class NovaClient(base.DriverBase):
         resource_flavor.update({'flavorid': resource_flavor['id']})
         resource_flavor.pop("links", None)
         resource_flavor.pop("OS-FLV-DISABLED:disabled", None)
+        resource_flavor["ephemeral"] = resource_flavor[
+            "OS-FLV-EXT-DATA:ephemeral"]
         resource_flavor.pop("OS-FLV-EXT-DATA:ephemeral", None)
         resource_flavor.pop("os-flavor-access:is_public", None)
         resource_flavor.pop("id", None)

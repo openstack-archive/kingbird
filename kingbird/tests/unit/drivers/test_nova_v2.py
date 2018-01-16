@@ -27,14 +27,15 @@ class Server(object):
 
 
 class Fake_Flavor(object):
-    def __init__(self, id, ram, cores, disks, name, swap, rxtx_factor,
-                 is_public=True, keys=None):
+    def __init__(self, id, ram, cores, disks, name, ephemeral, swap,
+                 rxtx_factor, is_public=True, keys=None):
         self.id = id
         self.ram = ram
         self.vcpus = cores
         self.disk = disks
         self.name = name
         self.is_public = is_public
+        self.ephemeral = ephemeral
         self.swap = swap
         self.rxtx_factor = 1.0
         self._info = {u'name': self.name,
@@ -47,7 +48,8 @@ class Fake_Flavor(object):
                       u'vcpus': self.vcpus, u'swap': self.swap,
                       u'rxtx_factor': 1.0, u'disk': self.disk,
                       u'os-flavor-access:is_public': self.is_public,
-                      u'OS-FLV-EXT-DATA:ephemeral': 0, u'id': self.id}
+                      u'OS-FLV-EXT-DATA:ephemeral': self.ephemeral,
+                      u'id': self.id}
         self.keys = keys
 
     def get_keys(self):
@@ -197,7 +199,7 @@ class TestNovaClient(base.KingbirdTestCase):
     def test_check_and_delete_flavor(self, mock_novaclient):
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 10, 1,
                                   1.0)
         mock_novaclient.Client().flavors.list.return_value = [fake_flavor]
         nv_client.check_and_delete_flavor_in_target_region(fake_flavor,
@@ -213,7 +215,7 @@ class TestNovaClient(base.KingbirdTestCase):
     def test_check_and_delete_target_flavor(self, mock_novaclient):
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 10, 1,
                                   1.0)
         mock_novaclient.Client().flavors.get.return_value = None
         mock_novaclient.Client().flavors.list.return_value = []
@@ -225,21 +227,15 @@ class TestNovaClient(base.KingbirdTestCase):
                                                         mock_novaclient):
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 10, 1,
                                   1.0)
         nv_client.create_flavor(True, fake_flavor)
         mock_novaclient.Client().flavors.create.\
             assert_called_once_with(
                 disk=fake_flavor.disk, name=fake_flavor.name,
-                ram=fake_flavor.ram, rxtx_factor=fake_flavor.rxtx_factor,
+                ram=fake_flavor.ram, ephemeral=fake_flavor.ephemeral,
+                rxtx_factor=fake_flavor.rxtx_factor,
                 swap=fake_flavor.swap, vcpus=fake_flavor.vcpus)
-        fake_resource_dict = fake_flavor._info.copy()
-        fake_resource_dict.update({'flavorid': fake_flavor.id})
-        fake_resource_dict.pop("links", None)
-        fake_resource_dict.pop("OS-FLV-DISABLED:disabled", None)
-        fake_resource_dict.pop("OS-FLV-EXT-DATA:ephemeral", None)
-        fake_resource_dict.pop("os-flavor-access:is_public", None)
-        fake_resource_dict.pop("id", None)
         mock_novaclient.Client().flavors.get.\
             assert_called_once_with(fake_flavor.id)
         mock_novaclient.Client().flavors.list.\
@@ -250,13 +246,14 @@ class TestNovaClient(base.KingbirdTestCase):
                                                          mock_novaclient):
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 10, 1,
                                   1.0)
         nv_client.create_flavor(False, fake_flavor)
         mock_novaclient.Client().flavors.create.\
             assert_called_once_with(
                 flavorid=fake_flavor.id, disk=fake_flavor.disk,
                 name=fake_flavor.name, ram=fake_flavor.ram,
+                ephemeral=fake_flavor.ephemeral,
                 rxtx_factor=fake_flavor.rxtx_factor,
                 swap=fake_flavor.swap, vcpus=fake_flavor.vcpus)
         mock_novaclient.Client().flavors.assert_not_called
@@ -267,22 +264,16 @@ class TestNovaClient(base.KingbirdTestCase):
                                                           mock_novaclient):
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 10, 1,
                                   1.0)
         access_tenants = ['fake_tenant_1', 'fake_tenant_2']
         nv_client.create_flavor(True, fake_flavor, access_tenants)
         mock_novaclient.Client().flavors.create.\
             assert_called_once_with(
                 disk=fake_flavor.disk, name=fake_flavor.name,
-                ram=fake_flavor.ram, rxtx_factor=fake_flavor.rxtx_factor,
+                ram=fake_flavor.ram, ephemeral=fake_flavor.ephemeral,
+                rxtx_factor=fake_flavor.rxtx_factor,
                 swap=fake_flavor.swap, vcpus=fake_flavor.vcpus)
-        fake_resource_dict = fake_flavor._info.copy()
-        fake_resource_dict.update({'flavorid': fake_flavor.id})
-        fake_resource_dict.pop("links", None)
-        fake_resource_dict.pop("OS-FLV-DISABLED:disabled", None)
-        fake_resource_dict.pop("OS-FLV-EXT-DATA:ephemeral", None)
-        fake_resource_dict.pop("os-flavor-access:is_public", None)
-        fake_resource_dict.pop("id", None)
         mock_novaclient.Client().flavors.get.\
             assert_called_once_with(fake_flavor.id)
         mock_novaclient.Client().flavors.list.\
@@ -295,7 +286,7 @@ class TestNovaClient(base.KingbirdTestCase):
                                                            mock_novaclient):
         nv_client = nova_v2.NovaClient('fake_region', self.session,
                                        DISABLED_QUOTAS)
-        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = Fake_Flavor('fake_id', 512, 2, 30, 'fake_flavor', 10, 1,
                                   1.0)
         access_tenants = ['fake_tenant_1', 'fake_tenant_2']
         nv_client.create_flavor(False, fake_flavor, access_tenants)
@@ -303,6 +294,7 @@ class TestNovaClient(base.KingbirdTestCase):
             assert_called_once_with(
                 flavorid=fake_flavor.id, disk=fake_flavor.disk,
                 name=fake_flavor.name, ram=fake_flavor.ram,
+                ephemeral=fake_flavor.ephemeral,
                 rxtx_factor=fake_flavor.rxtx_factor,
                 swap=fake_flavor.swap, vcpus=fake_flavor.vcpus)
         mock_novaclient.Client().flavors.assert_not_called

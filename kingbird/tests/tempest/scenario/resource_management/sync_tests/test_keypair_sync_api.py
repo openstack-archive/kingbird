@@ -140,7 +140,8 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
             lambda: self._check_job_status(),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
         self.delete_db_entries(job_id_1)
-        job_details_2 = self._keypair_sync_job_create(FORCE)
+        job_details_2 = self._keypair_sync_job_create(
+          FORCE, job_details_1['keys'])
         job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
             lambda: self._check_job_status(),

@@ -24,6 +24,7 @@ import six
 import tempest.test
 
 from tempest.api.compute import base as kp_base
+from tempest.common import utils
 from tempest import config
 from tempest.lib.common.utils import data_utils
 from tempest.lib.common.utils import test_utils
@@ -43,19 +44,44 @@ class BaseKingbirdClass(object):
         admin_client = self._get_admin_keystone()
         regions = self._get_regions(admin_client)
         target_regions = regions
-        target_regions.remove(self.client.region)
+        target_regions.remove(self.keypair_client.region)
+        source_region = self.keypair_client.region
         if keys:
             create_response = self._sync_job_create(
-                consts.KEYPAIR_RESOURCE_TYPE, target_regions, keys,
-                force=force)
+                consts.KEYPAIR_RESOURCE_TYPE, source_region, target_regions,
+                keys, force=force)
             result['keys'] = keys
         else:
             key_list = self._create_keypairs()
             # Now sync all the keypairs in other regions.
             create_response = self._sync_job_create(
-                consts.KEYPAIR_RESOURCE_TYPE, target_regions, key_list,
-                force=force)
+                consts.KEYPAIR_RESOURCE_TYPE, source_region, target_regions,
+                key_list, force=force)
             result['keys'] = key_list
+        job_id = create_response.get('job_status').get('id')
+        result['job_id'] = job_id
+        result['admin'] = admin_client
+        result['target'] = target_regions
+        return result
+
+    def _flavor_sync_job_create(self, force, admin_session,
+                                existed_flavors=None):
+        result = dict()
+        admin_client = self._get_admin_keystone()
+        target_regions = self._get_regions(admin_client)
+        flavors, admin = self._create_flavor(admin_session)
+        target_regions.remove(admin.region)
+        source_region = admin.region
+        if existed_flavors:
+            create_response = self._sync_job_create(
+                consts.FLAVOR_RESOURCE_TYPE, source_region, target_regions,
+                existed_flavors, force)
+            result['flavors'] = existed_flavors
+        else:
+            create_response = self._sync_job_create(
+                consts.FLAVOR_RESOURCE_TYPE, source_region, target_regions,
+                flavors, force)
+            result['flavors'] = flavors
         job_id = create_response.get('job_status').get('id')
         result['job_id'] = job_id
         result['admin'] = admin_client
@@ -69,10 +95,11 @@ class BaseKingbirdClass(object):
         regions = self._get_regions(admin_client)
         target_regions = regions
         target_regions.remove(self.client.region)
+        source_region = self.client.region
         # Now sync the created images in other regions.
         create_response = self._sync_job_create(
-            consts.IMAGE_RESOURCE_TYPE, target_regions, images.keys(),
-            force=force)
+            consts.IMAGE_RESOURCE_TYPE, source_region, target_regions,
+            images.keys(), force=force)
         job_id = create_response.get('job_status').get('id')
         result['job_id'] = job_id
         result['admin'] = admin_client
@@ -86,15 +113,80 @@ class BaseKingbirdClass(object):
         status = job_list_resp.get('job_set')[0].get('sync_status')
         return status != consts.JOB_PROGRESS
 
-    def _sync_job_create(self, resource_type, target_regions, resource_list,
-                         force):
+    def _check_template_job_status(self, job_id):
+        # Wait until the status of the each resource job is not "IN_PROGRESS"
+        job_list_resp = self.get_sync_job_detail(job_id)
+        for i in range(len(job_list_resp['job_set'])):
+            status = job_list_resp.get('job_set')[i].get('sync_status')
+            if(status == consts.JOB_PROGRESS):
+                return False
+        return True
+
+    def _sync_job_create(self, resource_type, source_region, target_regions,
+                         resource_list, force):
         # JSON body used to sync resource.
         body = {"resource_type": resource_type,
                 "resources": resource_list,
-                "source": self.client.region, "force": force,
+                "source": source_region, "force": force,
                 "target": target_regions}
         response = self.sync_resource(body)
         return response
+
+    def template_sync_job_create_non_admin(self, keypair, image, force):
+        # JSON body used to sync resource.
+        body = dict()
+        result = dict()
+        resource_set = list()
+        admin_client = self._get_admin_keystone()
+        regions = self._get_regions(admin_client)
+        keypair_target_regions = regions
+        keypair_target_regions.remove(self.keypair_client.region)
+        regions = self._get_regions(admin_client)
+        image_target_regions = regions
+        image_target_regions.remove(self.client.region)
+        keypair_set = {"resource_type": consts.KEYPAIR_RESOURCE_TYPE,
+                       "resources": keypair,
+                       "source": self.keypair_client.region,
+                       "force": force,
+                       "target": keypair_target_regions}
+        resource_set.append(keypair_set)
+        image_set = {"resource_type": consts.IMAGE_RESOURCE_TYPE,
+                     "resources": image.keys(),
+                     "source": self.client.region,
+                     "force": force,
+                     "target": image_target_regions}
+        resource_set.append(image_set)
+        body["Sync"] = resource_set
+        response = self.sync_resource(body)
+        job_id = response.get('job_status').get('id')
+        result['job_id'] = job_id
+        result['admin'] = admin_client
+        result['keypair_targets'] = keypair_target_regions
+        result['image_targets'] = image_target_regions
+        return result
+
+    def template_sync_job_create_admin(self, flavor, force):
+        # JSON body used to sync resource.
+        body = dict()
+        result = dict()
+        resource_set = list()
+        admin_client = self._get_admin_keystone()
+        regions = self._get_regions(admin_client)
+        flavor_target_regions = regions
+        flavor_target_regions.remove(self.admin_flavors_client.region)
+        flavor_set = {"resource_type": consts.FLAVOR_RESOURCE_TYPE,
+                      "resources": flavor,
+                      "source": self.admin_flavors_client.region,
+                      "force": force,
+                      "target": flavor_target_regions}
+        resource_set.append(flavor_set)
+        body["Sync"] = resource_set
+        response = self.sync_resource(body)
+        job_id = response.get('job_status').get('id')
+        result['job_id'] = job_id
+        result['admin'] = admin_client
+        result['target'] = flavor_target_regions
+        return result
 
     def _get_admin_keystone(self):
         auth = v3.Password(
@@ -148,6 +240,7 @@ class BaseKingbirdClass(object):
         job_set = list()
         res = dict()
         for i in response:
+            result['resource_id'] = i.id
             result['resource'] = i.resource_name
             result['target_region'] = i.target_region
             result['sync_status'] = i.status
@@ -166,7 +259,7 @@ class BaseKBKeypairTest(kp_base.BaseV2ComputeTest):
     @classmethod
     def setup_clients(cls):
         super(BaseKBKeypairTest, cls).setup_clients()
-        cls.client = cls.keypairs_client
+        cls.keypair_client = cls.keypairs_client
 
     def _create_keypairs(self):
         key_list = list()
@@ -182,10 +275,10 @@ class BaseKBKeypairTest(kp_base.BaseV2ComputeTest):
                                                session=self.sess,
                                                region_name=region)
                 source_keypair = nova_client.keypairs.get(
-                    keypair, self.client.user_id)
+                    keypair, self.keypair_client.user_id)
                 self.assertEqual(source_keypair.name, keypair)
 
-    def _cleanup_resources(self, key_list, regions, user_id):
+    def _keypair_cleanup_resources(self, key_list, regions, user_id):
         for region in regions:
             for key in key_list:
                 nova_client = nv_client.Client(NOVA_API_VERSION,
@@ -194,7 +287,7 @@ class BaseKBKeypairTest(kp_base.BaseV2ComputeTest):
                 nova_client.keypairs.delete(key, user_id)
 
     def _delete_keypair(self, keypair_name, **params):
-        self.client.delete_keypair(keypair_name, **params)
+        self.keypair_client.delete_keypair(keypair_name, **params)
 
     def create_keypair(self, keypair_name=None,
                        pub_key=None, keypair_type=None,
@@ -210,10 +303,10 @@ class BaseKBKeypairTest(kp_base.BaseV2ComputeTest):
         if user_id:
             kwargs.update({'user_id': user_id})
             delete_params['user_id'] = user_id
-        body = self.client.create_keypair(**kwargs)['keypair']
+        body = self.keypair_client.create_keypair(**kwargs)['keypair']
         self.kingbird_client = kb_client.Client(
-            kingbird_url=KINGBIRD_URL, auth_token=self.client.token,
-            project_id=self.client.tenant_id)
+            kingbird_url=KINGBIRD_URL, auth_token=self.keypair_client.token,
+            project_id=self.keypair_client.tenant_id)
         self.addCleanup(self._delete_keypair, keypair_name, **delete_params)
         return body
 
@@ -315,8 +408,8 @@ class BaseKBImageTest(tempest.test.BaseTestCase):
         target_regions.remove(self.client.region)
         # Now sync the created images in other regions.
         create_response = self._sync_job_create(
-            consts.IMAGE_RESOURCE_TYPE, target_regions, [ami_id],
-            force=force)
+            consts.IMAGE_RESOURCE_TYPE, self.client.region, target_regions,
+            [ami_id], force=force)
         job_id = create_response.get('job_status').get('id')
         result['job_id'] = job_id
         result['admin'] = admin_client
@@ -392,3 +485,78 @@ class BaseKBImageTest(tempest.test.BaseTestCase):
                         region_image.ramdisk_id)
                     glance_client.images.delete(source_ari_image.id)
                     glance_client.images.delete(target_image['id'])
+
+
+class BaseKBFlavorsTest(kp_base.BaseV2ComputeAdminTest):
+    """Tests Flavors API Create and Delete that require admin privileges"""
+
+    @classmethod
+    def skip_checks(cls):
+        super(BaseKBFlavorsTest, cls).skip_checks()
+        if not utils.is_extension_enabled('OS-FLV-EXT-DATA', 'compute'):
+            msg = "OS-FLV-EXT-DATA extension not enabled."
+            raise cls.skipException(msg)
+
+    @classmethod
+    def resource_setup(cls):
+        super(BaseKBFlavorsTest, cls).resource_setup()
+        cls.flavor_client = cls.flavors_client
+        cls.flavor_name_prefix = 'test_flavor_'
+        cls.ram = 512
+        cls.vcpus = 1
+        cls.disk = 10
+        cls.ephemeral = 10
+        cls.swap = 1024
+        cls.rxtx = 2
+
+    def _create_flavor(self, admin_session):
+        # Create a flavor and ensure it's details are listed
+        # This operation requires the user to have 'admin' role
+        flavor_list = list()
+        for i in range(2):
+            flavor_name = data_utils.rand_name(self.flavor_name_prefix)
+            # Create the flavor
+            self.create_flavor(name=flavor_name, ram=self.ram,
+                               vcpus=self.vcpus, disk=self.disk,
+                               ephemeral=self.ephemeral, swap=self.swap,
+                               rxtx_factor=self.rxtx)
+            flavor_list.append(flavor_name)
+        if admin_session:
+            self.kingbird_client = kb_client.Client(
+                kingbird_url=KINGBIRD_URL,
+                auth_token=self.admin_flavors_client.token,
+                project_id=self.admin_flavors_client.tenant_id)
+            return flavor_list, self.admin_flavors_client
+        else:
+            self.kingbird_client = kb_client.Client(
+                kingbird_url=KINGBIRD_URL,
+                auth_token=self.flavors_client.token,
+                project_id=self.flavors_client.tenant_id)
+            return flavor_list, self.flavors_client
+
+    def _check_flavors_in_target_region(self, target_regions, flavors,
+                                        admin_client, **properties):
+        for region in target_regions:
+            for flavor in flavors:
+                nova_client = nv_client.Client(
+                    NOVA_API_VERSION, session=admin_client.session,
+                    region_name=region)
+                res_id = nova_client.flavors.find(name=flavor)
+                source_flavor = nova_client.flavors.get(res_id)
+                self.assertEqual(source_flavor.name, flavor)
+                self.assertEqual(source_flavor.ram, properties["ram"])
+                self.assertEqual(source_flavor.vcpus, properties["vcpus"])
+                self.assertEqual(source_flavor.disk, properties["disk"])
+                self.assertEqual(source_flavor.ephemeral,
+                                 properties["ephemeral"])
+                self.assertEqual(source_flavor.swap, properties["swap"])
+                self.assertEqual(source_flavor.rxtx_factor, properties["rxtx"])
+
+    def _flavor_cleanup_resources(self, flavors, regions, admin_client):
+        for region in regions:
+            for flavor in flavors:
+                nova_client = nv_client.Client(
+                    NOVA_API_VERSION, session=admin_client.session,
+                    region_name=region)
+                res_id = nova_client.flavors.find(name=flavor)
+                nova_client.flavors.delete(res_id)

@@ -160,11 +160,6 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
             cls.session, cls.regions, project_id)
         total_usages = cls.get_summation(resource_usage)
         for current_region in cls.regions:
-            # Calculate new limit for instance count
-            global_remaining_limit = GLOBAL_INSTANCE_LIMIT - \
-                total_usages['instances']
-            instances_limit = global_remaining_limit + resource_usage[
-                current_region]['instances']
             # Calculate new limit for network count
             global_remaining_limit = GLOBAL_NETWORK_LIMIT - \
                 total_usages['network']
@@ -175,6 +170,11 @@ class BaseKingbirdTest(api_version_utils.BaseMicroversionTest,
                 total_usages['volumes']
             volume_limit = global_remaining_limit + resource_usage[
                 current_region]['volumes']
+            # Calculate new limit for instance count
+            global_remaining_limit = GLOBAL_INSTANCE_LIMIT - \
+                total_usages['instances']
+            instances_limit = global_remaining_limit + resource_usage[
+                current_region]['instances']
             calculated_quota_limits.update(
                 {current_region: [instances_limit, network_limit,
                                   volume_limit]})

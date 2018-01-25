@@ -125,7 +125,7 @@ def get_keystone_client(session):
 def create_instance(openstack_drivers, resource_ids, count=1):
     nova_client = openstack_drivers['nova']
     server_ids = []
-    image = nova_client.images.find(id=CONF.compute.image_ref)
+    image = nova_client.glance.find_image(CONF.compute.image_ref)
     flavor = nova_client.flavors.find(id=resource_ids['flavor_id'])
     try:
         for x in range(count):

@@ -55,24 +55,19 @@ class ResourceSyncController(object):
         pass
 
     def _entries_to_database(self, context, target_regions, source_region,
-                             resources, resource_type, job_id, job_name):
+                             resources, resource_type, result):
         """Manage the entries to database for both Keypair and image."""
-        # Insert into the parent table
-        try:
-
-            result = db_api.sync_job_create(context, job_name, job_id=job_id)
-        except exceptions.InternalError:
-            pecan.abort(500, _('Internal Server Error.'))
-            # Insert into the child table
+        # Insert into the child table
         for region in target_regions:
             for resource in resources:
+                job_id = uuidutils.generate_uuid()
                 try:
                     db_api.resource_sync_create(context, result,
                                                 region, source_region,
-                                                resource, resource_type)
+                                                resource, resource_type,
+                                                job_id)
                 except exceptions.JobNotFound:
                     pecan.abort(404, _('Job not found'))
-        return result
 
     @index.when(method='GET', template='json')
     def get(self, project, action=None):
@@ -91,16 +86,12 @@ class ResourceSyncController(object):
             result['job_set'] = db_api.sync_job_list(context, action)
         elif uuidutils.is_uuid_like(action):
             try:
-                result['job_set'] = db_api.resource_sync_list_by_job_id(
+                result['job_set'] = db_api.resource_sync_list(
                     context, action)
             except exceptions.JobNotFound:
                 pecan.abort(404, _('Job not found'))
         else:
-            try:
-                result['job_set'] = db_api.resource_sync_list_by_job_name(
-                    context, action)
-            except exceptions.JobNotFound:
-                pecan.abort(404, _('Job not found'))
+            pecan.abort(400, _('Invalid request URL'))
         return result
 
     @index.when(method='POST', template='json')
@@ -118,83 +109,81 @@ class ResourceSyncController(object):
         request_data = request_data.get('resource_set')
         if not request_data:
             pecan.abort(400, _('resource_set required'))
-        job_name = None
-        if 'name' in request_data.keys():
-            job_name = request_data.get('name')
-            db_api.validate_job_name(context, job_name)
-            for iteration in range(len(request_data['Sync'])):
-                payload = request_data['Sync'][iteration]
-                response = self._get_post_data(payload,
-                                               context, job_name)
-        else:
-            response = self._get_post_data(request_data,
-                                           context, job_name)
+        parent_job_id = uuidutils.generate_uuid()
+        try:
+            result = db_api.sync_job_create(context, parent_job_id)
+        except exceptions.InternalError:
+            pecan.abort(500, _('Internal Server Error.'))
+        response = self._get_post_data(request_data,
+                                       context, result)
         return response
 
-    def _get_post_data(self, payload, context, job_name):
+    def _get_post_data(self, payload, context, result):
         resource_type = payload.get('resource_type')
         target_regions = payload.get('target')
+        force = eval(str(payload.get('force', False)))
+        source_regions = list()
         if not target_regions or not isinstance(target_regions, list):
             pecan.abort(400, _('Target regions required'))
         source_region = payload.get('source')
-        if(isinstance(source_region, list)):
-            source_region = "".join(source_region)
-        if not source_region or not isinstance(source_region, str):
+        if not source_region:
             pecan.abort(400, _('Source region required'))
+        if isinstance(source_region, list):
+            source_regions = source_region
+        if isinstance(source_region, str):
+            source_regions.append(source_region)
         source_resources = payload.get('resources')
         if not source_resources:
             pecan.abort(400, _('Source resources required'))
-        job_id = uuidutils.generate_uuid()
+        session = EndpointCache().get_session_from_token(
+            context.auth_token, context.project)
         if resource_type == consts.KEYPAIR:
-            session = EndpointCache().get_session_from_token(
-                context.auth_token, context.project)
-            # Create Source Region object
-            source_nova_client = NovaClient(source_region, session)
-            # Check for keypairs in Source Region
-            for source_keypair in source_resources:
-                source_keypair = source_nova_client.\
-                    get_keypairs(source_keypair)
-                if not source_keypair:
-                    pecan.abort(404)
-            result = self._entries_to_database(context, target_regions,
-                                               source_region,
-                                               source_resources,
-                                               resource_type,
-                                               job_id, job_name)
-            return self._keypair_sync(job_id, payload, context, result)
+            for source in source_regions:
+                # Create Source Region object
+                source_nova_client = NovaClient(source, session)
+                # Check for keypairs in Source Region
+                for source_keypair in source_resources:
+                    source_keypair = source_nova_client.\
+                        get_keypairs(source_keypair)
+                    if not source_keypair:
+                        db_api._delete_failure_sync_job(context, result.job_id)
+                        pecan.abort(404)
+                self._entries_to_database(context, target_regions,
+                                          source, source_resources,
+                                          resource_type, result)
+            return self._keypair_sync(force, context, result)
 
         elif resource_type == consts.IMAGE:
-            # Create Source Region glance_object
-            glance_driver = GlanceClient(source_region, context)
-            # Check for images in Source Region
-            for image in source_resources:
-                source_image = glance_driver.check_image(image)
-                if image != source_image:
-                    pecan.abort(404)
-            result = self._entries_to_database(context, target_regions,
-                                               source_region,
-                                               source_resources,
-                                               resource_type,
-                                               job_id, job_name)
-            return self._image_sync(job_id, payload, context, result)
+            for source in source_regions:
+                # Create Source Region glance_object
+                glance_driver = GlanceClient(source, context)
+                # Check for images in Source Region
+                for image in source_resources:
+                    source_image = glance_driver.check_image(image)
+                    if image != source_image:
+                        db_api._delete_failure_sync_job(context, result.job_id)
+                        pecan.abort(404)
+                self._entries_to_database(context, target_regions,
+                                          source, source_resources,
+                                          resource_type, result)
+            return self._image_sync(force, context, result)
 
         elif resource_type == consts.FLAVOR:
             if not context.is_admin:
+                db_api._delete_failure_sync_job(context, result.job_id)
                 pecan.abort(403, _('Admin required'))
-            session = EndpointCache().get_session_from_token(
-                context.auth_token, context.project)
-            # Create Source Region object
-            source_nova_client = NovaClient(source_region, session)
-            for flavor in source_resources:
-                source_flavor = source_nova_client.get_flavor(flavor)
-                if not source_flavor:
-                    pecan.abort(404)
-            result = self._entries_to_database(context, target_regions,
-                                               source_region,
-                                               source_resources,
-                                               resource_type,
-                                               job_id, job_name)
-            return self._flavor_sync(job_id, payload, context, result)
+            for source in source_regions:
+                # Create Source Region object
+                source_nova_client = NovaClient(source, session)
+                for flavor in source_resources:
+                    source_flavor = source_nova_client.get_flavor(flavor)
+                    if not source_flavor:
+                        db_api._delete_failure_sync_job(context, result.job_id)
+                        pecan.abort(404)
+                self._entries_to_database(context, target_regions,
+                                          source, source_resources,
+                                          resource_type, result)
+            return self._flavor_sync(force, context, result)
 
         else:
             pecan.abort(400, _('Bad resource_type'))
@@ -226,7 +215,7 @@ class ResourceSyncController(object):
         else:
             pecan.abort(400, _('Bad request'))
 
-    def _keypair_sync(self, job_id, payload, context, result):
+    def _keypair_sync(self, force, context, result):
         """Make an rpc call to kb-engine.
 
         :param job_id: ID of the job to update values in database based on
@@ -235,12 +224,12 @@ class ResourceSyncController(object):
         :param context: context of the request.
         :param result: Result object to return an output.
         """
-        self.rpc_client.keypair_sync_for_user(context, job_id, payload)
-        return {'job_status': {'name': result.name, 'id': result.id,
+        self.rpc_client.keypair_sync_for_user(context, result.job_id, force)
+        return {'job_status': {'id': result.job_id,
                                'status': result.sync_status,
                                'created_at': result.created_at}}
 
-    def _image_sync(self, job_id, payload, context, result):
+    def _image_sync(self, force, context, result):
         """Make an rpc call to engine.
 
         :param job_id: ID of the job to update values in database based on
@@ -249,12 +238,12 @@ class ResourceSyncController(object):
         :param context: context of the request.
         :param result: Result object to return an output.
         """
-        self.rpc_client.image_sync(context, job_id, payload)
-        return {'job_status': {'name': result.name, 'id': result.id,
+        self.rpc_client.image_sync(context, result.job_id, force)
+        return {'job_status': {'id': result.job_id,
                                'status': result.sync_status,
                                'created_at': result.created_at}}
 
-    def _flavor_sync(self, job_id, payload, context, result):
+    def _flavor_sync(self, force, context, result):
         """Make an rpc call to engine.
 
         :param job_id: ID of the job to update values in database based on
@@ -263,7 +252,7 @@ class ResourceSyncController(object):
         :param context: context of the request.
         :param result: Result object to return an output.
         """
-        self.rpc_client.flavor_sync(context, job_id, payload)
-        return {'job_status': {'name': result.name, 'id': result.id,
+        self.rpc_client.flavor_sync(context, result.job_id, force)
+        return {'job_status': {'id': result.job_id,
                                'status': result.sync_status,
                                'created_at': result.created_at}}

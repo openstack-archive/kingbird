@@ -33,46 +33,31 @@ class ImageSyncManager(object):
     def __init__(self, *args, **kwargs):
         super(ImageSyncManager, self).__init__()
 
-    def create_resources_in_region(self, job_id, target_regions,
+    def create_resources_in_region(self, job_id, target_region,
                                    source_region, context, resource, force):
-        """Create Region Specific threads."""
-        regions_thread = list()
-        for region in target_regions:
-            thread = threading.Thread(target=self.create_resources,
-                                      args=(job_id, region, source_region,
-                                            context, resource, force))
-            regions_thread.append(thread)
-            thread.start()
-            for region_thread in regions_thread:
-                region_thread.join()
-
-    def create_resources(self, job_id, region, source_region, context,
-                         resource, force):
-        """Check dependent images and create resources in target regions."""
         source_glance_client = GlanceClient(source_region, context)
-        target_glance_client = GlanceClient(region, context)
+        target_glance_client = GlanceClient(target_region, context)
         dependent_images = glance_adapter.check_dependent_images(
             context, source_region, resource)
         if dependent_images is not None:
             result = self.create_dependent_image(
                 resource, dependent_images, target_glance_client,
-                source_glance_client, region, force)
-            self.update_result_in_database(context, job_id, region, resource,
-                                           result)
+                source_glance_client, target_region, force)
+            self.update_result_in_database(context, job_id, target_region,
+                                           resource, result)
         else:
             result = self.create_independent_image(
                 resource, target_glance_client, source_glance_client,
-                region, force)
-            self.update_result_in_database(context, job_id, region, resource,
-                                           result)
+                target_region, force)
+            self.update_result_in_database(context, job_id, target_region,
+                                           resource, result)
 
     def update_result_in_database(self, context, job_id, region, resource,
                                   result):
         """Update result in database based on the sync operation."""
         job_result = consts.JOB_SUCCESS if result else consts.JOB_FAILURE
         try:
-            db_api.resource_sync_update(context, job_id, region,
-                                        resource, job_result)
+            db_api.resource_sync_update(context, job_id, job_result)
         except exceptions.JobNotFound():
             raise
         pass
@@ -167,7 +152,7 @@ class ImageSyncManager(object):
                       % {'msg': exc.message, 'region': region})
             return False
 
-    def resource_sync(self, context, job_id, payload):
+    def resource_sync(self, context, job_id, force):
         """Create resources in target regions.
 
         Image with same id is created in target_regions and therefore
@@ -182,21 +167,26 @@ class ImageSyncManager(object):
         """
         LOG.info('Triggered image sync.')
         images_thread = list()
-        target_regions = payload['target']
-        force = eval(str(payload.get('force', False)))
-        resource_ids = payload.get('resources')
-        source_region = payload['source']
-        if(isinstance(source_region, list)):
-            source_region = "".join(source_region)
-        for resource in resource_ids:
-            thread = threading.Thread(target=self.create_resources_in_region,
-                                      args=(job_id, target_regions,
-                                            source_region, context,
-                                            resource, force))
-            images_thread.append(thread)
-            thread.start()
-            for image_thread in images_thread:
-                image_thread.join()
+        try:
+            resource_jobs = db_api.resource_sync_list(context, job_id,
+                                                      consts.IMAGE)
+        except exceptions.JobNotFound():
+            raise
+        source_regions = [i["source_region"] for i in resource_jobs]
+        unique_source = list(set(source_regions))
+        for source_object in unique_source:
+            for resource_job in resource_jobs:
+                thread = threading.Thread(
+                    target=self.create_resources_in_region,
+                    args=(resource_job["id"], resource_job["target_region"],
+                          source_object, context, resource_job["resource"],
+                          force))
+                images_thread.append(thread)
+                thread.start()
+                for image_thread in images_thread:
+                    image_thread.join()
+
+        # Update Result in DATABASE.
         try:
             resource_sync_details = db_api.\
                 resource_sync_status(context, job_id)

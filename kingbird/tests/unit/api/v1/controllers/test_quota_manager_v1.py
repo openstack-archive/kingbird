@@ -52,7 +52,7 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(quota_manager, 'enf')
     def test_get_quota_details(self, mock_enf, mock_db_api):
         updated_values = {'subnet': 11}
-        default_values = tempest_consts.DEFAULT_QUOTAS
+        default_values = dict(tempest_consts.DEFAULT_QUOTAS)
         fake_url = '/v1.1/%s/os-quota-sets/'\
             % (FAKE_TENANT)
         mock_db_api.quota_get_all_by_project.return_value = updated_values

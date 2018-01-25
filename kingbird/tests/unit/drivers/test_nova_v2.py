@@ -204,8 +204,8 @@ class TestNovaClient(base.KingbirdTestCase):
         mock_novaclient.Client().flavors.list.return_value = [fake_flavor]
         nv_client.check_and_delete_flavor_in_target_region(fake_flavor,
                                                            fake_flavor._info)
-        mock_novaclient.Client().flavors.get.\
-            assert_called_once_with(fake_flavor.id)
+        mock_novaclient.Client().flavors.find.\
+            assert_called_once_with(name=fake_flavor.name)
         mock_novaclient.Client().flavors.list.\
             assert_called_once_with(is_public=None)
         mock_novaclient.Client().flavors.delete.\
@@ -236,8 +236,8 @@ class TestNovaClient(base.KingbirdTestCase):
                 ram=fake_flavor.ram, ephemeral=fake_flavor.ephemeral,
                 rxtx_factor=fake_flavor.rxtx_factor,
                 swap=fake_flavor.swap, vcpus=fake_flavor.vcpus)
-        mock_novaclient.Client().flavors.get.\
-            assert_called_once_with(fake_flavor.id)
+        mock_novaclient.Client().flavors.find.\
+            assert_called_once_with(name=fake_flavor.name)
         mock_novaclient.Client().flavors.list.\
             assert_called_once_with(is_public=None)
 
@@ -274,8 +274,8 @@ class TestNovaClient(base.KingbirdTestCase):
                 ram=fake_flavor.ram, ephemeral=fake_flavor.ephemeral,
                 rxtx_factor=fake_flavor.rxtx_factor,
                 swap=fake_flavor.swap, vcpus=fake_flavor.vcpus)
-        mock_novaclient.Client().flavors.get.\
-            assert_called_once_with(fake_flavor.id)
+        mock_novaclient.Client().flavors.find.\
+            assert_called_once_with(name=fake_flavor.name)
         mock_novaclient.Client().flavors.list.\
             assert_called_once_with(is_public=None)
         self.assertEqual(mock_novaclient.Client().flavor_access.

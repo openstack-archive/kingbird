@@ -33,6 +33,7 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj = service.EngineService('kingbird',
                                                  'kingbird-engine')
         self.payload = {}
+        self.force = False
         self.user_id = FAKE_USER
         self.job_id = FAKE_JOB
 
@@ -125,22 +126,22 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_tgm()
         self.service_obj.init_ksm()
         self.service_obj.keypair_sync_for_user(
-            self.context, self.job_id, self.payload)
+            self.context, self.job_id, self.force)
         mock_keypair_sync_manager().resource_sync.\
-            assert_called_once_with(self.context, self.job_id, self.payload)
+            assert_called_once_with(self.context, self.job_id, self.force)
 
     @mock.patch.object(service, 'ImageSyncManager')
     def test_image_sync(self, mock_image_sync_manager):
         self.service_obj.init_tgm()
         self.service_obj.init_ism()
-        self.service_obj.image_sync(self.context, self.job_id, self.payload)
+        self.service_obj.image_sync(self.context, self.job_id, self.force)
         mock_image_sync_manager().resource_sync.\
-            assert_called_once_with(self.context, self.job_id, self.payload)
+            assert_called_once_with(self.context, self.job_id, self.force)
 
     @mock.patch.object(service, 'FlavorSyncManager')
     def test_flavor_sync(self, mock_flavor_sync_manager):
         self.service_obj.init_tgm()
         self.service_obj.init_fsm()
-        self.service_obj.flavor_sync(self.context, self.job_id, self.payload)
+        self.service_obj.flavor_sync(self.context, self.job_id, self.force)
         mock_flavor_sync_manager().resource_sync.\
-            assert_called_once_with(self.context, self.job_id, self.payload)
+            assert_called_once_with(self.context, self.job_id, self.force)

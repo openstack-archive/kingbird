@@ -22,8 +22,7 @@ def upgrade(migrate_engine):
 
     sync_job = sqlalchemy.Table(
         'sync_job', meta,
-        sqlalchemy.Column('name', sqlalchemy.String(255)),
-        sqlalchemy.Column('id', sqlalchemy.String(36),
+        sqlalchemy.Column('job_id', sqlalchemy.String(36),
                           primary_key=True),
         sqlalchemy.Column('sync_status', sqlalchemy.String(length=36),
                           default=consts.JOB_PROGRESS, nullable=False),
@@ -42,7 +41,9 @@ def upgrade(migrate_engine):
     resource_sync = sqlalchemy.Table(
         'resource_sync', meta,
         sqlalchemy.Column('job_id', sqlalchemy.String(36),
-                          sqlalchemy.ForeignKey('sync_job.id'),
+                          sqlalchemy.ForeignKey('sync_job.job_id'),
+                          primary_key=True),
+        sqlalchemy.Column('resource_sync_id', sqlalchemy.String(36),
                           primary_key=True),
         sqlalchemy.Column('source_region', sqlalchemy.String(36),
                           primary_key=True),

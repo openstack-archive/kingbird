@@ -79,9 +79,8 @@ class Result(object):
 
 
 class SyncJob(object):
-    def __init__(self, id, name, sync_status, created_at):
-        self.id = id
-        self.name = name
+    def __init__(self, id, sync_status, created_at):
+        self.job_id = id
         self.sync_status = sync_status
         self.created_at = created_at
 
@@ -97,16 +96,17 @@ class TestResourceManager(testroot.KBApiTest):
     @mock.patch.object(sync_manager, 'db_api')
     def test_post_request_data(self, mock_db_api, mock_endpoint_cache,
                                mock_nova, mock_rpc_client):
+        time_now = timeutils.utcnow()
         payload = {"resources": [SOURCE_KEYPAIR],
                    "resource_type": "keypair",
                    "source": FAKE_SOURCE_REGION,
                    "target": [FAKE_TARGET_REGION]}
-        mock_db_api.validate_job_name(self.ctx, JOB_NAME)
-        self.assertEqual(1,
-                         mock_db_api.validate_job_name
-                         .call_count)
+        sync_job_result = SyncJob(FAKE_JOB,
+                                  consts.JOB_PROGRESS, time_now)
+        mock_db_api.sync_job_create.return_value = sync_job_result
         result = sync_manager.ResourceSyncController().\
-            _get_post_data(payload, self.ctx, JOB_NAME)
+            _get_post_data(payload, self.ctx, sync_job_result)
+        self.assertEqual(1, mock_db_api.resource_sync_create.call_count)
         self.assertEqual(result['job_status'].get('status'),
                          mock_db_api.sync_job_create().sync_status)
 
@@ -123,7 +123,7 @@ class TestResourceManager(testroot.KBApiTest):
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
         fake_key = FakeKeypair('fake_name', 'fake-rsa')
-        sync_job_result = SyncJob(JOB_NAME, FAKE_JOB,
+        sync_job_result = SyncJob(FAKE_JOB,
                                   consts.JOB_PROGRESS, time_now)
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
@@ -154,7 +154,7 @@ class TestResourceManager(testroot.KBApiTest):
                                  "target": [FAKE_TARGET_REGION]}}
         fake_flavor = Fake_Flavor('fake_id', 512, 2,
                                   30, 'fake_flavor', 1)
-        sync_job_result = SyncJob(JOB_NAME, FAKE_JOB,
+        sync_job_result = SyncJob(FAKE_JOB,
                                   consts.JOB_PROGRESS, time_now)
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
@@ -172,10 +172,12 @@ class TestResourceManager(testroot.KBApiTest):
         self.assertEqual(response.status_int, 200)
 
     @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'NovaClient')
     @mock.patch.object(sync_manager, 'db_api')
     def test_post_flavor_sync_non_admin(self, mock_db_api,
-                                        mock_nova, mock_rpc_client):
+                                        mock_nova, mock_endpoint,
+                                        mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_FLAVOR],
                                  "resource_type": "flavor",
                                  "force": "True",
@@ -188,8 +190,10 @@ class TestResourceManager(testroot.KBApiTest):
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'GlanceClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_post_image_sync(self, mock_db_api, mock_glance, mock_rpc_client):
+    def test_post_image_sync(self, mock_db_api, mock_endpoint,
+                             mock_glance, mock_rpc_client):
         time_now = timeutils.utcnow()
         data = {"resource_set": {"resources": [SOURCE_IMAGE_ID],
                                  "resource_type": "image",
@@ -197,7 +201,7 @@ class TestResourceManager(testroot.KBApiTest):
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
         fake_image = FakeImage(SOURCE_IMAGE_ID, SOURCE_IMAGE_NAME)
-        sync_job_result = SyncJob(JOB_NAME, FAKE_JOB,
+        sync_job_result = SyncJob(FAKE_JOB,
                                   consts.JOB_PROGRESS, time_now)
         mock_glance().check_image.return_value = fake_image.id
         mock_db_api.sync_job_create.return_value = sync_job_result
@@ -239,7 +243,8 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    def test_post_no_target_regions(self, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_target_regions(self, mock_db, mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "force": "True",
                                  "source": FAKE_SOURCE_REGION}}
@@ -248,7 +253,9 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    def test_post_no_source_regions(self, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_source_regions(self, mock_db,
+                                    mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "force": "True",
                                  "target": [FAKE_TARGET_REGION]}}
@@ -257,7 +264,10 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    def test_post_no_resources_in_body(self, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_resources_in_body(self, mock_db, mock_endpoint_cache,
+                                       mock_rpc_client):
         data = {"resource_set": {"force": "True",
                                  "source": FAKE_SOURCE_REGION,
                                  "target": [FAKE_TARGET_REGION]}}
@@ -266,7 +276,10 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
-    def test_post_no_resource_type(self, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'EndpointCache')
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_resource_type(self, mock_db, mock_endpoint_cache,
+                                   mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "force": "True",
                                  "source": FAKE_SOURCE_REGION,
@@ -278,7 +291,9 @@ class TestResourceManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'NovaClient')
-    def test_post_no_keypairs_in_region(self, mock_nova, mock_endpoint_cache,
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_keypairs_in_region(self, mock_db, mock_nova,
+                                        mock_endpoint_cache,
                                         mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_KEYPAIR],
                                  "resource_type": "keypair",
@@ -293,8 +308,11 @@ class TestResourceManager(testroot.KBApiTest):
                                 headers=FAKE_HEADERS, params=data)
 
     @mock.patch.object(rpc_client, 'EngineClient')
+    @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'GlanceClient')
-    def test_post_no_images_in_source_region(self, mock_glance,
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_images_in_source_region(self, mock_db, mock_glance,
+                                             mock_endpoint_cache,
                                              mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_IMAGE_ID],
                                  "resource_type": "image",
@@ -310,7 +328,8 @@ class TestResourceManager(testroot.KBApiTest):
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'EndpointCache')
     @mock.patch.object(sync_manager, 'NovaClient')
-    def test_post_no_flavors_in_source_region(self, mock_nova,
+    @mock.patch.object(sync_manager, 'db_api')
+    def test_post_no_flavors_in_source_region(self, mock_db, mock_nova,
                                               mock_endpoint_cache,
                                               mock_rpc_client):
         data = {"resource_set": {"resources": [SOURCE_FLAVOR],
@@ -382,27 +401,21 @@ class TestResourceManager(testroot.KBApiTest):
         get_url = FAKE_URL + '/' + FAKE_JOB
         self.app.get(get_url, headers=FAKE_HEADERS)
         self.assertEqual(1,
-                         mock_db_api.resource_sync_list_by_job_id
+                         mock_db_api.resource_sync_list
                          .call_count)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')
-    def test_get_detail_job_by_name(self, mock_db_api, mock_rpc_client):
-        get_url = FAKE_URL + '/' + JOB_NAME
-        self.app.get(get_url, headers=FAKE_HEADERS)
-        self.assertEqual(1,
-                         mock_db_api.resource_sync_list_by_job_name
-                         .call_count)
-
-    @mock.patch.object(rpc_client, 'EngineClient')
-    @mock.patch.object(sync_manager, 'db_api')
-    def test_entries_to_database(self, mock_db_api, mock_rpc_client):
+    @mock.patch.object(sync_manager, 'uuidutils')
+    def test_entries_to_database(self, mock_uuid, mock_db_api,
+                                 mock_rpc_client):
         time_now = timeutils.utcnow()
         result = Result(JOB_NAME, FAKE_JOB, FAKE_STATUS, time_now)
         mock_db_api.sync_job_create.return_value = result
+        mock_uuid.generate_uuid.return_value = FAKE_JOB
         sync_manager.ResourceSyncController()._entries_to_database(
             self.ctx, FAKE_TARGET_REGION, FAKE_SOURCE_REGION,
-            FAKE_RESOURCE_ID, FAKE_RESOURCE_TYPE, FAKE_TENANT, JOB_NAME)
+            FAKE_RESOURCE_ID, FAKE_RESOURCE_TYPE, result)
         mock_db_api.resource_sync_create.assert_called_once_with(
             self.ctx, result, FAKE_TARGET_REGION[0], FAKE_SOURCE_REGION,
-            FAKE_RESOURCE_ID[0], FAKE_RESOURCE_TYPE)
+            FAKE_RESOURCE_ID[0], FAKE_RESOURCE_TYPE, FAKE_JOB)

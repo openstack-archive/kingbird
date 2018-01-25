@@ -53,7 +53,7 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_all_admin(self, mock_db_api):
         updated_values = {'subnet': 11}
-        default_values = tempest_consts.DEFAULT_QUOTAS
+        default_values = dict(tempest_consts.DEFAULT_QUOTAS)
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
             % (FAKE_TENANT, FAKE_TENANT)
         mock_db_api.quota_get_all_by_project.return_value = updated_values
@@ -68,7 +68,7 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_tenant_with_admin(self, mock_db_api):
         updated_values = {'subnet': 11}
-        default_values = tempest_consts.DEFAULT_QUOTAS
+        default_values = dict(tempest_consts.DEFAULT_QUOTAS)
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
             % (FAKE_TENANT, TARGET_FAKE_TENANT)
         mock_db_api.quota_get_all_by_project.return_value = updated_values
@@ -83,7 +83,7 @@ class TestQuotaManager(testroot.KBApiTest):
     @mock.patch.object(quota_manager, 'db_api')
     def test_get_tenant_without_admin(self, mock_db_api):
         updated_values = {'subnet': 11}
-        default_values = tempest_consts.DEFAULT_QUOTAS
+        default_values = dict(tempest_consts.DEFAULT_QUOTAS)
         fake_url = '/v1.0/%s/os-quota-sets/%s'\
             % (TARGET_FAKE_TENANT, TARGET_FAKE_TENANT)
         mock_db_api.quota_get_all_by_project.return_value = updated_values

@@ -154,9 +154,7 @@ class SyncJob(BASE, KingbirdBase):
 
     __tablename__ = 'sync_job'
 
-    name = Column('name', String(255))
-
-    id = Column('id', String(36), primary_key=True)
+    job_id = Column('job_id', String(36), primary_key=True)
 
     sync_status = Column(String(36), default=consts.JOB_PROGRESS,
                          nullable=False)
@@ -174,7 +172,9 @@ class ResourceSync(BASE, KingbirdBase):
     __tablename__ = 'resource_sync'
 
     job_id = Column('job_id', String(36),
-                    ForeignKey('sync_job.id'), primary_key=True)
+                    ForeignKey('sync_job.job_id'), primary_key=True)
+
+    resource_sync_id = Column('resource_sync_id', String(36), primary_key=True)
 
     source_region = Column('source_region', String(36), primary_key=True)
 

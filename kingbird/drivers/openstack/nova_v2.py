@@ -160,7 +160,7 @@ class NovaClient(base.DriverBase):
                                                  resource_flavor):
         """Check for the flavor and then delete it."""
         try:
-            target_flavor = self.nova_client.flavors.get(flavor.id)
+            target_flavor = self.get_flavor(flavor.name)
             if target_flavor:
                 resource_flavor.pop("flavorid", None)
                 flavor_list = self.nova_client.flavors.list(is_public=None)

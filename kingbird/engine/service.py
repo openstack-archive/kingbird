@@ -166,19 +166,19 @@ class EngineService(service.Service):
         self.qm.quota_sync_for_project(project_id)
 
     @request_context
-    def keypair_sync_for_user(self, ctxt, job_id, payload):
+    def keypair_sync_for_user(self, ctxt, job_id, force):
         # Keypair Sync for a user, will be triggered by KB-API
-        self.ksm.resource_sync(ctxt, job_id, payload)
+        self.ksm.resource_sync(ctxt, job_id, force)
 
     @request_context
-    def image_sync(self, ctxt, job_id, payload):
+    def image_sync(self, ctxt, job_id, force):
         # Image Sync triggered by KB_API.
-        self.ism.resource_sync(ctxt, job_id, payload)
+        self.ism.resource_sync(ctxt, job_id, force)
 
     @request_context
-    def flavor_sync(self, ctxt, job_id, payload):
+    def flavor_sync(self, ctxt, job_id, force):
         # Flavor Sync triggered by KB_API.
-        self.fsm.resource_sync(ctxt, job_id, payload)
+        self.fsm.resource_sync(ctxt, job_id, force)
 
     def _stop_rpc_server(self):
         # Stop RPC connection to prevent new requests

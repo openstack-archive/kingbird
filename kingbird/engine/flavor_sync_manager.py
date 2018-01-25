@@ -32,23 +32,9 @@ class FlavorSyncManager(object):
     def __init__(self, *args, **kwargs):
         super(FlavorSyncManager, self).__init__()
 
-    def create_resources_in_region(self, job_id, force, target_regions,
+    def create_resources_in_region(self, job_id, force, region,
                                    source_flavor, session, context,
                                    access_tenants=None):
-        """Create Region specific threads."""
-        regions_thread = list()
-        for region in target_regions:
-            thread = threading.Thread(target=self.create_resources,
-                                      args=(job_id, force, region,
-                                            source_flavor, session,
-                                            context, access_tenants))
-            regions_thread.append(thread)
-            thread.start()
-            for region_thread in regions_thread:
-                region_thread.join()
-
-    def create_resources(self, job_id, force, region, source_flavor,
-                         session, context, access_tenants=None):
         """Create resources using threads."""
         target_nova_client = NovaClient(region, session)
         try:
@@ -57,8 +43,7 @@ class FlavorSyncManager(object):
             LOG.info('Flavor %(flavor)s created in %(region)s'
                      % {'flavor': source_flavor.name, 'region': region})
             try:
-                db_api.resource_sync_update(context, job_id, region,
-                                            source_flavor.name,
+                db_api.resource_sync_update(context, job_id,
                                             consts.JOB_SUCCESS)
             except exceptions.JobNotFound():
                 raise
@@ -66,14 +51,13 @@ class FlavorSyncManager(object):
             LOG.error('Exception Occurred: %(msg)s in %(region)s'
                       % {'msg': exc.message, 'region': region})
             try:
-                db_api.resource_sync_update(context, job_id, region,
-                                            source_flavor.name,
+                db_api.resource_sync_update(context, job_id,
                                             consts.JOB_FAILURE)
             except exceptions.JobNotFound():
                 raise
             pass
 
-    def resource_sync(self, context, job_id, payload):
+    def resource_sync(self, context, job_id, force):
         """Create resources in target regions.
 
         :param context: request context object.
@@ -83,29 +67,35 @@ class FlavorSyncManager(object):
         LOG.info("Triggered Flavor Sync.")
         flavors_thread = list()
         access_tenants = None
-        target_regions = payload['target']
-        force = eval(str(payload.get('force', False)))
-        resource_ids = payload.get('resources')
-        source_region = payload['source']
-        if(isinstance(source_region, list)):
-            source_region = "".join(source_region)
         session = EndpointCache().get_session_from_token(
             context.auth_token, context.project)
         # Create Source Region object
-        source_nova_client = NovaClient(source_region, session)
-        for flavor in resource_ids:
-            source_flavor = source_nova_client.get_flavor(flavor)
-            if not source_flavor.is_public:
-                access_tenants = source_nova_client.\
-                    get_flavor_access_tenant(flavor)
-            thread = threading.Thread(target=self.create_resources_in_region,
-                                      args=(job_id, force, target_regions,
-                                            source_flavor, session,
-                                            context, access_tenants))
-            flavors_thread.append(thread)
-            thread.start()
-            for flavor_thread in flavors_thread:
-                flavor_thread.join()
+        try:
+            resource_jobs = db_api.resource_sync_list(context, job_id,
+                                                      consts.FLAVOR)
+        except exceptions.JobNotFound():
+            raise
+        source_regions = [i["source_region"] for i in resource_jobs]
+        unique_source = list(set(source_regions))
+        for source_object in unique_source:
+            source_nova_client = NovaClient(source_object, session)
+            for resource_job in resource_jobs:
+                source_flavor = source_nova_client.\
+                    get_flavor(resource_job["resource"])
+                if not source_flavor.is_public:
+                    access_tenants = source_nova_client.\
+                        get_flavor_access_tenant(resource_job["resource"])
+                thread = threading.Thread(
+                    target=self.create_resources_in_region,
+                    args=(resource_job["id"], force,
+                          resource_job["target_region"],
+                          source_flavor, session, context, access_tenants))
+                flavors_thread.append(thread)
+                thread.start()
+                for flavor_thread in flavors_thread:
+                    flavor_thread.join()
+
+        # Update Result in DATABASE.
         try:
             resource_sync_details = db_api.\
                 resource_sync_status(context, job_id)

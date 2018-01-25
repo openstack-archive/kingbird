@@ -383,12 +383,10 @@ def service_get_all(context):
 ##########################
 
 @require_context
-def sync_job_create(context, job_name, job_id):
+def sync_job_create(context, job_id):
     with write_session() as session:
         sjc = models.SyncJob()
-        if job_name is not None:
-            sjc.name = job_name
-        sjc.id = job_id
+        sjc.job_id = job_id
         sjc.user_id = context.user
         sjc.project_id = context.project
         session.add(sjc)
@@ -409,8 +407,7 @@ def sync_job_list(context, action=None):
     output = list()
     for row in rows:
         result = dict()
-        result['id'] = row.id
-        result['name'] = row.name
+        result['id'] = row.job_id
         result['sync_status'] = row.sync_status
         result['created_at'] = row.created_at
         if row.updated_at:
@@ -424,7 +421,7 @@ def sync_job_list(context, action=None):
 @require_context
 def sync_job_status(context, job_id):
     row = model_query(context, models.SyncJob).\
-        filter_by(id=job_id, user_id=context.user,
+        filter_by(job_id=job_id, user_id=context.user,
                   project_id=context.project).first()
     if not row:
         raise exception.JobNotFound()
@@ -436,7 +433,7 @@ def sync_job_status(context, job_id):
 def sync_job_update(context, job_id, status):
     with write_session() as session:
         sync_job_ref = session.query(models.SyncJob). \
-            filter_by(id=job_id).first()
+            filter_by(job_id=job_id).first()
         if not sync_job_ref:
             raise exception.JobNotFound()
         values = dict()
@@ -448,11 +445,11 @@ def sync_job_update(context, job_id, status):
 def sync_job_delete(context, job_id):
     with write_session() as session:
         parent_job = model_query(context, models.SyncJob). \
-            filter_by(id=job_id, user_id=context.user,
+            filter_by(job_id=job_id, user_id=context.user,
                       project_id=context.project).first()
         if parent_job:
             child_jobs = model_query(context, models.ResourceSync). \
-                filter_by(job_id=parent_job.id).all()
+                filter_by(job_id=parent_job.job_id).all()
             if not child_jobs:
                 raise exception.JobNotFound()
             for child_job in child_jobs:
@@ -462,15 +459,28 @@ def sync_job_delete(context, job_id):
             raise exception.JobNotFound()
 
 
+@require_context
+def _delete_failure_sync_job(context, job_id):
+    with write_session() as session:
+        parent_job = model_query(context, models.SyncJob). \
+            filter_by(job_id=job_id, user_id=context.user,
+                      project_id=context.project).first()
+        if parent_job:
+            session.delete(parent_job)
+        else:
+            raise exception.JobNotFound()
+
+
 ##########################
 @require_context
 def resource_sync_create(context, job, region, source_region,
-                         resource, resource_type):
+                         resource, resource_type, job_id):
     if not job:
         raise exception.JobNotFound()
     with write_session() as session:
         rsc = models.ResourceSync()
         rsc.sync_job = job
+        rsc.resource_sync_id = job_id
         rsc.resource = resource
         rsc.target_region = region
         rsc.source_region = source_region
@@ -480,11 +490,10 @@ def resource_sync_create(context, job, region, source_region,
 
 
 @require_context
-def resource_sync_update(context, job_id, region, resource, status):
+def resource_sync_update(context, job_id, status):
     with write_session() as session:
         resource_sync_ref = session.query(models.ResourceSync).\
-            filter_by(job_id=job_id, target_region=region, resource=resource).\
-            first()
+            filter_by(resource_sync_id=job_id).first()
         if not resource_sync_ref:
             raise exception.JobNotFound()
         values = dict()
@@ -506,47 +515,25 @@ def resource_sync_status(context, job_id):
 
 
 @require_context
-def resource_sync_list_by_job_name(context, job_name):
-    final_response = list()
+def resource_sync_list(context, job_id, resource_type=None):
     parent_row = model_query(context, models.SyncJob).\
-        filter_by(name=job_name, user_id=context.user,
-                  project_id=context.project).all()
-    if not parent_row:
-        raise exception.JobNotFound()
-    for iteration in range(len(parent_row)):
-        rows = model_query(context, models.ResourceSync).\
-            filter_by(job_id=parent_row[iteration].id).all()
-        final_response = final_response + sync_individual_resource(rows)
-    return final_response
-
-
-def validate_job_name(context, job_name):
-    parent_row = model_query(context, models.SyncJob).\
-        filter_by(name=job_name, user_id=context.user,
-                  project_id=context.project).all()
-    if parent_row:
-        raise exception.DuplicateJobEntry()
-
-
-@require_context
-def resource_sync_list_by_job_id(context, job_id):
-    parent_row = model_query(context, models.SyncJob).\
-        filter_by(id=job_id, user_id=context.user,
+        filter_by(job_id=job_id, user_id=context.user,
                   project_id=context.project).first()
     if not parent_row:
         raise exception.JobNotFound()
-    rows = model_query(context, models.ResourceSync).\
-        filter_by(job_id=parent_row.id).all()
-    return sync_individual_resource(rows)
-
-
-def sync_individual_resource(rows):
+    if resource_type:
+        rows = model_query(context, models.ResourceSync).\
+            filter_by(job_id=parent_row.job_id,
+                      resource_type=resource_type).all()
+    else:
+        rows = model_query(context, models.ResourceSync).\
+            filter_by(job_id=parent_row.job_id).all()
     output = list()
     if not rows:
         raise exception.JobNotFound()
     for row in rows:
         result = dict()
-        result['id'] = row.job_id
+        result['id'] = row.resource_sync_id
         result['target_region'] = row.target_region
         result['source_region'] = row.source_region
         result['resource'] = row.resource

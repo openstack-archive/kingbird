@@ -108,11 +108,12 @@ class TestImageSyncManager(base.KingbirdTestCase):
                                       'aki', 'aki', FAKE_ID)
         fake_ari_image = FakeARIimage(0, 'False', 0, 'fake_ramdisk_image',
                                       'ari', 'ari', FAKE_ID)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = DEFAULT_FORCE
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_ami_image.id]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = fake_ami_image.id
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         expected_resources = {
             'kernel_image': fake_aki_image,
             'ramdisk_image': fake_ari_image
@@ -120,7 +121,7 @@ class TestImageSyncManager(base.KingbirdTestCase):
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
         mock_glance_adapter.check_dependent_images.\
             assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
                                     fake_ami_image.id)
@@ -141,19 +142,17 @@ class TestImageSyncManager(base.KingbirdTestCase):
                               mock_glance_adapter, mock_db_api):
         fake_qcow2_image = FakeQCOW2Image(0, 'False', 0, FAKE_RESOURCE, 'bare',
                                           'qcow2', FAKE_ID)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = DEFAULT_FORCE
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_qcow2_image.id]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = fake_qcow2_image.id
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         expected_resources = None
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
-        mock_glance_adapter.check_dependent_images.\
-            assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
-                                    fake_qcow2_image.id)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
         self.assertEqual(mock_glance_client().get_image_data.call_count, 1)
         self.assertEqual(mock_glance_client().create_image.call_count, 1)
         self.assertEqual(mock_glance_upload.call_count, 1)
@@ -171,16 +170,17 @@ class TestImageSyncManager(base.KingbirdTestCase):
                             mock_glance_adapter, mock_db_api):
         fake_aki_image = FakeAKIimage(0, 'False', 0, 'fake_kernel_image',
                                       'aki', 'aki', FAKE_ID)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = DEFAULT_FORCE
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_aki_image.id]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = fake_aki_image.id
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         expected_resources = None
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
         mock_glance_adapter.check_dependent_images.\
             assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
                                     fake_aki_image.id)
@@ -201,16 +201,17 @@ class TestImageSyncManager(base.KingbirdTestCase):
                             mock_glance_adapter, mock_db_api):
         fake_ari_image = FakeARIimage(0, 'False', 0, 'fake_ramdisk_image',
                                       'ari', 'ari', FAKE_ID)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = DEFAULT_FORCE
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_ari_image.id]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = fake_ari_image.id
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         expected_resources = None
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
         mock_glance_adapter.check_dependent_images.\
             assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
                                     fake_ari_image.id)
@@ -231,7 +232,6 @@ class TestImageSyncManager(base.KingbirdTestCase):
                                       True)
         mock_db_api.resource_sync_update.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID,
-                                    FAKE_TARGET_REGION, FAKE_RESOURCE,
                                     FAKE_RESULT)
 
     @patch('kingbird.engine.image_sync_manager.db_api')
@@ -242,5 +242,4 @@ class TestImageSyncManager(base.KingbirdTestCase):
                                       False)
         mock_db_api.resource_sync_update.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID,
-                                    FAKE_TARGET_REGION, FAKE_RESOURCE,
                                     FAKE_RESULT_FAIL)

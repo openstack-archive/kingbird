@@ -32,22 +32,8 @@ class KeypairSyncManager(object):
     def __init__(self, *args, **kwargs):
         super(KeypairSyncManager, self).__init__()
 
-    def create_resources_in_region(self, job_id, force, target_regions,
+    def create_resources_in_region(self, job_id, force, region,
                                    source_keypair, session, context):
-        """Create Region specific threads."""
-        regions_thread = list()
-        for region in target_regions:
-            thread = threading.Thread(target=self.create_resources,
-                                      args=(job_id, force, region,
-                                            source_keypair, session,
-                                            context))
-            regions_thread.append(thread)
-            thread.start()
-            for region_thread in regions_thread:
-                region_thread.join()
-
-    def create_resources(self, job_id, force, region, source_keypair,
-                         session, context):
         """Create resources using threads."""
         target_nova_client = NovaClient(region, session)
         try:
@@ -55,8 +41,7 @@ class KeypairSyncManager(object):
             LOG.info('keypair %(keypair)s created in %(region)s'
                      % {'keypair': source_keypair.name, 'region': region})
             try:
-                db_api.resource_sync_update(context, job_id, region,
-                                            source_keypair.name,
+                db_api.resource_sync_update(context, job_id,
                                             consts.JOB_SUCCESS)
             except exceptions.JobNotFound():
                 raise
@@ -64,14 +49,13 @@ class KeypairSyncManager(object):
             LOG.error('Exception Occurred: %(msg)s in %(region)s'
                       % {'msg': exc.message, 'region': region})
             try:
-                db_api.resource_sync_update(context, job_id, region,
-                                            source_keypair.name,
+                db_api.resource_sync_update(context, job_id,
                                             consts.JOB_FAILURE)
             except exceptions.JobNotFound():
                 raise
             pass
 
-    def resource_sync(self, context, job_id, payload):
+    def resource_sync(self, context, job_id, force):
         """Create resources in target regions.
 
         :param context: request context object.
@@ -80,26 +64,31 @@ class KeypairSyncManager(object):
         """
         LOG.info("Triggered Keypair Sync.")
         keypairs_thread = list()
-        target_regions = payload['target']
-        force = eval(str(payload.get('force', False)))
-        resource_ids = payload.get('resources')
-        source_region = payload['source']
-        if(isinstance(source_region, list)):
-            source_region = "".join(source_region)
         session = EndpointCache().get_session_from_token(
             context.auth_token, context.project)
-        # Create Source Region object
-        source_nova_client = NovaClient(source_region, session)
-        for keypair in resource_ids:
-            source_keypair = source_nova_client.get_keypairs(keypair)
-            thread = threading.Thread(target=self.create_resources_in_region,
-                                      args=(job_id, force, target_regions,
-                                            source_keypair, session,
-                                            context,))
-            keypairs_thread.append(thread)
-            thread.start()
-            for keypair_thread in keypairs_thread:
-                keypair_thread.join()
+        try:
+            resource_jobs = db_api.resource_sync_list(context, job_id,
+                                                      consts.KEYPAIR)
+        except exceptions.JobNotFound():
+            raise
+        source_regions = [i["source_region"] for i in resource_jobs]
+        unique_source = list(set(source_regions))
+        for source_object in unique_source:
+            source_nova_client = NovaClient(source_object, session)
+            for resource_job in resource_jobs:
+                source_keypair = source_nova_client.\
+                    get_keypairs(resource_job["resource"])
+                thread = threading.Thread(
+                    target=self.create_resources_in_region,
+                    args=(resource_job["id"], force,
+                          resource_job["target_region"],
+                          source_keypair, session, context,))
+                keypairs_thread.append(thread)
+                thread.start()
+                for keypair_thread in keypairs_thread:
+                    keypair_thread.join()
+
+        # Update Result in DATABASE.
         try:
             resource_sync_details = db_api.\
                 resource_sync_status(context, job_id)

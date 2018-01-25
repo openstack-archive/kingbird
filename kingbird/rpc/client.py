@@ -69,18 +69,18 @@ class EngineClient(object):
         return self.cast(ctxt, self.make_msg('quota_sync_for_project',
                                              project_id=project_id))
 
-    def keypair_sync_for_user(self, ctxt, job_id, payload):
+    def keypair_sync_for_user(self, ctxt, job_id, force):
         return self.cast(
             ctxt,
             self.make_msg('keypair_sync_for_user', job_id=job_id,
-                          payload=payload))
+                          force=force))
 
-    def image_sync(self, ctxt, job_id, payload):
+    def image_sync(self, ctxt, job_id, force):
         return self.cast(
             ctxt,
-            self.make_msg('image_sync', job_id=job_id, payload=payload))
+            self.make_msg('image_sync', job_id=job_id, force=force))
 
-    def flavor_sync(self, ctxt, job_id, payload):
+    def flavor_sync(self, ctxt, job_id, force):
         return self.cast(
             ctxt,
-            self.make_msg('flavor_sync', job_id=job_id, payload=payload))
+            self.make_msg('flavor_sync', job_id=job_id, force=force))

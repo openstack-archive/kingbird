@@ -13,6 +13,7 @@
 # under the License.
 import mock
 
+from kingbird.common import consts
 from kingbird.engine import flavor_sync_manager
 from kingbird.tests import base
 from kingbird.tests import utils
@@ -49,29 +50,31 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
     @mock.patch.object(flavor_sync_manager, 'NovaClient')
     @mock.patch.object(flavor_sync_manager, 'EndpointCache')
     @mock.patch.object(flavor_sync_manager.FlavorSyncManager,
-                       'create_resources')
+                       'create_resources_in_region')
     @mock.patch.object(flavor_sync_manager, 'db_api')
     def test_flavor_sync_force_false_no_access_tenants(
             self, mock_db_api, mock_create_resource, mock_endpoint_cache,
             mock_nova):
         access_tenants = None
-        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, SOURCE_FLAVOR, 1,
                                  1.0)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = DEFAULT_FORCE
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_flavor]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = [SOURCE_FLAVOR]
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_flavor.return_value = fake_flavor
-        mock_db_api().resource_sync_status.return_value = [JOB_RESULT]
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
         mock_create_resource.assert_called_once_with(
-            FAKE_JOB_ID, payload['force'], payload['target'][0], fake_flavor,
-            'fake_session', self.ctxt, access_tenants)
+            FAKE_JOB_ID, DEFAULT_FORCE, resource_job['target_region'],
+            fake_flavor, 'fake_session', self.ctxt, access_tenants)
         mock_nova().get_flavor_access_tenant.assert_not_called
+        mock_db_api.resource_sync_list.\
+            assert_called_once_with(self.ctxt, FAKE_JOB_ID, consts.FLAVOR)
         mock_db_api.resource_sync_status.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID)
         mock_db_api.sync_job_update.\
@@ -80,27 +83,27 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
     @mock.patch.object(flavor_sync_manager, 'NovaClient')
     @mock.patch.object(flavor_sync_manager, 'EndpointCache')
     @mock.patch.object(flavor_sync_manager.FlavorSyncManager,
-                       'create_resources')
+                       'create_resources_in_region')
     @mock.patch.object(flavor_sync_manager, 'db_api')
     def test_flavor_sync_force_true_no_access_tenants(
             self, mock_db_api, mock_create_resource, mock_endpoint_cache,
             mock_nova):
         access_tenants = None
-        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, SOURCE_FLAVOR, 1,
                                  1.0)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = True
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_flavor]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = [SOURCE_FLAVOR]
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_flavor.return_value = fake_flavor
-        mock_db_api().resource_sync_status.return_value = [JOB_RESULT]
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, True)
         mock_create_resource.assert_called_once_with(
-            FAKE_JOB_ID, payload['force'], payload['target'][0], fake_flavor,
+            FAKE_JOB_ID, True, resource_job['target_region'], fake_flavor,
             'fake_session', self.ctxt, access_tenants)
         mock_nova().get_flavor_access_tenant.assert_not_called
         mock_db_api.resource_sync_status.\
@@ -111,31 +114,32 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
     @mock.patch.object(flavor_sync_manager, 'NovaClient')
     @mock.patch.object(flavor_sync_manager, 'EndpointCache')
     @mock.patch.object(flavor_sync_manager.FlavorSyncManager,
-                       'create_resources')
+                       'create_resources_in_region')
     @mock.patch.object(flavor_sync_manager, 'db_api')
     def test_flavor_sync_force_false_with_access_tenants(
             self, mock_db_api, mock_create_resource, mock_endpoint_cache,
             mock_nova):
         access_tenants = FAKE_TENANTS
-        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, SOURCE_FLAVOR, 1,
                                  1.0, False)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = DEFAULT_FORCE
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_flavor]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = [SOURCE_FLAVOR]
         mock_nova().get_flavor_access_tenant.return_value = access_tenants
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_flavor.return_value = fake_flavor
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         mock_db_api().resource_sync_status.return_value = [JOB_RESULT]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
         mock_create_resource.assert_called_once_with(
-            FAKE_JOB_ID, payload['force'], payload['target'][0], fake_flavor,
-            'fake_session', self.ctxt, access_tenants)
+            FAKE_JOB_ID, DEFAULT_FORCE, resource_job['target_region'],
+            fake_flavor, 'fake_session', self.ctxt, access_tenants)
         mock_nova().get_flavor_access_tenant.\
-            assert_called_once_with(fake_flavor)
+            assert_called_once_with([fake_flavor.name])
         mock_db_api.resource_sync_status.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID)
         mock_db_api.sync_job_update.\
@@ -144,73 +148,53 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
     @mock.patch.object(flavor_sync_manager, 'NovaClient')
     @mock.patch.object(flavor_sync_manager, 'EndpointCache')
     @mock.patch.object(flavor_sync_manager.FlavorSyncManager,
-                       'create_resources')
+                       'create_resources_in_region')
     @mock.patch.object(flavor_sync_manager, 'db_api')
     def test_flavor_sync_force_true_with_access_tenants(
             self, mock_db_api, mock_create_resource, mock_endpoint_cache,
             mock_nova):
         access_tenants = FAKE_TENANTS
-        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, SOURCE_FLAVOR, 1,
                                  1.0, False)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = True
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_flavor]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = [SOURCE_FLAVOR]
         mock_nova().get_flavor_access_tenant.return_value = access_tenants
         mock_endpoint_cache().get_session_from_token.\
             return_value = 'fake_session'
         mock_nova().get_flavor.return_value = fake_flavor
+        mock_db_api.resource_sync_list.return_value = [resource_job]
         mock_db_api().resource_sync_status.return_value = [JOB_RESULT]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, payload)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, True)
         mock_create_resource.assert_called_once_with(
-            FAKE_JOB_ID, payload['force'], payload['target'][0], fake_flavor,
+            FAKE_JOB_ID, True, resource_job['target_region'], fake_flavor,
             'fake_session', self.ctxt, access_tenants)
         mock_nova().get_flavor_access_tenant.\
-            assert_called_once_with(fake_flavor)
+            assert_called_once_with([fake_flavor.name])
         mock_db_api.resource_sync_status.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID)
         mock_db_api.sync_job_update.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID, JOB_RESULT)
 
-    @mock.patch.object(flavor_sync_manager.FlavorSyncManager,
-                       'create_resources')
-    def test_create_resources_in_region(self, mock_create_resource):
-        access_tenants = None
-        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
-                                 1.0, False)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = True
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_flavor]
-        fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.create_resources_in_region(FAKE_JOB_ID, payload['force'],
-                                       payload['target'], fake_flavor,
-                                       'fake_session', self.ctxt,
-                                       access_tenants)
-        mock_create_resource.assert_called_once_with(
-            FAKE_JOB_ID, payload['force'], payload['target'][0], fake_flavor,
-            'fake_session', self.ctxt, access_tenants)
-
     @mock.patch.object(flavor_sync_manager, 'NovaClient')
     @mock.patch.object(flavor_sync_manager, 'db_api')
     def test_create_resources(self, mock_db_api, mock_nova):
         access_tenants = None
-        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, 'fake_flavor', 1,
+        fake_flavor = FakeFlavor('fake_id', 512, 2, 30, SOURCE_FLAVOR, 1,
                                  1.0, False)
-        payload = dict()
-        payload['target'] = [FAKE_TARGET_REGION]
-        payload['force'] = True
-        payload['source'] = FAKE_SOURCE_REGION
-        payload['resources'] = [fake_flavor]
+        resource_job = dict()
+        resource_job['id'] = FAKE_JOB_ID
+        resource_job['target_region'] = [FAKE_TARGET_REGION]
+        resource_job['source_region'] = FAKE_SOURCE_REGION
+        resource_job['resource'] = [SOURCE_FLAVOR]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.create_resources(FAKE_JOB_ID, payload['force'],
-                             payload['target'][0], fake_flavor,
-                             'fake_session', self.ctxt, access_tenants)
+        fsm.create_resources_in_region(
+            FAKE_JOB_ID, DEFAULT_FORCE, resource_job['source_region'],
+            fake_flavor, 'fake_session', self.ctxt, access_tenants)
         mock_nova().create_flavor.assert_called_once_with(
-            payload['force'], fake_flavor, access_tenants)
+            DEFAULT_FORCE, fake_flavor, access_tenants)
         mock_db_api.resource_sync_update.assert_called_once_with(
-            self.ctxt, FAKE_JOB_ID, payload['target'][0], fake_flavor.name,
-            JOB_RESULT)
+            self.ctxt, FAKE_JOB_ID, JOB_RESULT)

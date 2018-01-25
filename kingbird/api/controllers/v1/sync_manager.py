@@ -114,8 +114,14 @@ class ResourceSyncController(object):
             result = db_api.sync_job_create(context, parent_job_id)
         except exceptions.InternalError:
             pecan.abort(500, _('Internal Server Error.'))
-        response = self._get_post_data(request_data,
-                                       context, result)
+        if 'Sync' in request_data.keys():
+            for iteration in range(len(request_data['Sync'])):
+                payload = request_data['Sync'][iteration]
+                response = self._get_post_data(payload,
+                                               context, result)
+        else:
+            response = self._get_post_data(request_data,
+                                           context, result)
         return response
 
     def _get_post_data(self, payload, context, result):

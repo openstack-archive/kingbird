@@ -129,9 +129,9 @@ class NovaClient(base.DriverBase):
                 LOG.error('Exception Occurred: %s', exception.message)
                 pass
             LOG.info("Created Keypair: %s", keypair.name)
-        return self.nova_client.keypairs. \
-            create(keypair.name,
-                   public_key=keypair.public_key)
+        return (self.nova_client.keypairs.
+                create(keypair.name,
+                       public_key=keypair.public_key))
 
     def get_flavor(self, res_id):
         """Get Flavor for a specified context."""

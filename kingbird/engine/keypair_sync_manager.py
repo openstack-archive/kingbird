@@ -55,49 +55,54 @@ class KeypairSyncManager(object):
                 raise
             pass
 
-    def resource_sync(self, context, job_id, force):
+    def resource_sync(self, context, job_id, force, jobs):
         """Create resources in target regions.
+
+        Keypair with same name is created in target_regions.If a user
+        wants to syncs the same resource then nova throws 409 error
+        because the name is already used. In order to avoid that we
+        use --force and there by creates resource without fail.
 
         :param context: request context object.
         :param job_id: ID of the job which triggered image_sync.
-        :payload: request payload.
+        :force: True/False option to sync the same resource again.
+        :jobs: List of resource_sync_id's for param job_id.
         """
         LOG.info("Triggered Keypair Sync.")
         keypairs_thread = list()
         session = EndpointCache().get_session_from_token(
             context.auth_token, context.project)
-        try:
-            resource_jobs = db_api.resource_sync_list(context, job_id,
-                                                      consts.KEYPAIR)
-        except exceptions.JobNotFound():
-            raise
-        source_regions = [i["source_region"] for i in resource_jobs]
-        unique_source = list(set(source_regions))
-        for source_object in unique_source:
-            source_nova_client = NovaClient(source_object, session)
-            for resource_job in resource_jobs:
-                source_keypair = source_nova_client.\
-                    get_keypairs(resource_job["resource"])
-                thread = threading.Thread(
-                    target=self.create_resources_in_region,
-                    args=(resource_job["id"], force,
-                          resource_job["target_region"],
-                          source_keypair, session, context,))
-                keypairs_thread.append(thread)
-                thread.start()
-                for keypair_thread in keypairs_thread:
-                    keypair_thread.join()
+        for job in jobs:
+            try:
+                resource_job = db_api.resource_sync_list(context, job_id,
+                                                         job)
+                resource_job = resource_job.pop()
+            except exceptions.JobNotFound():
+                raise
+            # Create Source Region object
+            source_nova_client = NovaClient(
+                resource_job["source_region"], session)
+            source_keypair = source_nova_client.get_keypairs(
+                resource_job["resource"])
+            thread = threading.Thread(target=self.create_resources_in_region,
+                                      args=(resource_job["id"], force,
+                                            resource_job["target_region"],
+                                            source_keypair, session, context))
+            keypairs_thread.append(thread)
+            thread.start()
+            for keypair_thread in keypairs_thread:
+                keypair_thread.join()
 
-        # Update Result in DATABASE.
-        try:
-            resource_sync_details = db_api.\
-                resource_sync_status(context, job_id)
-        except exceptions.JobNotFound:
-            raise
-        result = consts.JOB_SUCCESS
-        if consts.JOB_FAILURE in resource_sync_details:
-            result = consts.JOB_FAILURE
-        try:
-            db_api.sync_job_update(context, job_id, result)
-        except exceptions.JobNotFound:
-            raise
+            # Update Result in DATABASE.
+            try:
+                resource_sync_details = db_api.\
+                    resource_sync_status(context, job_id)
+            except exceptions.JobNotFound:
+                raise
+            result = consts.JOB_SUCCESS
+            if consts.JOB_FAILURE in resource_sync_details:
+                result = consts.JOB_FAILURE
+            try:
+                db_api.sync_job_update(context, job_id, result)
+            except exceptions.JobNotFound:
+                raise

@@ -46,7 +46,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         }
         job_details = self._image_sync_job_create(FORCE, **create_params)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.
@@ -67,7 +67,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         }
         job_details = self._image_sync_job_create(FORCE, **create_params)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.
@@ -89,7 +89,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         job_details = self._image_sync_job_create(DEFAULT_FORCE,
                                                   **create_params)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.
@@ -109,7 +109,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         job_details = self._image_sync_job_create(DEFAULT_FORCE,
                                                   **create_params)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.
@@ -132,7 +132,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         job_details = self._image_sync_job_create(DEFAULT_FORCE,
                                                   **create_params)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_detail(job_details['job_id'])
@@ -164,7 +164,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         status = active_job.get('job_set')[0].get('sync_status')
         self.assertEqual(status, consts.JOB_PROGRESS)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.
@@ -190,7 +190,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         # Actual result when we try and delete an active_job
         # Clean_up the database entries
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.
@@ -210,7 +210,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         job_details = self._image_sync_job_create(DEFAULT_FORCE,
                                                   **create_params)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Clean_up the database entries
@@ -247,7 +247,7 @@ class KingbirdImageSyncTest(base.BaseKBImageTest, base.BaseKingbirdClass):
         job_details = self._sync_ami_image(DEFAULT_FORCE, ami_image['id'])
         # Clean_up the database entries
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions.

@@ -515,16 +515,16 @@ def resource_sync_status(context, job_id):
 
 
 @require_context
-def resource_sync_list(context, job_id, resource_type=None):
+def resource_sync_list(context, job_id, resource_sync_id=None):
     parent_row = model_query(context, models.SyncJob).\
         filter_by(job_id=job_id, user_id=context.user,
                   project_id=context.project).first()
     if not parent_row:
         raise exception.JobNotFound()
-    if resource_type:
+    if resource_sync_id:
         rows = model_query(context, models.ResourceSync).\
             filter_by(job_id=parent_row.job_id,
-                      resource_type=resource_type).all()
+                      resource_sync_id=resource_sync_id).all()
     else:
         rows = model_query(context, models.ResourceSync).\
             filter_by(job_id=parent_row.job_id).all()

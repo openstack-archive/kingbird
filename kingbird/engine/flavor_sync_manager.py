@@ -57,54 +57,59 @@ class FlavorSyncManager(object):
                 raise
             pass
 
-    def resource_sync(self, context, job_id, force):
+    def resource_sync(self, context, job_id, force, jobs):
         """Create resources in target regions.
+
+        Flavor with same name is created in target_regions.If a user
+        wants to syncs the same resource then nova throws 409 error
+        because the name is already used. In order to avoid that we
+        use --force and there by creates resource without fail.
 
         :param context: request context object.
         :param job_id: ID of the job which triggered image_sync.
-        :payload: request payload.
+        :force: True/False option to sync the same resource again.
+        :jobs: List of resource_sync_id's for param job_id.
         """
         LOG.info("Triggered Flavor Sync.")
         flavors_thread = list()
         access_tenants = None
         session = EndpointCache().get_session_from_token(
             context.auth_token, context.project)
-        # Create Source Region object
-        try:
-            resource_jobs = db_api.resource_sync_list(context, job_id,
-                                                      consts.FLAVOR)
-        except exceptions.JobNotFound():
-            raise
-        source_regions = [i["source_region"] for i in resource_jobs]
-        unique_source = list(set(source_regions))
-        for source_object in unique_source:
-            source_nova_client = NovaClient(source_object, session)
-            for resource_job in resource_jobs:
-                source_flavor = source_nova_client.\
-                    get_flavor(resource_job["resource"])
-                if not source_flavor.is_public:
-                    access_tenants = source_nova_client.\
-                        get_flavor_access_tenant(resource_job["resource"])
-                thread = threading.Thread(
-                    target=self.create_resources_in_region,
-                    args=(resource_job["id"], force,
-                          resource_job["target_region"],
-                          source_flavor, session, context, access_tenants))
-                flavors_thread.append(thread)
-                thread.start()
-                for flavor_thread in flavors_thread:
-                    flavor_thread.join()
+        for job in jobs:
+            try:
+                resource_job = db_api.resource_sync_list(context, job_id,
+                                                         job)
+                resource_job = resource_job.pop()
+            except exceptions.JobNotFound():
+                raise
+            # Create Source Region object
+            source_nova_client = NovaClient(
+                resource_job["source_region"], session)
+            source_flavor = source_nova_client.get_flavor(
+                resource_job["resource"])
+            if not source_flavor.is_public:
+                access_tenants = source_nova_client.\
+                    get_flavor_access_tenant(resource_job["resource"])
+            thread = threading.Thread(
+                target=self.create_resources_in_region,
+                args=(resource_job["id"], force,
+                      resource_job["target_region"],
+                      source_flavor, session, context, access_tenants))
+            flavors_thread.append(thread)
+            thread.start()
+            for flavor_thread in flavors_thread:
+                flavor_thread.join()
 
-        # Update Result in DATABASE.
-        try:
-            resource_sync_details = db_api.\
-                resource_sync_status(context, job_id)
-        except exceptions.JobNotFound:
-            raise
-        result = consts.JOB_SUCCESS
-        if consts.JOB_FAILURE in resource_sync_details:
-            result = consts.JOB_FAILURE
-        try:
-            db_api.sync_job_update(context, job_id, result)
-        except exceptions.JobNotFound:
-            raise
+            # Update Result in DATABASE.
+            try:
+                resource_sync_details = db_api.\
+                    resource_sync_status(context, job_id)
+            except exceptions.JobNotFound:
+                raise
+            result = consts.JOB_SUCCESS
+            if consts.JOB_FAILURE in resource_sync_details:
+                result = consts.JOB_FAILURE
+            try:
+                db_api.sync_job_update(context, job_id, result)
+            except exceptions.JobNotFound:
+                raise

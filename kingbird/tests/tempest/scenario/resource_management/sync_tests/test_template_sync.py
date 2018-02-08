@@ -46,7 +46,7 @@ class KingbirdTemplateSyncTest(base.BaseKBKeypairTest,
         job_details = self.template_sync_job_create_non_admin(
             keypairs, images, FORCE)
         utils.wait_until_true(
-            lambda: self._check_template_job_status(job_details['job_id']),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions
@@ -75,7 +75,7 @@ class KingbirdTemplateSyncTest(base.BaseKBKeypairTest,
         flavors = self._create_flavor(admin_session)
         job_details = self.template_sync_job_create_admin(flavors[0], FORCE)
         utils.wait_until_true(
-            lambda: self._check_template_job_status(job_details['job_id']),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions
@@ -101,7 +101,7 @@ class KingbirdTemplateSyncTest(base.BaseKBKeypairTest,
         job_details = self.template_sync_job_create_non_admin(
             keypairs, images, DEFAULT_FORCE)
         utils.wait_until_true(
-            lambda: self._check_template_job_status(job_details['job_id']),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_list()
@@ -130,7 +130,7 @@ class KingbirdTemplateSyncTest(base.BaseKBKeypairTest,
         job_details = self.template_sync_job_create_non_admin(
             keypairs, images, DEFAULT_FORCE)
         utils.wait_until_true(
-            lambda: self._check_template_job_status(job_details['job_id']),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_detail(job_details['job_id'])
@@ -160,34 +160,6 @@ class KingbirdTemplateSyncTest(base.BaseKBKeypairTest,
             keypairs, job_details['keypair_targets'],
             self.keypair_client.user_id)
 
-    @decorators.idempotent_id('f5701f6a-183b-41fe-b0ab-e0ddef3fbd89')
-    def test_get_active_jobs(self):
-        # Keypairs and images can be created by non-admin
-        kwargs = {
-            "container_format": CONF.image.container_formats[3],
-            "disk_format": CONF.image.disk_formats[6],
-            "visibility": 'private'
-        }
-        keypairs = self._create_keypairs()
-        images = self._create_images(**kwargs)
-        job_details = self.template_sync_job_create_non_admin(
-            keypairs, images, FORCE)
-        active_job = self.get_sync_job_list(consts.JOB_ACTIVE)
-        status = active_job.get('job_set')[0].get('sync_status')
-        self.assertEqual(status, consts.JOB_PROGRESS)
-        utils.wait_until_true(
-            lambda: self._check_template_job_status(job_details['job_id']),
-            exception=RuntimeError("Timed out waiting for job %s " %
-                                   job_details['job_id']))
-        # Clean_up the database entries
-        self._check_images_delete_target_region(
-            job_details['admin'], job_details['image_targets'],
-            images, FORCE, **kwargs)
-        self.delete_db_entries(job_details['job_id'])
-        self._keypair_cleanup_resources(
-            keypairs, job_details['keypair_targets'],
-            self.keypair_client.user_id)
-
     @decorators.idempotent_id('adf565b1-c076-4273-b7d2-305cc144d0e2')
     def test_delete_already_deleted_job(self):
         # Keypairs and images can be created by non-admin
@@ -201,7 +173,7 @@ class KingbirdTemplateSyncTest(base.BaseKBKeypairTest,
         job_details = self.template_sync_job_create_non_admin(
             keypairs, images, FORCE)
         utils.wait_until_true(
-            lambda: self._check_template_job_status(job_details['job_id']),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Clean_up the database entries

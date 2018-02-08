@@ -13,7 +13,6 @@
 # under the License.
 import mock
 
-from kingbird.common import consts
 from kingbird.engine import keypair_sync_manager
 from kingbird.tests import base
 from kingbird.tests import utils
@@ -23,8 +22,8 @@ SOURCE_KEYPAIR = 'fake_key1'
 FAKE_USER_ID = 'user123'
 FAKE_TARGET_REGION = 'fake_target_region'
 FAKE_SOURCE_REGION = 'fake_source_region'
-FAKE_RESOURCE_ID = 'fake_id'
 FAKE_JOB_ID = utils.UUID1
+FAKE_RESOURCE_SYNC_ID = utils.UUID2
 
 
 class FakeKeypair(object):
@@ -54,9 +53,10 @@ class TestKeypairSyncManager(base.KingbirdTestCase):
         mock_db_api.resource_sync_list.return_value = [resource_job]
         mock_nova().get_keypairs.return_value = fake_key
         ksm = keypair_sync_manager.KeypairSyncManager()
-        ksm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        ksm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_db_api.resource_sync_list.assert_called_once_with(
-            self.ctxt, FAKE_JOB_ID, consts.KEYPAIR)
+            self.ctxt, FAKE_JOB_ID, FAKE_RESOURCE_SYNC_ID)
         mock_nova().get_keypairs.assert_called_once_with(
             resource_job['resource'])
 
@@ -76,9 +76,10 @@ class TestKeypairSyncManager(base.KingbirdTestCase):
         mock_db_api.resource_sync_list.return_value = [resource_job]
         mock_nova().get_keypairs.return_value = fake_key
         ksm = keypair_sync_manager.KeypairSyncManager()
-        ksm.resource_sync(self.ctxt, FAKE_JOB_ID, True)
+        ksm.resource_sync(self.ctxt, FAKE_JOB_ID, True,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_db_api.resource_sync_list.assert_called_once_with(
-            self.ctxt, FAKE_JOB_ID, consts.KEYPAIR)
+            self.ctxt, FAKE_JOB_ID, FAKE_RESOURCE_SYNC_ID)
         mock_nova().get_keypairs.assert_called_once_with(
             resource_job['resource'])
 

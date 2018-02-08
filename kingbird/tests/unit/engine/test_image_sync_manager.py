@@ -22,11 +22,11 @@ DEFAULT_FORCE = False
 FAKE_USER_ID = 'user123'
 FAKE_TARGET_REGION = 'fake_target_region'
 FAKE_SOURCE_REGION = 'fake_source_region'
-FAKE_RESOURCE_ID = 'fake_id'
 FAKE_JOB_ID = utils.UUID1
 FAKE_KERNEL_ID = utils.UUID2
 FAKE_RAMDISK_ID = utils.UUID3
 FAKE_ID = utils.UUID4
+FAKE_RESOURCE_SYNC_ID = utils.UUID5
 FAKE_RESULT = 'SUCCESS'
 FAKE_RESULT_FAIL = 'FAILURE'
 FAKE_RESOURCE = 'fake_image'
@@ -121,7 +121,8 @@ class TestImageSyncManager(base.KingbirdTestCase):
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_glance_adapter.check_dependent_images.\
             assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
                                     fake_ami_image.id)
@@ -152,7 +153,8 @@ class TestImageSyncManager(base.KingbirdTestCase):
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         self.assertEqual(mock_glance_client().get_image_data.call_count, 1)
         self.assertEqual(mock_glance_client().create_image.call_count, 1)
         self.assertEqual(mock_glance_upload.call_count, 1)
@@ -180,7 +182,8 @@ class TestImageSyncManager(base.KingbirdTestCase):
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_glance_adapter.check_dependent_images.\
             assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
                                     fake_aki_image.id)
@@ -211,7 +214,8 @@ class TestImageSyncManager(base.KingbirdTestCase):
         mock_glance_adapter.check_dependent_images.\
             return_value = expected_resources
         ism = image_sync_manager.ImageSyncManager()
-        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        ism.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_glance_adapter.check_dependent_images.\
             assert_called_once_with(self.ctxt, FAKE_SOURCE_REGION,
                                     fake_ari_image.id)

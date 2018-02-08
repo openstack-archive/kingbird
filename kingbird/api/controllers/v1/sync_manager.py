@@ -58,9 +58,11 @@ class ResourceSyncController(object):
                              resources, resource_type, result):
         """Manage the entries to database for both Keypair and image."""
         # Insert into the child table
+        job_ids = list()
         for region in target_regions:
             for resource in resources:
                 job_id = uuidutils.generate_uuid()
+                job_ids.append(job_id)
                 try:
                     db_api.resource_sync_create(context, result,
                                                 region, source_region,
@@ -68,6 +70,7 @@ class ResourceSyncController(object):
                                                 job_id)
                 except exceptions.JobNotFound:
                     pecan.abort(404, _('Job not found'))
+        return job_ids
 
     @index.when(method='GET', template='json')
     def get(self, project, action=None):
@@ -154,10 +157,10 @@ class ResourceSyncController(object):
                     if not source_keypair:
                         db_api._delete_failure_sync_job(context, result.job_id)
                         pecan.abort(404)
-                self._entries_to_database(context, target_regions,
-                                          source, source_resources,
-                                          resource_type, result)
-            return self._keypair_sync(force, context, result)
+                jobs = self._entries_to_database(context, target_regions,
+                                                 source, source_resources,
+                                                 resource_type, result)
+            return self._keypair_sync(force, context, result, jobs)
 
         elif resource_type == consts.IMAGE:
             for source in source_regions:
@@ -169,10 +172,10 @@ class ResourceSyncController(object):
                     if image != source_image:
                         db_api._delete_failure_sync_job(context, result.job_id)
                         pecan.abort(404)
-                self._entries_to_database(context, target_regions,
-                                          source, source_resources,
-                                          resource_type, result)
-            return self._image_sync(force, context, result)
+                jobs = self._entries_to_database(context, target_regions,
+                                                 source, source_resources,
+                                                 resource_type, result)
+            return self._image_sync(force, context, result, jobs)
 
         elif resource_type == consts.FLAVOR:
             if not context.is_admin:
@@ -186,10 +189,10 @@ class ResourceSyncController(object):
                     if not source_flavor:
                         db_api._delete_failure_sync_job(context, result.job_id)
                         pecan.abort(404)
-                self._entries_to_database(context, target_regions,
-                                          source, source_resources,
-                                          resource_type, result)
-            return self._flavor_sync(force, context, result)
+                jobs = self._entries_to_database(context, target_regions,
+                                                 source, source_resources,
+                                                 resource_type, result)
+            return self._flavor_sync(force, context, result, jobs)
 
         else:
             pecan.abort(400, _('Bad resource_type'))
@@ -221,7 +224,7 @@ class ResourceSyncController(object):
         else:
             pecan.abort(400, _('Bad request'))
 
-    def _keypair_sync(self, force, context, result):
+    def _keypair_sync(self, force, context, result, jobs):
         """Make an rpc call to kb-engine.
 
         :param job_id: ID of the job to update values in database based on
@@ -230,12 +233,13 @@ class ResourceSyncController(object):
         :param context: context of the request.
         :param result: Result object to return an output.
         """
-        self.rpc_client.keypair_sync_for_user(context, result.job_id, force)
+        self.rpc_client.keypair_sync_for_user(context, result.job_id,
+                                              force, jobs)
         return {'job_status': {'id': result.job_id,
                                'status': result.sync_status,
                                'created_at': result.created_at}}
 
-    def _image_sync(self, force, context, result):
+    def _image_sync(self, force, context, result, jobs):
         """Make an rpc call to engine.
 
         :param job_id: ID of the job to update values in database based on
@@ -244,12 +248,12 @@ class ResourceSyncController(object):
         :param context: context of the request.
         :param result: Result object to return an output.
         """
-        self.rpc_client.image_sync(context, result.job_id, force)
+        self.rpc_client.image_sync(context, result.job_id, force, jobs)
         return {'job_status': {'id': result.job_id,
                                'status': result.sync_status,
                                'created_at': result.created_at}}
 
-    def _flavor_sync(self, force, context, result):
+    def _flavor_sync(self, force, context, result, jobs):
         """Make an rpc call to engine.
 
         :param job_id: ID of the job to update values in database based on
@@ -258,7 +262,7 @@ class ResourceSyncController(object):
         :param context: context of the request.
         :param result: Result object to return an output.
         """
-        self.rpc_client.flavor_sync(context, result.job_id, force)
+        self.rpc_client.flavor_sync(context, result.job_id, force, jobs)
         return {'job_status': {'id': result.job_id,
                                'status': result.sync_status,
                                'created_at': result.created_at}}

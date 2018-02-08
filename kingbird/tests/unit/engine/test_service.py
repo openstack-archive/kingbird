@@ -21,6 +21,7 @@ from oslo_config import cfg
 CONF = cfg.CONF
 FAKE_USER = utils.UUID1
 FAKE_JOB = utils.UUID2
+FAKE_RESOURCE_JOB = utils.UUID3
 
 
 class TestEngineService(base.KingbirdTestCase):
@@ -36,6 +37,7 @@ class TestEngineService(base.KingbirdTestCase):
         self.force = False
         self.user_id = FAKE_USER
         self.job_id = FAKE_JOB
+        self.resource_sync_id = FAKE_RESOURCE_JOB
 
     def test_init(self):
         self.assertEqual(self.service_obj.host, 'localhost')
@@ -126,22 +128,27 @@ class TestEngineService(base.KingbirdTestCase):
         self.service_obj.init_tgm()
         self.service_obj.init_ksm()
         self.service_obj.keypair_sync_for_user(
-            self.context, self.job_id, self.force)
+            self.context, self.job_id, self.force, [self.resource_sync_id])
         mock_keypair_sync_manager().resource_sync.\
-            assert_called_once_with(self.context, self.job_id, self.force)
+            assert_called_once_with(self.context, self.job_id, self.force,
+                                    [self.resource_sync_id])
 
     @mock.patch.object(service, 'ImageSyncManager')
     def test_image_sync(self, mock_image_sync_manager):
         self.service_obj.init_tgm()
         self.service_obj.init_ism()
-        self.service_obj.image_sync(self.context, self.job_id, self.force)
+        self.service_obj.image_sync(self.context, self.job_id, self.force,
+                                    [self.resource_sync_id])
         mock_image_sync_manager().resource_sync.\
-            assert_called_once_with(self.context, self.job_id, self.force)
+            assert_called_once_with(self.context, self.job_id, self.force,
+                                    [self.resource_sync_id])
 
     @mock.patch.object(service, 'FlavorSyncManager')
     def test_flavor_sync(self, mock_flavor_sync_manager):
         self.service_obj.init_tgm()
         self.service_obj.init_fsm()
-        self.service_obj.flavor_sync(self.context, self.job_id, self.force)
+        self.service_obj.flavor_sync(self.context, self.job_id, self.force,
+                                     [self.resource_sync_id])
         mock_flavor_sync_manager().resource_sync.\
-            assert_called_once_with(self.context, self.job_id, self.force)
+            assert_called_once_with(self.context, self.job_id, self.force,
+                                    [self.resource_sync_id])

@@ -43,7 +43,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         # Flavors created should be available in the response list
         job_details = self._flavor_sync_job_create(FORCE, admin_session)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions
@@ -71,7 +71,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         admin_session = True
         job_details = self._flavor_sync_job_create(FORCE, admin_session)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_list()
@@ -88,7 +88,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         admin_session = True
         job_details = self._flavor_sync_job_create(FORCE, admin_session)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_detail(job_details['job_id'])
@@ -116,7 +116,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         status = active_job.get('job_set')[0].get('sync_status')
         self.assertEqual(status, consts.JOB_PROGRESS)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Clean_up the database entries
@@ -136,7 +136,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         # Actual result when we try and delete an active_job
         # Clean_up the database entries
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Clean_up the database entries
@@ -151,7 +151,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         job_details = self._flavor_sync_job_create(FORCE, admin_session)
         # Clean_up the database entries
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         self.delete_db_entries(job_details['job_id'])
@@ -168,14 +168,14 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
         job_details_1 = self._flavor_sync_job_create(FORCE, admin_session)
         job_id_1 = job_details_1['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_1),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
         self.delete_db_entries(job_id_1)
         job_details_2 = self._flavor_sync_job_create(FORCE, admin_session,
                                                      job_details_1['flavors'])
         job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_2),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_2))
         # Clean_up the database entries
         self.delete_db_entries(job_id_2)
@@ -190,7 +190,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
                                                      admin_session)
         job_id_1 = job_details_1['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_1),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
         self.delete_db_entries(job_id_1)
         job_details_2 = self._flavor_sync_job_create(DEFAULT_FORCE,
@@ -198,7 +198,7 @@ class KingbirdFlavorSyncTest(base.BaseKBFlavorsTest,
                                                      job_details_1['flavors'])
         job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_2),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_2))
         job_list_resp = self.get_sync_job_detail(job_id_2)
         # This job fail because resoruce is already created.

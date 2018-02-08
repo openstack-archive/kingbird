@@ -107,13 +107,7 @@ class BaseKingbirdClass(object):
         result['images'] = images
         return result
 
-    def _check_job_status(self):
-        # Wait until the status of the job is not "IN_PROGRESS"
-        job_list_resp = self.get_sync_job_list()
-        status = job_list_resp.get('job_set')[0].get('sync_status')
-        return status != consts.JOB_PROGRESS
-
-    def _check_template_job_status(self, job_id):
+    def _check_job_status(self, job_id):
         # Wait until the status of the each resource job is not "IN_PROGRESS"
         job_list_resp = self.get_sync_job_detail(job_id)
         for i in range(len(job_list_resp['job_set'])):

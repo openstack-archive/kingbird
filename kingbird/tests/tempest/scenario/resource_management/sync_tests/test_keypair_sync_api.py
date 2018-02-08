@@ -35,7 +35,7 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
         # Create 2 keypairs:
         job_details = self._keypair_sync_job_create(FORCE)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Check for resources in target_regions
@@ -51,7 +51,7 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
     def test_get_kingbird_sync_list(self):
         job_details = self._keypair_sync_job_create(FORCE)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_list()
@@ -67,7 +67,7 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
     def test_get_sync_job_details(self):
         job_details = self._keypair_sync_job_create(FORCE)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         job_list_resp = self.get_sync_job_detail(job_details['job_id'])
@@ -94,7 +94,7 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
         status = active_job.get('job_set')[0].get('sync_status')
         self.assertEqual(status, consts.JOB_PROGRESS)
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Clean_up the database entries
@@ -113,7 +113,7 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
         # Actual result when we try and delete an active_job
         # Clean_up the database entries
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         # Clean_up the database entries
@@ -127,7 +127,7 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
         job_details = self._keypair_sync_job_create(FORCE)
         # Clean_up the database entries
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_details['job_id']),
             exception=RuntimeError("Timed out waiting for job %s " %
                                    job_details['job_id']))
         self.delete_db_entries(job_details['job_id'])
@@ -143,14 +143,14 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
         job_details_1 = self._keypair_sync_job_create(FORCE)
         job_id_1 = job_details_1['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_1),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
         self.delete_db_entries(job_id_1)
         job_details_2 = self._keypair_sync_job_create(
             FORCE, job_details_1['keys'])
         job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_2),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_2))
         # Clean_up the database entries
         self.delete_db_entries(job_id_2)
@@ -163,14 +163,14 @@ class KingbirdKeyPairSyncTest(base.BaseKBKeypairTest,
         job_details_1 = self._keypair_sync_job_create(DEFAULT_FORCE)
         job_id_1 = job_details_1['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_1),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_1))
         self.delete_db_entries(job_id_1)
         job_details_2 = self._keypair_sync_job_create(DEFAULT_FORCE,
                                                       job_details_1['keys'])
         job_id_2 = job_details_2['job_id']
         utils.wait_until_true(
-            lambda: self._check_job_status(),
+            lambda: self._check_job_status(job_id_2),
             exception=RuntimeError("Timed out waiting for job %s " % job_id_2))
         job_list_resp = self.get_sync_job_detail(job_id_2)
         # This job fail because resoruce is already created.

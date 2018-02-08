@@ -13,7 +13,6 @@
 # under the License.
 import mock
 
-from kingbird.common import consts
 from kingbird.engine import flavor_sync_manager
 from kingbird.tests import base
 from kingbird.tests import utils
@@ -23,8 +22,8 @@ SOURCE_FLAVOR = 'fake_key1'
 FAKE_USER_ID = 'user123'
 FAKE_TARGET_REGION = 'fake_target_region'
 FAKE_SOURCE_REGION = 'fake_source_region'
-FAKE_RESOURCE_ID = 'fake_id'
 FAKE_JOB_ID = utils.UUID1
+FAKE_RESOURCE_SYNC_ID = utils.UUID2
 JOB_RESULT = "SUCCESS"
 FAKE_TENANTS = ['fake_tenant_1', 'fake_tenant_2']
 
@@ -68,13 +67,15 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
         mock_nova().get_flavor.return_value = fake_flavor
         mock_db_api.resource_sync_list.return_value = [resource_job]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_create_resource.assert_called_once_with(
             FAKE_JOB_ID, DEFAULT_FORCE, resource_job['target_region'],
             fake_flavor, 'fake_session', self.ctxt, access_tenants)
         mock_nova().get_flavor_access_tenant.assert_not_called
         mock_db_api.resource_sync_list.\
-            assert_called_once_with(self.ctxt, FAKE_JOB_ID, consts.FLAVOR)
+            assert_called_once_with(self.ctxt, FAKE_JOB_ID,
+                                    FAKE_RESOURCE_SYNC_ID)
         mock_db_api.resource_sync_status.\
             assert_called_once_with(self.ctxt, FAKE_JOB_ID)
         mock_db_api.sync_job_update.\
@@ -101,7 +102,8 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
         mock_nova().get_flavor.return_value = fake_flavor
         mock_db_api.resource_sync_list.return_value = [resource_job]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, True)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, True,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_create_resource.assert_called_once_with(
             FAKE_JOB_ID, True, resource_job['target_region'], fake_flavor,
             'fake_session', self.ctxt, access_tenants)
@@ -134,7 +136,8 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
         mock_db_api.resource_sync_list.return_value = [resource_job]
         mock_db_api().resource_sync_status.return_value = [JOB_RESULT]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, DEFAULT_FORCE,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_create_resource.assert_called_once_with(
             FAKE_JOB_ID, DEFAULT_FORCE, resource_job['target_region'],
             fake_flavor, 'fake_session', self.ctxt, access_tenants)
@@ -168,7 +171,8 @@ class TestFlavorSyncManager(base.KingbirdTestCase):
         mock_db_api.resource_sync_list.return_value = [resource_job]
         mock_db_api().resource_sync_status.return_value = [JOB_RESULT]
         fsm = flavor_sync_manager.FlavorSyncManager()
-        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, True)
+        fsm.resource_sync(self.ctxt, FAKE_JOB_ID, True,
+                          [FAKE_RESOURCE_SYNC_ID])
         mock_create_resource.assert_called_once_with(
             FAKE_JOB_ID, True, resource_job['target_region'], fake_flavor,
             'fake_session', self.ctxt, access_tenants)

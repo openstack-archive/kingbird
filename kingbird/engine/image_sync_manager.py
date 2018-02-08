@@ -152,7 +152,7 @@ class ImageSyncManager(object):
                       % {'msg': exc.message, 'region': region})
             return False
 
-    def resource_sync(self, context, job_id, force):
+    def resource_sync(self, context, job_id, force, jobs):
         """Create resources in target regions.
 
         Image with same id is created in target_regions and therefore
@@ -167,35 +167,33 @@ class ImageSyncManager(object):
         """
         LOG.info('Triggered image sync.')
         images_thread = list()
-        try:
-            resource_jobs = db_api.resource_sync_list(context, job_id,
-                                                      consts.IMAGE)
-        except exceptions.JobNotFound():
-            raise
-        source_regions = [i["source_region"] for i in resource_jobs]
-        unique_source = list(set(source_regions))
-        for source_object in unique_source:
-            for resource_job in resource_jobs:
-                thread = threading.Thread(
-                    target=self.create_resources_in_region,
-                    args=(resource_job["id"], resource_job["target_region"],
-                          source_object, context, resource_job["resource"],
-                          force))
-                images_thread.append(thread)
-                thread.start()
-                for image_thread in images_thread:
-                    image_thread.join()
+        for job in jobs:
+            try:
+                resource_job = db_api.resource_sync_list(context, job_id,
+                                                         job)
+                resource_job = resource_job.pop()
+            except exceptions.JobNotFound():
+                raise
+            thread = threading.Thread(
+                target=self.create_resources_in_region,
+                args=(resource_job["id"], resource_job["target_region"],
+                      resource_job["source_region"], context,
+                      resource_job["resource"], force))
+            images_thread.append(thread)
+            thread.start()
+            for image_thread in images_thread:
+                image_thread.join()
 
-        # Update Result in DATABASE.
-        try:
-            resource_sync_details = db_api.\
-                resource_sync_status(context, job_id)
-        except exceptions.JobNotFound:
-            raise
-        result = consts.JOB_SUCCESS
-        if consts.JOB_FAILURE in resource_sync_details:
-            result = consts.JOB_FAILURE
-        try:
-            db_api.sync_job_update(context, job_id, result)
-        except exceptions.JobNotFound:
-            raise
+            # Update Result in DATABASE.
+            try:
+                resource_sync_details = db_api.\
+                    resource_sync_status(context, job_id)
+            except exceptions.JobNotFound:
+                raise
+            result = consts.JOB_SUCCESS
+            if consts.JOB_FAILURE in resource_sync_details:
+                result = consts.JOB_FAILURE
+            try:
+                db_api.sync_job_update(context, job_id, result)
+            except exceptions.JobNotFound:
+                raise

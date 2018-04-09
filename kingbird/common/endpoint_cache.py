@@ -38,7 +38,9 @@ class EndpointCache(object):
             auth_url=cfg.CONF.cache.auth_uri,
             username=cfg.CONF.cache.admin_username,
             password=cfg.CONF.cache.admin_password,
-            project_id=cfg.CONF.cache.admin_tenant)
+            project_id=cfg.CONF.cache.admin_tenant,
+            user_domain_id=cfg.CONF.cache.admin_user_domain_name,
+            project_domain_id=cfg.CONF.cache.admin_project_domain_name)
         self.admin_session = session.Session(auth=auth)
         cli = keystone_client.Client(session=self.admin_session)
         self.keystone_client = cli

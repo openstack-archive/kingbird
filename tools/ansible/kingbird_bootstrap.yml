@@ -1,0 +1,54 @@
+---
+- name: Bootstrap Kingbird Service
+  vars:
+    os_controller: "{{ ansible_default_ipv4.address }}"
+    service: "kingbird"
+    port: "8118"
+    version: "v1.0"
+  hosts: localhost
+  tasks:
+  - name: Create Service Kingbird
+    os_keystone_service:
+      state: present
+      name: "{{service}}"
+      service_type: synchronization
+      description: OpenStack Synchronization Service.
+
+  - name: Create Kingbird Public Endpoint
+    os_keystone_endpoint:
+      service: "{{service}}"
+      endpoint_interface: public
+      url: "http://{{ os_controller }}:{{ port }}/{{ version }}"
+      region: RegionOne
+      state: present
+
+  - name: Create Kingbird Internal Endpoint
+    os_keystone_endpoint:
+      service: "{{service}}"
+      endpoint_interface: internal
+      url: "http://{{ os_controller }}:{{ port }}/{{ version }}"
+      region: RegionOne
+      state: present
+
+  - name: Create Kingbird Admin Endpoint
+    os_keystone_endpoint:
+      service: "{{service}}"
+      endpoint_interface: admin
+      url: "http://{{ os_controller }}:{{ port }}/{{ version }}"
+      region: RegionOne
+      state: present
+
+  - name: Create Kingbird User
+    os_user:
+      state: present
+      name: "{{service}}"
+      password: "{{service}}"
+      email: "{{service}}@openstack.com"
+      domain: default
+      default_project: service
+
+  - name: Assign role to Kingbird user
+    os_user_role:
+      user: "{{service}}"
+      role: admin
+      project: service

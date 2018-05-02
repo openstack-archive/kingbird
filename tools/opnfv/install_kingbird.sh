@@ -8,9 +8,9 @@ set -o pipefail
 source openrc
 
 # Endpoints. Dynamically get IP addresses from another service (keystone)
-KINGBIRD_PUBLIC_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 6 | cut -d '/' -f 3 | cut -d ':' -f 1)
-KINGBIRD_ADMIN_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 7 | cut -d '/' -f 3 | cut -d ':' -f 1)
-KINGBIRD_INTERNAL_URL=$(openstack endpoint list --long | grep keystone | cut -d '|' -f 7 | cut -d '/' -f 3 | cut -d ':' -f 1)
+KINGBIRD_PUBLIC_URL=$(openstack endpoint list | grep keystone | grep public | awk {'print $14'} | cut -d '/' -f 3 | cut -d ':' -f 1)
+KINGBIRD_ADMIN_URL=$(openstack endpoint list | grep keystone | grep admin | awk {'print $14'} | cut -d '/' -f 3 | cut -d ':' -f 1)
+KINGBIRD_INTERNAL_URL=$(openstack endpoint list | grep keystone | grep internal | awk {'print $14'} | cut -d '/' -f 3 | cut -d ':' -f 1)
 KINGBIRD_PORT=8118
 KINGBIRD_VERSION='v1.0'
 # MySQL
@@ -104,12 +104,13 @@ if [ $? -eq 0 ]; then
     echo "Kingbird service already exists. Skipping.."
 else
     echo "Creating Kingbird endpoints.."
-    openstack service create --name=kingbird --description="Kingbird" multisite
+    openstack service create --name=kingbird --description="Kingbird"
     openstack endpoint create kingbird \
-        --publicurl http://${KINGBIRD_PUBLIC_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION} \
-        --adminurl http://${KINGBIRD_ADMIN_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION} \
-        --internalurl http://${KINGBIRD_INTERNAL_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION} \
-        --region ${OS_REGION_NAME}
+        public http://${KINGBIRD_PUBLIC_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION}
+    openstack endpoint create kingbird \
+        admin http://${KINGBIRD_ADMIN_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION}
+    openstack endpoint create kingbird \
+        internal http://${KINGBIRD_INTERNAL_URL}:${KINGBIRD_PORT}/${KINGBIRD_VERSION}
 fi
 
 #Setup Kingbird

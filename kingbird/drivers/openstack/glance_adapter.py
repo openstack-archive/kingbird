@@ -48,7 +48,7 @@ def check_dependent_images(context, region, image_id):
                      % {'ramdisk_image': ramdisk_image.id,
                         'region': region})
 
-        except exceptions.DependentImageNotFound():
+        except exceptions.DependentImageNotFound:
             raise
 
         return {

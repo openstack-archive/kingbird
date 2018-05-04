@@ -112,7 +112,7 @@ class NovaClient(base.DriverBase):
             return keypair
 
         except Exception as exception:
-            LOG.error('Exception Occurred: %s', exception.message)
+            LOG.error('Exception Occurred: %s', str(exception))
             pass
 
     def create_keypairs(self, force, keypair):

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import itertools
+from six.moves import zip_longest
 
 from kingbird.common import consts
 from kingbird.common import exceptions
@@ -26,7 +27,7 @@ def get_import_path(cls):
 # Returns a iterator of tuples containing batch_size number of objects in each
 def get_batch_projects(batch_size, project_list, fillvalue=None):
     args = [iter(project_list)] * batch_size
-    return itertools.izip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(fillvalue=fillvalue, *args)
 
 
 # to do validate the quota limits

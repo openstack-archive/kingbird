@@ -11,7 +11,7 @@
 # under the License.
 from collections import Counter
 import mock
-from Queue import Queue
+from queue import Queue
 import uuid
 
 from oslo_config import cfg
@@ -25,7 +25,7 @@ CONF = cfg.CONF
 FAKE_PROJECT = 'fake_project'
 FAKE_REGION = 'fake_region'
 FAKE_ENGINE_ID = str(uuid.uuid4())
-NOVA_USAGE = {'ram': 100, 'cores': '50'}
+NOVA_USAGE = {'ram': 100, 'cores': 50}
 NEUTRON_USAGE = {'port': 10}
 CINDER_USAGE = {'volumes': 18}
 FAKE_REGION_DICT = {'region1': {'ram': 100},

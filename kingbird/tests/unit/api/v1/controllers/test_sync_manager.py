@@ -83,6 +83,7 @@ class SyncJob(object):
         self.job_id = id
         self.sync_status = sync_status
         self.created_at = created_at
+        self._sa_class_manager = True
 
 
 class TestResourceManager(testroot.KBApiTest):
@@ -370,15 +371,22 @@ class TestResourceManager(testroot.KBApiTest):
     def test_delete_in_progress_job(self, mock_db_api, mock_rpc_client):
         delete_url = FAKE_URL + '/' + FAKE_JOB
         mock_db_api.sync_job_status.return_value = consts.JOB_PROGRESS
-        self.assertRaises(KeyError, self.app.delete_json, delete_url,
-                          headers=FAKE_HEADERS)
+        self.assertRaises(
+            KeyError,
+            self.app.delete_json,
+            delete_url,
+            headers=FAKE_HEADERS
+        )
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')
     def test_get_job(self, mock_db_api, mock_rpc_client):
         get_url = FAKE_URL
-        self.app.get(get_url, headers=FAKE_HEADERS)
-        self.assertEqual(1, mock_db_api.sync_job_list.call_count)
+        sync_job = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, timeutils.utcnow())
+        mock_db_api.sync_job_list.return_value = sync_job
+        response = self.app.get(get_url, headers=FAKE_HEADERS)
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.json['job_set']['job_id'], FAKE_JOB)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')
@@ -392,17 +400,30 @@ class TestResourceManager(testroot.KBApiTest):
     @mock.patch.object(sync_manager, 'db_api')
     def test_get_active_job(self, mock_db_api, mock_rpc_client):
         get_url = FAKE_URL + '/active'
-        self.app.get(get_url, headers=FAKE_HEADERS)
-        self.assertEqual(1, mock_db_api.sync_job_list.call_count)
+        sync_job = SyncJob(FAKE_JOB, consts.JOB_PROGRESS, timeutils.utcnow())
+        mock_db_api.sync_job_list.return_value = sync_job
+        response = self.app.get(get_url, headers=FAKE_HEADERS)
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.json['job_set']['job_id'], FAKE_JOB)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')
     def test_get_detail_job_by_id(self, mock_db_api, mock_rpc_client):
         get_url = FAKE_URL + '/' + FAKE_JOB
-        self.app.get(get_url, headers=FAKE_HEADERS)
-        self.assertEqual(1,
-                         mock_db_api.resource_sync_list
-                         .call_count)
+        mocked_response = [{
+            'resource': 'fake_key',
+            'target_region': 'Fake_region',
+            'sync_status': 'SUCCESS',
+            'created_at': '2018-05-04T16:25:46.606433',
+            'updated_at': '2018-05-04T16:25:46.609030',
+            'source_region': 'Fake_region2',
+            'id': '205d7c52-5042-46e1-8873-5b5ffb171108',
+            'resource_type': 'keypair'
+        }]
+        mock_db_api.resource_sync_list.return_value = mocked_response
+        response = self.app.get(get_url, headers=FAKE_HEADERS)
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.json['job_set'], mocked_response)
 
     @mock.patch.object(rpc_client, 'EngineClient')
     @mock.patch.object(sync_manager, 'db_api')

@@ -119,7 +119,7 @@ class GlanceClient(object):
                                  'virtual_size', 'schema']
 
         # split out the usual key and the properties which are top-level
-        for key in six.iterkeys(image):
+        for key in six.iterkeys(image.__dict__):
             if key not in fields_after_creation:
                 kwargs[key] = image.get(key)
 
@@ -162,4 +162,5 @@ class GlanceUpload(object):
         entire imagedata into an iterator and send this 65536kb chunk to
         the glance image upload and there by omitting the usage of file.
         """
-        return self.received.next()
+
+        return next(self.received)

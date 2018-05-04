@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import collections
-from Queue import Queue
+from queue import Queue
 import re
+from six import iteritems
 import threading
 import time
 
@@ -133,7 +134,7 @@ class QuotaManager(manager.Manager):
                                                              project_id)
         except exceptions.ProjectQuotaNotFound:
             limits_from_db = {}
-        for current_resource in CONF.kingbird_global_limit.iteritems():
+        for current_resource in iteritems(CONF.kingbird_global_limit):
             resource = re.sub('quota_', '', current_resource[0])
             # If resource limit in DB, then use it or else use limit
             # from conf file

@@ -21,6 +21,7 @@ from oslo_utils import uuidutils
 import pecan
 from pecan import expose
 from pecan import request
+from six import iteritems
 
 from kingbird.api.controllers import restcomm
 from kingbird.api import enforcer as enf
@@ -209,7 +210,7 @@ class BaseController(object):
             pecan.abort(400, _('quota_set in body is required'))
         try:
             utils.validate_quota_limits(payload)
-            for resource, limit in payload.iteritems():
+            for resource, limit in iteritems(payload):
                 try:
                     # Update quota limit in DB
                     result = db_api.quota_update(
@@ -444,7 +445,7 @@ class QuotaManagerV1Controller(BaseController):
         if not enforce:
             pecan.abort(403, _('Admin required'))
         if args:
-            payload = args.keys()
+            payload = list(args.keys())
             if not payload:
                 pecan.abort(400, _('quota_set in body required'))
             self.delete_quota_resources(context, project_id, payload)

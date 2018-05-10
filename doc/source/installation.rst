@@ -138,7 +138,7 @@ below to the address you get from OpenStack Kingbird endpoint.
 To make the Kingbird work normally, you have to edit these configuration
 items. The [cache] section is used by kingbird engine to access the quota
 information of Nova, Cinder, Neutron in each region, replace the
-auth_uri to the keystone service in your environment,
+www_authenticate_uri to the keystone service in your environment,
 especially if the keystone service is not located in the same node, and
 also for the account to access the Nova, Cinder, Neutron in each region,
 in the following configuration, user "admin" with password "password" of
@@ -148,7 +148,7 @@ each region:
 .. code-block:: bash
 
     [cache]
-    auth_uri = http://127.0.0.1:5000/v3
+    www_authenticate_uri = http://127.0.0.1:5000/v3
     admin_tenant = admin
     admin_password = password
     admin_username = admin
@@ -187,13 +187,13 @@ KeyStone is deployed in multiple regions*
     [keystone_authtoken]
     signing_dir = /var/cache/kingbird
     cafile = /opt/stack/data/ca-bundle.pem
-    auth_uri = http://127.0.0.1:5000/v3
+    www_authenticate_uri = http://127.0.0.1:5000/v3
     project_domain_name = Default
     project_name = service
     user_domain_name = Default
     password = $kb_svc_pwd
     username = $kb_svc_user
-    auth_url = http://127.0.0.1:35357/v3
+    auth_url = http://127.0.0.1:5000/v3
     auth_type = password
     region_name = RegionOne
 
@@ -205,13 +205,13 @@ is "password", then the configuration will look like this:
     [keystone_authtoken]
     signing_dir = /var/cache/kingbird
     cafile = /opt/stack/data/ca-bundle.pem
-    auth_uri = http://127.0.0.1:5000/v3
+    www_authenticate_uri = http://127.0.0.1:5000/v3
     project_domain_name = Default
     project_name = service
     user_domain_name = Default
     password = password
     username = kingbird
-    auth_url = http://127.0.0.1:35357/v3
+    auth_url = http://127.0.0.1:5000/v3
     auth_type = password
     region_name = RegionOne
 

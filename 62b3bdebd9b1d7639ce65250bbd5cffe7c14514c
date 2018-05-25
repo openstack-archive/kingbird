@@ -1,0 +1,9 @@
+Code-Review+1: Van Hung Pham <hungpv@vn.fujitsu.com>
+Code-Review+2: Lakshmi Prasanna Goutham Pratapa <lakshmi.pratapa@imaginea.com>
+Workflow+1: Lakshmi Prasanna Goutham Pratapa <lakshmi.pratapa@imaginea.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Fri, 25 May 2018 06:27:52 +0000
+Reviewed-on: https://review.openstack.org/567495
+Project: openstack/kingbird
+Branch: refs/heads/master

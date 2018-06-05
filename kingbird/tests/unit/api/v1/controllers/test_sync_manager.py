@@ -372,7 +372,7 @@ class TestResourceManager(testroot.KBApiTest):
         delete_url = FAKE_URL + '/' + FAKE_JOB
         mock_db_api.sync_job_status.return_value = consts.JOB_PROGRESS
         self.assertRaises(
-            KeyError,
+            webtest.app.AppError,
             self.app.delete_json,
             delete_url,
             headers=FAKE_HEADERS

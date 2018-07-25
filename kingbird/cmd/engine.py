@@ -45,7 +45,8 @@ def main():
     srv = engine.EngineService(cfg.CONF.host,
                                consts.TOPIC_KB_ENGINE)
     launcher = service.launch(cfg.CONF,
-                              srv, workers=cfg.CONF.workers)
+                              srv, workers=cfg.CONF.workers,
+                              restart_method='mutate')
     # the following periodic tasks are intended serve as HA checking
     # srv.create_periodic_tasks()
     launcher.wait()

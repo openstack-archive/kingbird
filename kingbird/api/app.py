@@ -83,7 +83,8 @@ def serve(api_service, conf, workers=1):
     if _launcher:
         raise RuntimeError(_('serve() can only be called once'))
 
-    _launcher = service.launch(conf, api_service, workers=workers)
+    _launcher = service.launch(conf, api_service, workers=workers,
+                               restart_method='mutate')
 
 
 def wait():

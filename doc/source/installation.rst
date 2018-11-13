@@ -155,7 +155,7 @@ each region:
 
 Configure the database section with the service user "kingbird" and its
 password, to access database "kingbird". For detailed database section
-configuration, please refer to http://docs.openstack.org/developer/oslo.db/opts.html,
+configuration, please refer to https://docs.openstack.org/developer/oslo.db/opts.html,
 and change the following configuration accordingly based on your
 environment.
 
@@ -174,7 +174,7 @@ password "password", then the configuration is as following:
 
 The [keystone_authtoken] section is used by keystonemiddleware for token
 validation during the API request to the kingbird-api, please refer to
-http://docs.openstack.org/developer/keystonemiddleware/middlewarearchitecture.html
+https://docs.openstack.org/developer/keystonemiddleware/middlewarearchitecture.html
 on how to configure the keystone_authtoken section for the keystonemiddleware
 in detail, and change the following configuration accordingly based on your
 environment:

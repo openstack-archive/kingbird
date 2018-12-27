@@ -52,7 +52,7 @@ fi
 
 sudo chown -R jenkins:stack $DEST/tempest
 
-# change the tempest configruation to test Kingbird
+# change the tempest configuration to test Kingbird
 env | grep OS_
 
 # import functions needed for the below workaround

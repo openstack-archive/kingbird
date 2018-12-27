@@ -6,7 +6,7 @@ Scripts to integrate the API and Engine service to OpenStack
 devstack development environment
 
 local.conf.sample:
-    sample configruation to integrate kingbird into devstack
+    sample configuration to integrate kingbird into devstack
     customize the configuration file to tell devstack which OpenStack services
     will be launched
 
